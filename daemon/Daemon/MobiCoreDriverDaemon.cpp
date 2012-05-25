@@ -34,8 +34,12 @@
 #include <cstdlib>
 #include <signal.h>
 #include <fcntl.h>
+#ifndef REDUCED_STLPORT
 #include <fstream>
 #include <cassert>
+#else
+#include <stdio.h>
+#endif
 
 #include "MobiCoreDriverCmd.h"
 #include "mcVersion.h"
@@ -214,12 +218,21 @@ bool MobiCoreDriverDaemon::loadDeviceDriver(
 	do
 	{
 		//mobiCoreDevice
+#ifndef REDUCED_STLPORT
 		ifstream fs(driverPath.c_str(), ios_base::binary);
 		if (!fs) {
 			LOG_E("%s: failed: cannot open %s", __func__, driverPath.c_str());
 			break;
 		}
-		
+#else
+		FILE *fs = fopen (driverPath.c_str(), "rb");
+		if (!fs) {
+			LOG_E("%s: failed: cannot open %s", __func__, driverPath.c_str());
+			break;
+		}
+		fclose(fs);
+#endif
+
 		LOG_I("%s: loading %s", __func__, driverPath.c_str());
 		
 		regObj = mcRegistryGetDriverBlob(driverPath.c_str());

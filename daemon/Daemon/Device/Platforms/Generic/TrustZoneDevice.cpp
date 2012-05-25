@@ -4,7 +4,7 @@
  *
  *
  * <!-- Copyright Giesecke & Devrient GmbH 2009 - 2012 -->
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -31,7 +31,11 @@
  */
 
 #include <cstdlib>
+#ifndef REDUCED_STLPORT
 #include <fstream>
+#else
+#include <stdio.h>
+#endif
 #include <inttypes.h>
 #include <list>
 
@@ -97,6 +101,7 @@ static int loadMobiCoreImage(
     int ret = 1;
 
     do {
+#ifndef REDUCED_STLPORT
         // Open MobiCore binary for reading only
         fstream fs(mobicorePath, ios_base::in | ios_base::binary);
         if (!fs) {
@@ -123,6 +128,35 @@ static int loadMobiCoreImage(
         // Close file
         fs.close();
         ret = 0;
+#else
+        // Open MobiCore binary for reading only
+        FILE *fs = fopen (mobicorePath, "rb");
+        if(!fs) {
+            LOG_E("MobiCore not found: %s", mobicorePath);
+            break;
+        }
+
+        // Get the MobiCore file size
+        fseek(fs, 0, SEEK_END);
+        int32_t fileSize = ftell(fs);
+        fseek(fs, 0, SEEK_SET);
+        LOG_I("File size: %i", fileSize);
+        // Check if file is too big
+        if (fileSize > size) {
+            LOG_E("MobiCore size exceeds expectations. Size is: %i", fileSize);
+            fclose(fs);
+            break;
+        }
+
+        fread((char*)virtAddr, 1, fileSize, fs);
+
+        //Create an visible line with different content at the end
+        memset((void*)((uint32_t)virtAddr+fileSize),0xff,4096);
+
+        // Close file
+        fclose(fs);
+        ret = 0;
+#endif
     } while (false);
 
     return ret;

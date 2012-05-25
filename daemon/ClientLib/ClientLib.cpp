@@ -36,7 +36,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <list>
+#ifndef REDUCED_STLPORT
 #include <cassert>
+#else
+#include "assert.h"
+#endif
 
 #include "public/MobiCoreDriverApi.h"
 
