@@ -41,7 +41,7 @@ include $(BUILD_STATIC_LIBRARY)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE	:= libMcRegistry
-LOCAL_MODULE_TAGS := eng
+LOCAL_MODULE_TAGS := optional
 LOCAL_PRELINK_MODULE := false
 
 # Prevent not-yet-used functions of being ignored by linker

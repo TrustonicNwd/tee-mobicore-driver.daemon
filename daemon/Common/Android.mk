@@ -9,7 +9,7 @@ LOCAL_PATH	:= $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE	:= libMcCommon
-LOCAL_MODULE_TAGS := eng
+LOCAL_MODULE_TAGS := optional
 
 # Add new source files here
 LOCAL_SRC_FILES +=\

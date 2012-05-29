@@ -9,7 +9,7 @@ MY_MCDRIVER_PATH := $(LOCAL_PATH)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE	:= mcDriverDaemon
-LOCAL_MODULE_TAGS := eng
+LOCAL_MODULE_TAGS := optional
 
 # Add new subdirectories containing code here
 include $(LOCAL_PATH)/Device/Android.mk

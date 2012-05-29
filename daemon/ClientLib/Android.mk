@@ -12,7 +12,7 @@ MY_CLIENTLIB_PATH	:= $(LOCAL_PATH)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE	:= libMcClient
-LOCAL_MODULE_TAGS := eng
+LOCAL_MODULE_TAGS := optional
 LOCAL_PRELINK_MODULE := false
 
 # External include files
