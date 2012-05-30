@@ -748,8 +748,10 @@ regObject_t *mcRegistryGetServiceBlob(
     char* msg;
     if (!checkVersionOkDataObjectMCLF(version, &msg)) {
         fs.close();
-        LOG_E("%s", msg);
-        return NULL;
+		LOG_E("mcRegistryGetDriverBlob() failed: Trustlet header incompatible with MobiCore interface version. Check your SDK version!");
+		// msg is null for release version
+		LOG_E("%s", msg);
+		return NULL;
     }
 
     // Get service type.
@@ -1043,8 +1045,10 @@ regObject_t *mcRegistryGetDriverBlob(
 
     char* msg;
     if (!checkVersionOkDataObjectMCLF(version, &msg)) {
-        LOG_E("%s", msg);
-        return NULL;
+		LOG_E("mcRegistryGetDriverBlob() failed: Driver header incompatible with MobiCore interface version. Check your SDK version!");
+		// msg is null for release version
+		LOG_E("%s", msg);
+		return NULL;
     }
 	
 	// Get service type.

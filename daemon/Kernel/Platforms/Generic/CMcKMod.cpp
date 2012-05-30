@@ -83,13 +83,13 @@ int CMcKMod::mmap(
 		}
 
 		// mapping response data is in the buffer
-		struct mcMmapResp *pMmapResp = (struct mcMmapResp *) virtAddr;
+		struct mc_mmap_resp *pMmapResp = (struct mc_mmap_resp *) virtAddr;
 
-		*pMciReuse = pMmapResp->isReused;
+		*pMciReuse = pMmapResp->is_reused;
 
-		LOG_I("mmap(): virtAddr=%p, handle=%d, physAddr=%p, isReused=%s",
-				virtAddr, pMmapResp->handle, (addr_t) (pMmapResp->physAddr),
-				pMmapResp->isReused ? "true" : "false");
+		LOG_I("mmap(): virtAddr=%p, handle=%d, phys_addr=%p, is_reused=%s",
+				virtAddr, pMmapResp->handle, (addr_t) (pMmapResp->phys_addr),
+				pMmapResp->is_reused ? "true" : "false");
 
 		if (NULL != pVirtAddr)
 		{
@@ -103,7 +103,7 @@ int CMcKMod::mmap(
 
 		if (NULL != pPhysAddr)
 		{
-			*pPhysAddr = (addr_t) (pMmapResp->physAddr);
+			*pPhysAddr = (addr_t) (pMmapResp->phys_addr);
 		}
 
 		// clean memory
@@ -145,12 +145,12 @@ int CMcKMod::mapPersistent(
 		}
 
 		// mapping response data is in the buffer
-		struct mcMmapResp *pMmapResp = (struct mcMmapResp *) virtAddr;
+		struct mc_mmap_resp *pMmapResp = (struct mc_mmap_resp *) virtAddr;
 
-		LOG_I("mapPersistent(): virtAddr=%p, handle=%d, physAddr=%p, isReused=%s",
+		LOG_I("mapPersistent(): virtAddr=%p, handle=%d, phys_addr=%p, is_reused=%s",
 				virtAddr, pMmapResp->handle,
-				(addr_t) (pMmapResp->physAddr),
-				pMmapResp->isReused ? "true" : "false");
+				(addr_t) (pMmapResp->phys_addr),
+				pMmapResp->is_reused ? "true" : "false");
 
 		if (NULL != pVirtAddr)
 		{
@@ -164,7 +164,7 @@ int CMcKMod::mapPersistent(
 
 		if (NULL != pPhysAddr)
 		{
-			*pPhysAddr = (addr_t) (pMmapResp->physAddr);
+			*pPhysAddr = (addr_t) (pMmapResp->phys_addr);
 		}
 
 		// clean memory
@@ -249,14 +249,14 @@ int CMcKMod::fcInit(
 		}
 
 		// Init MC with NQ and MCP buffer addresses
-		union mcIoCtlInitParams fcInitParams = {
+		union mc_ioctl_init_params fcInitParams = {
 		// C++ does not support C99 designated initializers
 				/* .in = */{
 				/* .base = */(uint32_t) mciBuffer,
-				/* .nqOffset = */nqOffset,
-				/* .nqLength = */nqLength,
-				/* .mcpOffset = */mcpOffset,
-				/* .mcpLength = */mcpLength } };
+				/* .nq_offset = */nqOffset,
+				/* .nq_length = */nqLength,
+				/* .mcp_offset = */mcpOffset,
+				/* .mcp_length = */mcpLength } };
 		ret = ioctl(fdKMod, MC_DRV_KMOD_IOCTL_FC_INIT, &fcInitParams);
 		if (ret != 0)
 		{
@@ -288,10 +288,10 @@ int CMcKMod::fcInfo(
 		}
 
 		// Init MC with NQ and MCP buffer addresses
-		union mcIoCtlInfoParams fcInfoParams = {
+		union mc_ioctl_info_params fcInfoParams = {
 		// C++ does not support C99 designated initializers
 				/* .in = */{
-				/* .extInfoId = */extInfoId } };
+				/* .ext_info_id = */extInfoId } };
 		ret = ioctl(fdKMod, MC_DRV_KMOD_IOCTL_FC_INFO, &fcInfoParams);
 		if (ret != 0)
 		{
@@ -306,7 +306,7 @@ int CMcKMod::fcInfo(
 
 		if (NULL != pExtInfo)
 		{
-			*pExtInfo = fcInfoParams.out.extInfo;
+			*pExtInfo = fcInfoParams.out.ext_info;
 		}
 
 	} while (0);
@@ -388,7 +388,7 @@ int CMcKMod::free(
 			break;
 		}
 
-		union mcIoCtltoFreeParams freeParams = {
+		union mc_ioctl_free_params freeParams = {
 		// C++ does not support c99 designated initializers
 				/* .in = */{
 				/* .handle = */(uint32_t) handle } };
@@ -427,7 +427,7 @@ int CMcKMod::registerWsmL2(
 			break;
 		}
 
-		union mcIoCtlAppRegWsmL2Params params = {
+		union mc_ioctl_app_reg_wsm_l2_params params = {
 		// C++ does not support C99 designated initializers
 				/* .in = */{
 				/* .buffer = */(uint32_t) buffer,
@@ -441,7 +441,7 @@ int CMcKMod::registerWsmL2(
 			break;
 		}
 
-		LOG_I("WSM L2 phys=%x, handle=%d", params.out.physWsmL2Table,
+		LOG_I("WSM L2 phys=%x, handle=%d", params.out.phys_wsm_l2_table,
 				params.out.handle);
 
 		if (NULL != pHandle)
@@ -451,7 +451,7 @@ int CMcKMod::registerWsmL2(
 
 		if (NULL != pPhysWsmL2)
 		{
-			*pPhysWsmL2 = (addr_t) params.out.physWsmL2Table;
+			*pPhysWsmL2 = (addr_t) params.out.phys_wsm_l2_table;
 		}
 
 	} while (0);
@@ -477,7 +477,7 @@ int CMcKMod::unregisterWsmL2(
 			break;
 		}
 
-		struct mcIoCtlAppUnregWsmL2Params params = {
+		struct mc_ioctl_app_unreg_wsm_l2_params params = {
 		// C++ does not support c99 designated initializers
 				/* .in = */{
 				/* .handle = */handle } };
@@ -500,9 +500,9 @@ int CMcKMod::fcExecute(
     uint32_t  areaLength
 ) {
     int ret = 0;
-    union mcIoCtlFcExecuteParams params = {
+    union mc_ioctl_fc_execute_params params = {
         /*.in =*/ {
-            /*.physStartAddr = */ (uint32_t)startAddr,
+            /*.phys_start_addr = */ (uint32_t)startAddr,
             /*.length = */ areaLength
         }
     };
@@ -539,7 +539,7 @@ bool CMcKMod::checkKmodVersionOk(
             break;
         }
 
-        struct mcIoCtlGetVersionParams params;
+        struct mc_ioctl_get_version_params params;
 
         int ioret = ioctl(fdKMod, MC_DRV_KMOD_IOCTL_GET_VERSION, &params);
         if (0 != ioret)
@@ -550,7 +550,7 @@ bool CMcKMod::checkKmodVersionOk(
 
         // Run-time check.
         char* errmsg;
-        if (!checkVersionOkMCDRVMODULEAPI(params.out.kernelModuleVersion, &errmsg)) {
+        if (!checkVersionOkMCDRVMODULEAPI(params.out.kernel_module_version, &errmsg)) {
             LOG_E("%s", errmsg);
             break;
         }

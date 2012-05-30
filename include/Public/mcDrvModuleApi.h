@@ -61,18 +61,18 @@
  * Data exchange structure of the MC_DRV_MODULE_INIT ioctl command.
  * INIT request data to SWD
  */
-union mcIoCtlInitParams {
+union mc_ioctl_init_params {
 	struct {
 		/** base address of mci buffer 4KB align */
 		uint32_t  base;
 		/** notification buffer start/length [16:16] [start, length] */
-		uint32_t  nqOffset;
+		uint32_t  nq_offset;
 		/** length of notification queue */
-		uint32_t  nqLength;
+		uint32_t  nq_length;
 		/** mcp buffer start/length [16:16] [start, length] */
-		uint32_t  mcpOffset;
+		uint32_t  mcp_offset;
 		/** length of mcp buffer */
-		uint32_t  mcpLength;
+		uint32_t  mcp_length;
 	} in;
 	struct {
 		/* nothing */
@@ -84,13 +84,13 @@ union mcIoCtlInitParams {
  * Data exchange structure of the MC_DRV_MODULE_INFO ioctl command.
  * INFO request data to the SWD
  */
-union mcIoCtlInfoParams {
+union mc_ioctl_info_params {
 	struct {
-		uint32_t  extInfoId; /**< extended info ID */
+		uint32_t  ext_info_id; /**< extended info ID */
 	} in;
 	struct {
 		uint32_t  state; /**< state */
-		uint32_t  extInfo; /**< extended info */
+		uint32_t  ext_info; /**< extended info */
 	} out;
 };
 
@@ -109,22 +109,22 @@ union mcIoCtlInfoParams {
  *  kernel module. Therefore we define our special offsets as multiples of page
  *  size.
  */
-enum mcMmapMemtype {
+enum mc_mmap_memtype {
 	MC_DRV_KMOD_MMAP_WSM		= 0,
 	MC_DRV_KMOD_MMAP_MCI		= 4096,
 	MC_DRV_KMOD_MMAP_PERSISTENTWSM	= 8192
 };
 
-struct mcMmapResp {
+struct mc_mmap_resp {
 	uint32_t  handle; /**< WSN handle */
-	uint32_t  physAddr; /**< physical address of WSM (or NULL) */
-	bool	  isReused; /**< if WSM memory was reused, or new allocated */
+	uint32_t  phys_addr; /**< physical address of WSM (or NULL) */
+	bool	  is_reused; /**< if WSM memory was reused, or new allocated */
 };
 
 /**
  * Data exchange structure of the MC_DRV_KMOD_IOCTL_FREE ioctl command.
  */
-union mcIoCtltoFreeParams {
+union mc_ioctl_free_params {
 	struct {
 		uint32_t  handle; /**< driver handle */
 		uint32_t  pid; /**< process id */
@@ -143,7 +143,7 @@ union mcIoCtltoFreeParams {
  * The page alignment will be created and the appropriated pSize and pOffsetL2
  * will be modified to the used values.
  */
-union mcIoCtlAppRegWsmL2Params {
+union mc_ioctl_app_reg_wsm_l2_params {
 	struct {
 		uint32_t  buffer; /**< base address of the virtual address  */
 		uint32_t  len; /**< size of the virtual address space */
@@ -151,7 +151,7 @@ union mcIoCtlAppRegWsmL2Params {
 	} in;
 	struct {
 		uint32_t  handle; /**< driver handle for locked memory */
-		uint32_t  physWsmL2Table; /* physical address of the L2 table */
+		uint32_t  phys_wsm_l2_table; /* physical address of the L2 table */
 	} out;
 };
 
@@ -160,7 +160,7 @@ union mcIoCtlAppRegWsmL2Params {
  * Data exchange structure of the MC_DRV_KMOD_IOCTL_APP_UNREGISTER_WSM_L2
  * command.
  */
-struct mcIoCtlAppUnregWsmL2Params {
+struct mc_ioctl_app_unreg_wsm_l2_params {
 	struct {
 		uint32_t  handle; /**< driver handle for locked memory */
 		uint32_t  pid; /**< process id */
@@ -174,12 +174,12 @@ struct mcIoCtlAppUnregWsmL2Params {
 /**
  * Data exchange structure of the MC_DRV_KMOD_IOCTL_DAEMON_LOCK_WSM_L2 command.
  */
-struct mcIoCtlDaemonLockWsmL2Params {
+struct mc_ioctl_daemon_lock_wsm_l2_params {
 	struct {
 		uint32_t  handle; /**< driver handle for locked memory */
 	} in;
 	struct {
-		uint32_t physWsmL2Table;
+		uint32_t phys_wsm_l2_table;
 	} out;
 };
 
@@ -188,7 +188,7 @@ struct mcIoCtlDaemonLockWsmL2Params {
  * Data exchange structure of the MC_DRV_KMOD_IOCTL_DAEMON_UNLOCK_WSM_L2
  * command.
  */
-struct mcIoCtlDaemonUnlockWsmL2Params {
+struct mc_ioctl_daemon_unlock_wsm_l2_params {
 	struct {
 		uint32_t  handle; /**< driver handle for locked memory */
 	} in;
@@ -200,10 +200,12 @@ struct mcIoCtlDaemonUnlockWsmL2Params {
 /**
  * Data exchange structure of the MC_DRV_MODULE_FC_EXECUTE ioctl command.
  */
-union mcIoCtlFcExecuteParams {
+union mc_ioctl_fc_execute_params {
 	struct {
-		uint32_t  physStartAddr;/**< base address of mobicore binary */
-		uint32_t  length;	/**< length of DDR area */
+		/**< base address of mobicore binary */
+		uint32_t  phys_start_addr;
+		/**< length of DDR area */
+		uint32_t  length;
 	} in;
 	struct {
 		/* nothing */
@@ -213,9 +215,9 @@ union mcIoCtlFcExecuteParams {
 /**
  * Data exchange structure of the MC_DRV_MODULE_GET_VERSION ioctl command.
  */
-struct mcIoCtlGetVersionParams {
+struct mc_ioctl_get_version_params {
 	struct {
-		uint32_t	kernelModuleVersion;
+		uint32_t	kernel_module_version;
 	} out;
 };
 
@@ -229,7 +231,7 @@ struct mcIoCtlGetVersionParams {
 /**
  * defines for the ioctl mobicore driver module function call from user space.
  */
-enum mcKModIoClt {
+enum mc_kmod_ioctl {
 
 	/*
 	 * get detailed MobiCore Status
@@ -279,14 +281,14 @@ enum mcKModIoClt {
 	/**
 	 * Creates a L2 Table of the given base address and the size of the
 	 * data.
-	 * Parameter: mcIoCtlAppRegWsmL2Params
+	 * Parameter: mc_ioctl_app_reg_wsm_l2_params
 	 */
 	MC_DRV_KMOD_IOCTL_APP_REGISTER_WSM_L2 = 220,
 
 	/**
 	 * Frees the L2 table created by a MC_DRV_KMOD_IOCTL_APP_REGISTER_WSM_L2
 	 * ioctl.
-	 * Parameter: mcIoCtlAppUnRegWsmL2Params
+	 * Parameter: mc_ioctl_app_unreg_wsm_l2_params
 	 */
 	MC_DRV_KMOD_IOCTL_APP_UNREGISTER_WSM_L2 = 221,
 
@@ -297,7 +299,7 @@ enum mcKModIoClt {
 
 	/**
 	 * Return kernel driver version.
-	 * Parameter: mcIoCtlGetVersionParams
+	 * Parameter: mc_ioctl_get_version_params
 	 */
 	MC_DRV_KMOD_IOCTL_GET_VERSION = 224,
 };

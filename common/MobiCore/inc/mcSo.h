@@ -131,8 +131,6 @@ typedef struct {
     uint32_t encryptedLen;
 } mcSoHeader_t;
 
-#endif // MC_SO_H_
-
 /** Maximum size of the payload (plain length + encrypted length) of a secure object. */
 #define MC_SO_PAYLOAD_MAX_SIZE      1000000
 
@@ -161,5 +159,6 @@ typedef struct {
     sizeof(mcSoHeader_t) + (plainLen) + MC_SO_ENCRYPT_PADDED_SIZE((encryptedLen) + MC_SO_HASH_SIZE) \
 )
 
-/** @} */
+#endif // MC_SO_H_
 
+/** @} */
