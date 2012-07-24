@@ -494,14 +494,48 @@ void MobiCoreDriverDaemon::processOpenSession(
 		}
 
 		uint32_t mcResult = rspOpenSession.payload.mcResult;
+
+        mcDrvRsp_t responseId = MC_DRV_RSP_FAILED;
+
+        switch (mcResult) 
+        {
+        case MC_MCP_RET_OK:
+            responseId = MC_DRV_RSP_OK;
+            break;
+        case MC_MCP_RET_ERR_WRONG_PUBLIC_KEY:
+            responseId = MC_DRV_RSP_WRONG_PUBLIC_KEY;
+            break;
+        case MC_MCP_RET_ERR_CONTAINER_TYPE_MISMATCH:
+            responseId = MC_DRV_RSP_CONTAINER_TYPE_MISMATCH;
+            break;
+        case MC_MCP_RET_ERR_CONTAINER_LOCKED:
+            responseId = MC_DRV_RSP_CONTAINER_LOCKED;
+            break;
+        case MC_MCP_RET_ERR_SP_NO_CHILD:
+            responseId = MC_DRV_RSP_SP_NO_CHILD;
+            break;
+        case MC_MCP_RET_ERR_TL_NO_CHILD:
+            responseId = MC_DRV_RSP_TL_NO_CHILD;
+            break;
+        case MC_MCP_RET_ERR_UNWRAP_ROOT_FAILED:
+            responseId = MC_DRV_RSP_UNWRAP_ROOT_FAILED;
+            break;
+        case MC_MCP_RET_ERR_UNWRAP_SP_FAILED:
+            responseId = MC_DRV_RSP_UNWRAP_SP_FAILED;
+            break;
+        case MC_MCP_RET_ERR_UNWRAP_TRUSTLET_FAILED:
+            responseId = MC_DRV_RSP_UNWRAP_TRUSTLET_FAILED;
+            break;
+        }
+
 		if (MC_MCP_RET_OK != mcResult)
 		{
 			LOG_E("rspOpenSession mcResult %d", mcResult);
-			writeResult(connection, MC_DRV_RSP_FAILED);
+			writeResult(connection, responseId);
 			break;
 		}
 
-		rspOpenSession.header.responseId = MC_DRV_RSP_OK;
+		rspOpenSession.header.responseId = responseId;
 		connection->writeData(
 						&rspOpenSession,
 						sizeof(rspOpenSession));

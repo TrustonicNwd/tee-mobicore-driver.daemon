@@ -61,31 +61,39 @@
  */
 typedef enum
 {
-    MC_DRV_OK                       =  0, /**< Function call succeeded. */
-    MC_DRV_NO_NOTIFICATION          =  1, /**< No notification available. */
-    MC_DRV_ERR_NOTIFICATION         =  2, /**< Error during notification on communication level. */
-    MC_DRV_ERR_NOT_IMPLEMENTED      =  3, /**< Function not implemented. */
-    MC_DRV_ERR_OUT_OF_RESOURCES     =  4, /**< No more resources available. */
-    MC_DRV_ERR_INIT                 =  5, /**< Driver initialization failed. */
-    MC_DRV_ERR_UNKNOWN              =  6, /**< Unknown error. */
-    MC_DRV_ERR_UNKNOWN_DEVICE       =  7, /**< The specified device is unknown. */
-    MC_DRV_ERR_UNKNOWN_SESSION      =  8, /**< The specified session is unknown. */
-    MC_DRV_ERR_INVALID_OPERATION    =  9, /**< The specified operation is not allowed. */
-    MC_DRV_ERR_INVALID_RESPONSE     = 10, /**< The response header from the MC is invalid. */
-    MC_DRV_ERR_TIMEOUT              = 11, /**< Function call timed out. */
-    MC_DRV_ERR_NO_FREE_MEMORY       = 12, /**< Can not allocate additional memory. */
-    MC_DRV_ERR_FREE_MEMORY_FAILED   = 13, /**< Free memory failed. */
-    MC_DRV_ERR_SESSION_PENDING      = 14, /**< Still some open sessions pending. */
-    MC_DRV_ERR_DAEMON_UNREACHABLE   = 15, /**< MC daemon not reachable */
-    MC_DRV_ERR_INVALID_DEVICE_FILE  = 16, /**< The device file of the kernel module could not be opened. */
-    MC_DRV_ERR_INVALID_PARAMETER    = 17, /**< Invalid parameter. */
-    MC_DRV_ERR_KERNEL_MODULE        = 18, /**< Unspecified error from Kernel Module*/
-    MC_DRV_ERR_BULK_MAPPING         = 19, /**< Error during mapping of additional bulk memory to session. */
-    MC_DRV_ERR_BULK_UNMAPPING       = 20, /**< Error during unmapping of additional bulk memory to session. */
-    MC_DRV_INFO_NOTIFICATION        = 21, /**< Notification received, exit code available. */
-    MC_DRV_ERR_NQ_FAILED            = 22, /**< Set up of NWd connection failed. */
-    MC_DRV_ERR_DAEMON_VERSION       = 23, /**< Wrong daemon version. */
-    MC_DRV_ERR_CONTAINER_VERSION    = 24, /**< Wrong container version. */
+    MC_DRV_OK                                   =  0, /**< Function call succeeded. */
+    MC_DRV_NO_NOTIFICATION                      =  1, /**< No notification available. */
+    MC_DRV_ERR_NOTIFICATION                     =  2, /**< Error during notification on communication level. */
+    MC_DRV_ERR_NOT_IMPLEMENTED                  =  3, /**< Function not implemented. */
+    MC_DRV_ERR_OUT_OF_RESOURCES                 =  4, /**< No more resources available. */
+    MC_DRV_ERR_INIT                             =  5, /**< Driver initialization failed. */
+    MC_DRV_ERR_UNKNOWN                          =  6, /**< Unknown error. */
+    MC_DRV_ERR_UNKNOWN_DEVICE                   =  7, /**< The specified device is unknown. */
+    MC_DRV_ERR_UNKNOWN_SESSION                  =  8, /**< The specified session is unknown. */
+    MC_DRV_ERR_INVALID_OPERATION                =  9, /**< The specified operation is not allowed. */
+    MC_DRV_ERR_INVALID_RESPONSE                 = 10, /**< The response header from the MC is invalid. */
+    MC_DRV_ERR_TIMEOUT                          = 11, /**< Function call timed out. */
+    MC_DRV_ERR_NO_FREE_MEMORY                   = 12, /**< Can not allocate additional memory. */
+    MC_DRV_ERR_FREE_MEMORY_FAILED               = 13, /**< Free memory failed. */
+    MC_DRV_ERR_SESSION_PENDING                  = 14, /**< Still some open sessions pending. */
+    MC_DRV_ERR_DAEMON_UNREACHABLE               = 15, /**< MC daemon not reachable */
+    MC_DRV_ERR_INVALID_DEVICE_FILE              = 16, /**< The device file of the kernel module could not be opened. */
+    MC_DRV_ERR_INVALID_PARAMETER                = 17, /**< Invalid parameter. */
+    MC_DRV_ERR_KERNEL_MODULE                    = 18, /**< Unspecified error from Kernel Module*/
+    MC_DRV_ERR_BULK_MAPPING                     = 19, /**< Error during mapping of additional bulk memory to session. */
+    MC_DRV_ERR_BULK_UNMAPPING                   = 20, /**< Error during unmapping of additional bulk memory to session. */
+    MC_DRV_INFO_NOTIFICATION                    = 21, /**< Notification received, exit code available. */
+    MC_DRV_ERR_NQ_FAILED                        = 22, /**< Set up of NWd connection failed. */
+    MC_DRV_ERR_DAEMON_VERSION                   = 23, /**< Wrong daemon version. */
+    MC_DRV_ERR_CONTAINER_VERSION                = 24, /**< Wrong container version. */
+    MC_DRV_ERR_WRONG_PUBLIC_KEY                 = 25, /**< System Trustlet public key is wrong. */
+    MC_DRV_ERR_CONTAINER_TYPE_MISMATCH          = 26, /**< Wrong containter type(s). */
+    MC_DRV_ERR_CONTAINER_LOCKED                 = 27, /**< Container is locked (or not activated). */
+    MC_DRV_ERR_SP_NO_CHILD                      = 28, /**< SPID is not registered with root container. */
+    MC_DRV_ERR_TL_NO_CHILD                      = 29, /**< UUID is not registered with sp container. */
+    MC_DRV_ERR_UNWRAP_ROOT_FAILED               = 30, /**< Unwrapping of root container failed. */
+    MC_DRV_ERR_UNWRAP_SP_FAILED                 = 31, /**< Unwrapping of service provider container failed. */
+    MC_DRV_ERR_UNWRAP_TRUSTLET_FAILED           = 32, /**< Unwrapping of Trustlet container failed. */
 } mcResult_t;
 
 

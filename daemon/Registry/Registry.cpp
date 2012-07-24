@@ -339,7 +339,7 @@ mcResult_t mcRegistryReadSp(
         LOG_E("mcRegistry read So.Sp(SpId) failed: %d", MC_DRV_ERR_INVALID_DEVICE_FILE);
         return MC_DRV_ERR_INVALID_DEVICE_FILE;
     }
-    fseek(fs, 0, SEEK_SET);
+    fseek(fs, 0, SEEK_END);
     int32_t filesize = ftell(fs);
     if (sizeof(mcSoSpCont_t) != filesize) {
         fclose(fs);

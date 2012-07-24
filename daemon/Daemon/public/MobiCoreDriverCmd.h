@@ -55,15 +55,23 @@ typedef enum {
 
 
 typedef enum {
-	MC_DRV_RSP_OK                     = 0,
-	MC_DRV_RSP_FAILED                 = 1,
-    MC_DRV_RSP_DEVICE_NOT_OPENED      = 2,
-    MC_DRV_RSP_DEVICE_ALREADY_OPENED  = 3,
-	MC_DRV_RSP_COMMAND_NOT_ALLOWED    = 4,
-	MC_DRV_INVALID_DEVICE_NAME        = 5,
-	MC_DRV_RSP_MAP_BULK_ERRO          = 6,
-	MC_DRV_RSP_TRUSTLET_NOT_FOUND     = 7,
-	MC_DRV_RSP_PAYLOAD_LENGTH_ERROR	  = 8,
+	MC_DRV_RSP_OK                                   = 0,
+	MC_DRV_RSP_FAILED                               = 1,
+    MC_DRV_RSP_DEVICE_NOT_OPENED                    = 2,
+    MC_DRV_RSP_DEVICE_ALREADY_OPENED                = 3,
+	MC_DRV_RSP_COMMAND_NOT_ALLOWED                  = 4,
+	MC_DRV_INVALID_DEVICE_NAME                      = 5,
+	MC_DRV_RSP_MAP_BULK_ERRO                        = 6,
+	MC_DRV_RSP_TRUSTLET_NOT_FOUND                   = 7,
+	MC_DRV_RSP_PAYLOAD_LENGTH_ERROR	                = 8,
+    MC_DRV_RSP_WRONG_PUBLIC_KEY                     = 9,  /**< System Trustlet public key is wrong. */
+    MC_DRV_RSP_CONTAINER_TYPE_MISMATCH              = 10, /**< Wrong containter type(s). */
+    MC_DRV_RSP_CONTAINER_LOCKED                     = 11, /**< Container is locked (or not activated). */
+    MC_DRV_RSP_SP_NO_CHILD                          = 12, /**< SPID is not registered with root container. */
+    MC_DRV_RSP_TL_NO_CHILD                          = 13, /**< UUID is not registered with sp container. */
+    MC_DRV_RSP_UNWRAP_ROOT_FAILED                   = 14, /**< Unwrapping of root container failed. */
+    MC_DRV_RSP_UNWRAP_SP_FAILED                     = 15, /**< Unwrapping of service provider container failed. */
+    MC_DRV_RSP_UNWRAP_TRUSTLET_FAILED               = 16, /**< Unwrapping of Trustlet container failed. */
 } mcDrvRsp_t;
 
 

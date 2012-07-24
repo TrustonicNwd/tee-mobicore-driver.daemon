@@ -423,6 +423,30 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenSession(
             LOG_E("mcOpenSession(): CMD_OPEN_SESSION failed, respId=%d", rspHeader.responseId);
             switch(rspHeader.responseId)
             {
+            case MC_DRV_RSP_WRONG_PUBLIC_KEY:
+                mcResult = MC_DRV_ERR_WRONG_PUBLIC_KEY;
+                break;
+            case MC_DRV_RSP_CONTAINER_TYPE_MISMATCH:
+                mcResult = MC_DRV_ERR_CONTAINER_TYPE_MISMATCH;
+                break;
+            case MC_DRV_RSP_CONTAINER_LOCKED:
+                mcResult = MC_DRV_ERR_CONTAINER_LOCKED;
+                break;
+            case MC_DRV_RSP_SP_NO_CHILD:
+                mcResult = MC_DRV_ERR_SP_NO_CHILD;
+                break;
+            case MC_DRV_RSP_TL_NO_CHILD:
+                mcResult = MC_DRV_ERR_TL_NO_CHILD;
+                break;
+            case MC_DRV_RSP_UNWRAP_ROOT_FAILED:
+                mcResult = MC_DRV_ERR_UNWRAP_ROOT_FAILED;
+                break;
+            case MC_DRV_RSP_UNWRAP_SP_FAILED:
+                mcResult = MC_DRV_ERR_UNWRAP_SP_FAILED;
+                break;
+            case MC_DRV_RSP_UNWRAP_TRUSTLET_FAILED:
+                mcResult = MC_DRV_ERR_UNWRAP_TRUSTLET_FAILED;
+                break;
             case MC_DRV_RSP_TRUSTLET_NOT_FOUND:
             	mcResult = MC_DRV_ERR_INVALID_DEVICE_FILE;
             	break;
