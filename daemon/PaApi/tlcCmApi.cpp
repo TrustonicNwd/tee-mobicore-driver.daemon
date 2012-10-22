@@ -4,7 +4,7 @@
  * Content Manager API (implementation).
  *
  * <!-- Copyright Giesecke & Devrient GmbH 2009 - 2012 -->
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -33,7 +33,6 @@
 #include "tlcCmApi.h"
 #include "tlCmUuid.h"
 
-#define LOG_TAG "TlcCmApi"
 #include "log.h"
 
 #include <assert.h>
@@ -43,7 +42,7 @@
 static const uint32_t DEVICE_ID = MC_DEVICE_ID_DEFAULT;
 static mcSessionHandle_t m_sessionHandle = { 0, 0 };
 
-mcResult_t cmOpen(cmp_t** cmp)
+mcResult_t cmOpen(cmp_t **cmp)
 {
     const mcUuid_t UUID = TL_CM_UUID;
     mcResult_t result;
@@ -64,7 +63,7 @@ mcResult_t cmOpen(cmp_t** cmp)
         return result;
     }
 
-    result = mcOpenSession(&m_sessionHandle, &UUID, (uint8_t *)*cmp, (uint32_t) sizeof(cmp_t));
+    result = mcOpenSession(&m_sessionHandle, &UUID, (uint8_t *) * cmp, (uint32_t) sizeof(cmp_t));
     if (MC_DRV_OK != result) {
         LOG_E("Open session failed: %d", result);
     }

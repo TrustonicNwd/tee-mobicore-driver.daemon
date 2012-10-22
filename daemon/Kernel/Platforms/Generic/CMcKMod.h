@@ -5,7 +5,7 @@
  * MobiCore Driver Kernel Module Interface.
  *
  * <!-- Copyright Giesecke & Devrient GmbH 2009 - 2012 -->
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -39,105 +39,102 @@
 #include "CKMod.h"
 
 
-#define ERROR_MAPPING_FAILED         ((int)(-2))
-
 /**
  * As this is also used by the ClientLib, we do not use exceptions.
  */
-class CMcKMod : public CKMod {
-
+class CMcKMod : public CKMod
+{
 public:
+    /**
+    * Map data.
+    *
+    * @param len
+    * @param pHandle
+    * @param pVirtAddr
+    * @param pPhysAddr
+    *
+    * @return 0 if all went fine
+    * @return MC_DRV_ERR_KMOD_NOT_OPEN
+    * @return MC_DRV_ERR_KERNEL_MODULE or'ed with errno<<16
+    */
+    mcResult_t mapWsm(uint32_t  len,
+                      uint32_t    *pHandle,
+                      addr_t      *pVirtAddr,
+                      addr_t      *pPhysAddr);
+    /**
+    * Map data.
+    *
+    * @param len
+    * @param pHandle
+    * @param pVirtAddr
+    * @param pPhysAddr
+    * @param pMciReuse [in|out] set to true [in] for reusing MCI buffer
+    *                 is set to true [out] if MCI buffer has been reused
+    * @return 0 if all went fine
+    * @return MC_DRV_ERR_KMOD_NOT_OPEN
+    * @return MC_DRV_ERR_KERNEL_MODULE or'ed with errno<<16
+    */
+    mcResult_t mapMCI(
+        uint32_t    len,
+        uint32_t    *pHandle,
+        addr_t      *pVirtAddr,
+        addr_t      *pPhysAddr,
+        bool        *pReuse);
 
     /**
-     * Map data.
-     *
-     * @param len
-     * @param pHandle
-     * @param pVirtAddr
-     * @param pPhysAddr
-     * @param pMciReuse [in|out] set to true [in] for reusing MCI buffer
-     *                 is set to true [out] if MCI buffer has been reused
-     * @return 0 if all went fine
-     * @return ERROR_KMOD_NOT_OPEN
-     * @return ERROR_MAPPING_FAILED
-     */
-    int mmap(
-        uint32_t  len,
-        uint32_t  *pHandle,
-        addr_t    *pVirtAddr,
-        addr_t    *pPhysAddr,
-        bool      *pMciReuse
-    );
+    * Map persistent WSM which will not be freed up once the calling process dies.
+    */
+    mcResult_t mapPersistent(
+        uint32_t    len,
+        uint32_t    *pHandle,
+        addr_t      *pVirtAddr,
+        addr_t      *pPhysAddr);
 
-    /**
-     * Map persistent WSM which will not be freed up once the calling process dies.
-     */
-    int mapPersistent(
-        uint32_t  		len,
-        uint32_t  		*pHandle,
-        addr_t    		*pVirtAddr,
-        addr_t    		*pPhysAddr
-    );
+    int read(addr_t buffer, uint32_t len);
 
-    int read(
-        addr_t    buffer,
-        uint32_t  len
-    );
+    bool waitSSIQ(uint32_t *pCnt);
 
-    bool waitSSIQ(
-        uint32_t  *pCnt
-    );
-
-    int fcInit(
-        addr_t    mciBuffer,
-        uint32_t  nqOffset,
-        uint32_t  nqLength,
-        uint32_t  mcpOffset,
-        uint32_t  mcpLength
-    );
+    int fcInit(uint32_t nqOffset,
+               uint32_t    nqLength,
+               uint32_t    mcpOffset,
+               uint32_t    mcpLength);
 
     int fcInfo(
-        uint32_t  extInfoId,
-        uint32_t  *pState,
-        uint32_t  *pExtInfo
-    );
+        uint32_t    extInfoId,
+        uint32_t    *pState,
+        uint32_t    *pExtInfo);
 
-    int fcYield(
-        void
-    );
+    int fcYield(void);
 
-    int fcNSIQ(
-        void
-    );
+    int fcNSIQ(void);
 
-    int free(
-        uint32_t  handle
-    );
+    mcResult_t free(uint32_t handle, addr_t buffer, uint32_t len);
 
-    int registerWsmL2(
-        addr_t    buffer,
-        uint32_t  len,
-        uint32_t  pid,
-        uint32_t  *pHandle,
-        addr_t    *pPhysWsmL2
-    );
+    mcResult_t registerWsmL2(
+        addr_t      buffer,
+        uint32_t    len,
+        uint32_t    pid,
+        uint32_t    *pHandle,
+        addr_t      *pPhysWsmL2);
 
-    int unregisterWsmL2(
-        uint32_t  handle
-    );
+    mcResult_t unregisterWsmL2(uint32_t handle);
+
+    mcResult_t lockWsmL2(uint32_t handle);
+
+    mcResult_t unlockWsmL2(uint32_t handle);
+
+    mcResult_t cleanupWsmL2(void);
+
+    addr_t findWsmL2(uint32_t handle);
+
+    mcResult_t findContiguousWsm(uint32_t handle, addr_t *phys, uint32_t *len);
 
     /**
-     * Tell stub to start MobiCore from given physical address
-     */
-    int fcExecute(
-        addr_t    startAddr,
-        uint32_t  areaLength
-    );
+    * Tell stub to start MobiCore from given physical address
+    */
+    int fcExecute(addr_t startAddr, uint32_t areaLength);
 
-    bool checkKmodVersionOk(
-        void
-    );
-
+    bool checkVersion(void);
 };
 
 typedef CMcKMod  *CMcKMod_ptr;

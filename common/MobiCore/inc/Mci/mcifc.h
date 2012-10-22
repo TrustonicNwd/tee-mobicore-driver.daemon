@@ -49,7 +49,9 @@
 #define MC_FC_AFTR                   ((uint32_t)(-5))  /**< enter AFTR-sleep (called from core-0) */
 // --- wake-up access ---
 #define MC_FC_CORE_X_WAKEUP          ((uint32_t)(-4))  /**< wakeup/boot core-x (optional core-number in r1, not "0" ) */
-#define MC_FC_C15_RESUME            ((uint32_t)(-11))  /**< Write power control & diag registers */
+#define MC_FC_C15_RESUME             ((uint32_t)(-11)) /**< Write power control & diag registers */
+#define MC_FC_CMD_SAVE               ((uint32_t)(-6))  /**< Save core context to CP15 table(r1 is core number) */
+#define MC_FC_CMD_SHUTDOWN           ((uint32_t)(-7))  /**< Shutdown core(r1 is core number, cache flush is expected) */
 // --- L2 cache access ---
 #define MC_FC_L2X0_CTRL             ((uint32_t)(-21))  /**< Write to L2X0 control register */
 #define MC_FC_L2X0_SETUP1           ((uint32_t)(-22))  /**< Setup L2X0 register - part 1 */
@@ -62,6 +64,7 @@
 #define MC_FC_CP15_REG             ((uint32_t)(-101))  /**< general CP15/cache register update */
 // --- store value in sDDRRAM ---
 #define MC_FC_STORE_BINFO          ((uint32_t)(-201))  /**< write a 32bit value in secure DDRRAM in incremented art (max 2kB) */
+#define MC_FC_LOAD_BINFO           ((uint32_t)(-202))  /**< load a 32bit value from secure DDRRAM using an offset */
 
 #define MC_FC_MAX_ID         ((uint32_t)(0xFFFF0000))  /**< Maximum allowed FastCall ID */
 

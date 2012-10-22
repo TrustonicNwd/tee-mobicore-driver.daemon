@@ -5,7 +5,7 @@
  * Kernel Module Interface.
  *
  * <!-- Copyright Giesecke & Devrient GmbH 2009 - 2012 -->
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -38,85 +38,67 @@
 
 #include "CKMod.h"
 
-#define LOG_TAG	"McDaemon"
 #include "log.h"
 
+#define INVALID_FILE_DESCRIPTOR          ((int)(-1))
 
 //------------------------------------------------------------------------------
-CKMod::CKMod(
-    void
-) {
-	fdKMod = ERROR_KMOD_NOT_OPEN;
+CKMod::CKMod(void)
+{
+    fdKMod = INVALID_FILE_DESCRIPTOR;
 }
 
 
 //------------------------------------------------------------------------------
-CKMod::~CKMod(
-    void
-) {
-	close();
+CKMod::~CKMod(void)
+{
+    close();
 }
 
 
 //------------------------------------------------------------------------------
-bool CKMod::isOpen(
-    void
-) {
-	return (ERROR_KMOD_NOT_OPEN == fdKMod) ? false : true;
+bool CKMod::isOpen(void)
+{
+    return (INVALID_FILE_DESCRIPTOR == fdKMod) ? false : true;
 }
 
 
 //------------------------------------------------------------------------------
-bool CKMod::open(
-    const char *deviceName
-) {
-	bool ret = true;
+mcResult_t CKMod::open(const char *deviceName)
+{
+    if (isOpen()) {
+        LOG_W("already open");
+        return MC_DRV_ERR_DEVICE_ALREADY_OPEN;
+    }
 
-	do
-	{
-		if (isOpen())
-		{
-			LOG_W("already open");
-			ret = false;
-			break;
-		}
+    LOG_I(" Opening kernel module at %s.", deviceName);
 
-		// open return -1 on error, "errno" is set with details
-		int openRet = ::open(deviceName, O_RDWR);
-		if (-1 == openRet)
-		{
-			LOG_E("open failed with errno: %d", errno);
-			ret = false;
-			break;
-		}
+    // open return -1 on error, "errno" is set with details
+    int openRet = ::open(deviceName, O_RDWR);
+    if (openRet == -1) {
+        LOG_ERRNO("open");
+        return MAKE_MC_DRV_KMOD_WITH_ERRNO(errno);
+    }
 
-		fdKMod = openRet;
-
-	} while(0);
-
-	return ret;
+    fdKMod = openRet;
+    return MC_DRV_OK;
 }
 
 
 //------------------------------------------------------------------------------
 void CKMod::close(
     void
-) {
-	if (isOpen())
-	{
-		if (0 != ::close(fdKMod))
-		{
-			LOG_E("close failed with errno: %d", errno);
-		}
-		else
-		{
-			fdKMod = ERROR_KMOD_NOT_OPEN;
-		}
-	}
-	else
-	{
-		LOG_W("not open");
-	}
+)
+{
+    if (isOpen()) {
+        if (::close(fdKMod) != 0) {
+            LOG_ERRNO("close");
+        } else {
+            fdKMod = INVALID_FILE_DESCRIPTOR;
+        }
+    } else {
+        LOG_W(" Kernel module device not open");
+    }
 }
 
 /** @} */

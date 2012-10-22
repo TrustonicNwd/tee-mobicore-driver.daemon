@@ -58,5 +58,3 @@
 #endif // TLCMERROR_H_
 
 /** @} */
-
-

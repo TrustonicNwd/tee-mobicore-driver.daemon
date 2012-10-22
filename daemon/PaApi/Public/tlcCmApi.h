@@ -7,7 +7,7 @@
  * connector (Content Manager).
  *
  * <!-- Copyright Giesecke & Devrient GmbH 2009 - 2012 -->
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -39,46 +39,46 @@
 #include "tlCmError.h"
 
 #ifdef __cplusplus
-extern "C" { 
-#endif 
+extern "C" {
+#endif
 
-/** Opens a content management session.
- *
- * After opening a content management session the content manager is ready to
- * accecpt content management requests. Upon successful execution, this function
- * sets the cmp pointer to a content management protocol object that is to be
- * used for subsequent content management operations.
- *
- * @param [out] cmp Content management protocol object.
- *
- * @return MC_DRV_OK or error code.
- */
-mcResult_t cmOpen(cmp_t** cmp);
+    /** Opens a content management session.
+     *
+     * After opening a content management session the content manager is ready to
+     * accecpt content management requests. Upon successful execution, this function
+     * sets the cmp pointer to a content management protocol object that is to be
+     * used for subsequent content management operations.
+     *
+     * @param [out] cmp Content management protocol object.
+     *
+     * @return MC_DRV_OK or error code.
+     */
+    mcResult_t cmOpen(cmp_t **cmp);
 
-/** Closes a content management session.
- *
- * @return MC_DRV_OK or error code.
- */
-mcResult_t cmClose(void);
+    /** Closes a content management session.
+     *
+     * @return MC_DRV_OK or error code.
+     */
+    mcResult_t cmClose(void);
 
-/** Performs a content management operation.
- *
- * Executes the command contained in the content management protocol object
- *
- * returned from cmOpen. The result of the content management operation is also
- * conveyed within the CMP object returned from cmOpen, unless the overall
- * operation was aborted due to a low-level driver error, in which case the
- * return value of this routine is different to MC_DRV_OK.
- *
- * @return Indication as to whether the content management operation was executed.
- * MC_DRV_OK denotes that the operation was executed (see response contents of
- * the cmp_t object for details about the result of the operation).
- */
-mcResult_t cmManage(void);
+    /** Performs a content management operation.
+     *
+     * Executes the command contained in the content management protocol object
+     *
+     * returned from cmOpen. The result of the content management operation is also
+     * conveyed within the CMP object returned from cmOpen, unless the overall
+     * operation was aborted due to a low-level driver error, in which case the
+     * return value of this routine is different to MC_DRV_OK.
+     *
+     * @return Indication as to whether the content management operation was executed.
+     * MC_DRV_OK denotes that the operation was executed (see response contents of
+     * the cmp_t object for details about the result of the operation).
+     */
+    mcResult_t cmManage(void);
 
 #ifdef __cplusplus
 }
-#endif 
+#endif
 
 /** @} */
 

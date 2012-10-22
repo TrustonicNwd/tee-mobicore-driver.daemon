@@ -134,10 +134,10 @@ typedef union {
 } cmpVersionData_t;
 
 /** @defgroup MC_CMP_CMD_GET_VERSION
-* @{ */
+ * @{ */
 
 /** @defgroup MC_CMP_CMD_GET_VERSION_CMD Command
-* @{ */
+ * @{ */
 
 /** GetVersion command. */
 typedef struct {
@@ -147,11 +147,11 @@ typedef struct {
 /** @} */ 
 
 /** @defgroup MC_CMP_CMD_GET_VERSION_RSP Response
-* @{ */
+ * @{ */
 
 /** GetSuid response. */
 typedef struct {
-cmpResponseHeader_t rspHeader;
+    cmpResponseHeader_t rspHeader;
     cmpVersionTag_t tag;
     cmpVersionData_t data;
 } cmpRspGetVersion_t;
@@ -402,10 +402,10 @@ typedef struct {
 
 /** @defgroup MC_CMP_CMD_ROOT_CONT_REGISTER_ACTIVATE 
  * @{ */
- 
+
 /** @defgroup MC_CMP_CMD_ROOT_CONT_REGISTER_ACTIVATE_CMD Command
  * @{ */
- 
+
 typedef struct {
     mcSymmetricKey_t kRootAuth;
 } cmpRootRegActMsgEdata_t;
@@ -435,7 +435,7 @@ typedef struct {
 
 /** @defgroup MC_CMP_CMD_ROOT_CONT_REGISTER_ACTIVATE_RSP Response
  * @{ */
- 
+
 typedef struct {
     mcSoRootCont_t soRootCont;
 } cmpRootRegActRspEdata_t;
@@ -1478,10 +1478,10 @@ typedef struct {
 /** @} */ 
 
 /** @defgroup MC_CMP_CMD_GET_SUID
-* @{ */
+ * @{ */
 
 /** @defgroup MC_CMP_CMD_GET_SUID_CMD Command
-* @{ */
+ * @{ */
 
 /** GetSuid command. */
 typedef struct {
@@ -1491,11 +1491,11 @@ typedef struct {
 /** @} */ 
 
 /** @defgroup MC_CMP_CMD_GET_SUID_RSP Response
-* @{ */
+ * @{ */
 
 /** GetSuid response. */
 typedef struct {
-cmpResponseHeader_t rspHeader;
+    cmpResponseHeader_t rspHeader;
     mcSuid_t suid;
 } cmpRspGetSuid_t;
 
@@ -1504,10 +1504,10 @@ cmpResponseHeader_t rspHeader;
 /** @} */ 
 
 /** @defgroup MC_CMP_CMD_AUTHENTICATE_TERMINATE
-* @{ */
+ * @{ */
 
 /** @defgroup MC_CMP_CMD_AUTHENTICATE_TERMINATE_CMD Command
-* @{ */
+ * @{ */
 
 typedef struct {
     cmpCommandHeader_t cmdHeader;
@@ -1526,7 +1526,7 @@ typedef struct {
 /** @} */ 
 
 /** @defgroup MC_CMP_CMD_AUTHENTICATE_TERMINATE_RSP Response
-* @{ */
+ * @{ */
 
 typedef struct {
     cmpResponseHeader_t rspHeader;
@@ -1548,10 +1548,10 @@ typedef struct {
 
 /** @defgroup MC_CMP_CMD_TLT_CONT_PERSONALIZE
  * @{ */
- 
+
 /** @defgroup MC_CMP_CMD_TLT_CONT_PERSONALIZE_CMD Command
  * @{ */
- 
+
 typedef struct {
     mcPid_t pid;
     mcCoDataCont_t persoData;
@@ -1585,7 +1585,7 @@ typedef struct {
 
 /** @defgroup MC_CMP_CMD_TLT_CONT_PERSONLIZE_RSP Response
  * @{ */
- 
+
 typedef struct {
     mcSoDataCont_t soDataCont;
 } cmpTltContPersonalizeRspEdata_t;
@@ -1621,4 +1621,3 @@ typedef struct {
 #endif // CMP_H_
 
 /** @} */
-

@@ -2,7 +2,7 @@
  * @{
  * @file
  * <!-- Copyright Giesecke & Devrient GmbH 2009 - 2012 -->
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -30,20 +30,20 @@
 #include <stdint.h>
 #include <vector>
 
-#include "mcDrvModuleApi.h"
+#include "mc_linux.h"
 
 #include "Session.h"
 
-#define LOG_TAG	"McClient"
 #include "log.h"
+#include <assert.h>
 
 
 //------------------------------------------------------------------------------
 Session::Session(
     uint32_t    sessionId,
     CMcKMod     *mcKMod,
-    Connection  *connection
-) {
+    Connection  *connection)
+{
     this->sessionId = sessionId;
     this->mcKMod = mcKMod;
     this->notificationConnection = connection;
@@ -54,27 +54,24 @@ Session::Session(
 
 
 //------------------------------------------------------------------------------
-Session::~Session(
-    void
-) {
+Session::~Session(void)
+{
     BulkBufferDescriptor  *pBlkBufDescr;
 
     // Unmap still mapped buffers
     for ( bulkBufferDescrIterator_t iterator = bulkBufferDescriptors.begin();
-          iterator != bulkBufferDescriptors.end();
-          ++iterator)
-    {
+            iterator != bulkBufferDescriptors.end();
+            ++iterator) {
         pBlkBufDescr = *iterator;
 
         LOG_I("removeBulkBuf - Physical Address of L2 Table = 0x%X, handle= %d",
-                (unsigned int)pBlkBufDescr->physAddrWsmL2,
-                pBlkBufDescr->handle);
+              (unsigned int)pBlkBufDescr->physAddrWsmL2,
+              pBlkBufDescr->handle);
 
         // ignore any error, as we cannot do anything in this case.
         int ret = mcKMod->unregisterWsmL2(pBlkBufDescr->handle);
-        if (0 != ret)
-        {
-            LOG_E("removeBulkBuf(): mcKModUnregisterWsmL2 failed: %d",ret);
+        if (ret != 0) {
+            LOG_E("removeBulkBuf(): mcKModUnregisterWsmL2 failed: %d", ret);
         }
 
         //iterator = bulkBufferDescriptors.erase(iterator);
@@ -83,13 +80,16 @@ Session::~Session(
 
     // Finally delete notification connection
     delete notificationConnection;
+
+    unlock();
 }
 
 
 //------------------------------------------------------------------------------
 void Session::setErrorInfo(
     int32_t err
-) {
+)
+{
     sessionInfo.lastErr = err;
 }
 
@@ -97,111 +97,102 @@ void Session::setErrorInfo(
 //------------------------------------------------------------------------------
 int32_t Session::getLastErr(
     void
-) {
+)
+{
     return sessionInfo.lastErr;
 }
 
 
 //------------------------------------------------------------------------------
-BulkBufferDescriptor* Session::addBulkBuf(
-    addr_t		buf,
-    uint32_t	len
-) {
-    BulkBufferDescriptor* blkBufDescr = NULL;
+mcResult_t Session::addBulkBuf(addr_t buf, uint32_t len, BulkBufferDescriptor **blkBuf)
+{
+    addr_t pPhysWsmL2;
+    uint32_t handle;
+
+    assert(blkBuf != NULL);
 
     // Search bulk buffer descriptors for existing vAddr
     // At the moment a virtual address can only be added one time
     for ( bulkBufferDescrIterator_t iterator = bulkBufferDescriptors.begin();
-          iterator != bulkBufferDescriptors.end();
-          ++iterator
-    ) {
-        if ((*iterator)->virtAddr == buf)
-        {
-            return NULL;
+            iterator != bulkBufferDescriptors.end();
+            ++iterator) {
+        if ((*iterator)->virtAddr == buf) {
+            LOG_E("Cannot map a buffer to multiple locations in one Trustlet.");
+            return MC_DRV_ERR_BUFFER_ALREADY_MAPPED;
         }
     }
 
-    do
-    {
-        // Prepare the interface structure for memory registration in Kernel Module
-        addr_t    pPhysWsmL2;
-        uint32_t  handle;
+    // Prepare the interface structure for memory registration in Kernel Module
+    mcResult_t ret = mcKMod->registerWsmL2(buf, len, 0, &handle, &pPhysWsmL2);
 
-        int ret = mcKMod->registerWsmL2(
-                    buf,
-                    len,
-                    0,
-                    &handle,
-                    &pPhysWsmL2);
+    if (ret != MC_DRV_OK) {
+        LOG_V(" mcKMod->registerWsmL2() failed with %x", ret);
+        return ret;
+    }
 
-        if (0 != ret) {
-            LOG_E("mcKModRegisterWsmL2 failed, ret=%d",ret);
-            break;
-        }
+    LOG_V(" addBulkBuf - Handle of L2 Table = %u", handle);
 
-        LOG_I("addBulkBuf - Physical Address of L2 Table = 0x%X, handle=%d",
-                (unsigned int)pPhysWsmL2,
-                handle);
+    // Create new descriptor - secure virtual virtual set to 0, unknown!
+    *blkBuf = new BulkBufferDescriptor(buf, 0x0, len, handle, pPhysWsmL2);
 
-        // Create new descriptor
-        blkBufDescr = new BulkBufferDescriptor(
-                            buf,
-                            len,
-                            handle,
-                            pPhysWsmL2);
+    // Add to vector of descriptors
+    bulkBufferDescriptors.push_back(*blkBuf);
 
-        // Add to vector of descriptors
-        bulkBufferDescriptors.push_back(blkBufDescr);
-    } while(0);
-
-    return blkBufDescr;
+    return MC_DRV_OK;
 }
 
-
 //------------------------------------------------------------------------------
-bool Session::removeBulkBuf(
-	addr_t	virtAddr
-) {
-    bool ret = true;
-    BulkBufferDescriptor  *pBlkBufDescr = NULL;
-
-    LOG_I("removeBulkBuf(): Virtual Address = 0x%X", (unsigned int) virtAddr);
+uint32_t Session::getBufHandle(addr_t sVirtAddr)
+{
+    LOG_V("getBufHandle(): Virtual Address = 0x%X", (unsigned int) virtAddr);
 
     // Search and remove bulk buffer descriptor
     for ( bulkBufferDescrIterator_t iterator = bulkBufferDescriptors.begin();
-          iterator != bulkBufferDescriptors.end();
-          ++iterator
-    ) {
+            iterator != bulkBufferDescriptors.end();
+            ++iterator ) {
+        if ((*iterator)->sVirtualAddr == sVirtAddr) {
+            return (*iterator)->handle;
+        }
+    }
+    return 0;
+}
 
-        if ((*iterator)->virtAddr == virtAddr)
-        {
+//------------------------------------------------------------------------------
+mcResult_t Session::removeBulkBuf(addr_t virtAddr)
+{
+    BulkBufferDescriptor  *pBlkBufDescr = NULL;
+
+    LOG_V("removeBulkBuf(): Virtual Address = 0x%X", (unsigned int) virtAddr);
+
+    // Search and remove bulk buffer descriptor
+    for ( bulkBufferDescrIterator_t iterator = bulkBufferDescriptors.begin();
+            iterator != bulkBufferDescriptors.end();
+            ++iterator
+        ) {
+
+        if ((*iterator)->virtAddr == virtAddr) {
             pBlkBufDescr = *iterator;
             iterator = bulkBufferDescriptors.erase(iterator);
             break;
         }
     }
 
-    if (NULL == pBlkBufDescr)
-    {
-        LOG_E("removeBulkBuf - Virtual Address not found");
-        ret = false;
+    if (pBlkBufDescr == NULL) {
+        LOG_E("%p not registered in session %d.", virtAddr, sessionId);
+        return MC_DRV_ERR_BLK_BUFF_NOT_FOUND;
     }
-    else
-    {
-        LOG_I("removeBulkBuf(): WsmL2 phys=0x%X, handle=%d",
-        		(unsigned int)pBlkBufDescr->physAddrWsmL2, pBlkBufDescr->handle);
+    LOG_V("removeBulkBuf():handle=%u", pBlkBufDescr->handle);
 
-        // ignore any error, as we cannot do anything
-        int ret = mcKMod->unregisterWsmL2(pBlkBufDescr->handle);
-        if (0 != ret)
-        {
-            LOG_E("removeBulkBuf(): mcKModUnregisterWsmL2 failed: %d",ret);
-        }
-
-        delete (pBlkBufDescr);
+    // ignore any error, as we cannot do anything
+    mcResult_t ret = mcKMod->unregisterWsmL2(pBlkBufDescr->handle);
+    if (ret != MC_DRV_OK) {
+        LOG_E("mcKMod->unregisterWsmL2 failed: %x", ret);
+        return ret;
     }
 
-    return ret;
+    delete (pBlkBufDescr);
+
+    return MC_DRV_OK;
 }
 
 /** @} */

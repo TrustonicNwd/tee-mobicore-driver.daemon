@@ -40,6 +40,7 @@
 #define MCLOADFORMAT_H_
 
 #include "mcUuid.h"
+#include "mcSuid.h"
 #include "mcDriverId.h"
 
 #define MCLF_VERSION_MAJOR   2
@@ -100,46 +101,9 @@ typedef struct {
 /** @} */
 
 
-// Version 1 /////////////////////////////////////////////////////////////////////////////////////////////////////////
-/**
- * @defgroup MCLF_VER_V1   MCLF Version 1
- * @ingroup MCLF_VER
- *
- * @addtogroup MCLF_VER_V1
- * @{
- */
-
-/**
- * Version 1 MCLF header.
- */
-typedef struct {
-    mclfIntro_t             intro;           /**< MCLF header start with the mandatory intro. */
-    uint32_t                flags;           /**< Service flags. */
-    memType_t               memType;         /**< Type of memory the service must be executed from. */
-    serviceType_t           serviceType;     /**< Type of service. */
-
-    uint32_t                numInstances;    /**< Number of instances which can be run simultaneously. */
-    mcUuid_t                uuid;            /**< Loadable service unique identifier (UUID). */
-    mcDriverId_t            driverId;        /**< If the serviceType is SERVICE_TYPE_DRIVER the Driver ID is used. */
-    uint32_t                numThreads;      /**<
-                                              * <pre>
-                                              * <br>Number of threads (N) in a service depending on service type.<br>
-                                              *
-                                              *   SERVICE_TYPE_SP_TRUSTLET: N = 1
-                                              *   SERVICE_TYPE_SYSTEM_TRUSTLET: N = 1
-                                              *   SERVICE_TYPE_DRIVER: N >= 1
-                                              * </pre>
-                                              */
-    segmentDescriptor_t     text;           /**< Virtual text segment. */
-    segmentDescriptor_t     data;           /**< Virtual data segment. */
-    uint32_t                bssLen;         /**< Length of the BSS segment in bytes. MUST be at least 8 byte. */
-    addr_t                  entry;          /**< Virtual start address of service code. */
-} mclfHeaderV1_t, *mclfHeaderV1_ptr;
-/** @} */
-
 // Version 2 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
- * @defgroup MCLF_VER_V2   MCLF Version 2
+ * @defgroup MCLF_VER_V2   MCLF Version 32
  * @ingroup MCLF_VER
  *
  * @addtogroup MCLF_VER_V2
@@ -147,7 +111,7 @@ typedef struct {
  */
 
 /**
- * Version 2 MCLF header.
+ * Version 2.1 MCLF header.
  */
 typedef struct {
     mclfIntro_t             intro;           /**< MCLF header start with the mandatory intro. */
@@ -172,11 +136,45 @@ typedef struct {
     uint32_t                bssLen;         /**< Length of the BSS segment in bytes. MUST be at least 8 byte. */
     addr_t                  entry;          /**< Virtual start address of service code. */
     uint32_t                serviceVersion; /**< Version of the interface the driver exports. */
+
+// These should be put on next MCLF update:
+//    mcSuid_t                permittedSuid;  /**< Starting 2.2: If nonzero, suid which is allowed to execute binary */
+//    uint32_t                permittedHwCf;  /**< Starting 2.2: If nonzero, hw configuration which is allowed to execute binary */
+
 } mclfHeaderV2_t, *mclfHeaderV2_ptr;
 /** @} */
 
 
-// Version 1 and 2 ///////////////////////////////////////////////////////////////////////////////////////////////////
+/**
+ * Version 2 MCLF text segment header.
+ * Required to be present in MobiCore 1.2 components at address (0x1080).
+ * This extension is initialized already at trustlet compile time,
+ * but may be modified later by configuration tools and by MobiCore at load time.
+ */
+typedef struct {
+    uint32_t                version;        /**< Version of the TextHeader structure. */
+    uint32_t                textHeaderLen;  /**< Size of this structure (fixed at compile time) */
+    uint32_t                requiredFeat;   /**< Flags to indicate features that Mobicore must understand/interprete when loading.
+                                                 Initial value set at compile time.
+                                                 Required always. */
+    addr_t                  mcLibEntry;     /**< Address for McLib entry.
+                                                 Mobicore sets at load time for trustlets / drivers.
+                                                 Required always. */
+    segmentDescriptor_t     mcLibData;      /**< Segment for McLib data.
+                                                 Set at compile time.
+                                                 Required always. */
+    addr_t                  mcLibBase;      /**< McLib base address.
+                                                 Mobicore sets at load time for trustlets / drivers.
+                                                 Required always. */
+    uint32_t                tlApiVers;      /**< TlApi version used when building trustlet.
+                                                 Value set at compile time.
+                                                 Required always. */
+    uint32_t                drApiVers;      /**< DrApi version used when building trustlet.
+                                                 Value set at compile time for drivers. 0 for trustlets.
+                                                 Required always. */
+} mclfTextHeader_t, *mclfTextHeader_ptr;
+
+// Version 2 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @addtogroup MCLF
  * @{
@@ -185,7 +183,6 @@ typedef struct {
 /** MCLF header */
 typedef union {
     mclfIntro_t    intro;           /**< Intro for data structure identification. */
-    mclfHeaderV1_t mclfHeaderV1;    /**< Version 1 header */
     mclfHeaderV2_t mclfHeaderV2;    /**< Version 2 header */
 } mclfHeader_t, *mclfHeader_ptr;
 
