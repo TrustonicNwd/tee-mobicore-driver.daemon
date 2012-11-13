@@ -103,8 +103,3 @@ include $(LOG_WRAPPER)/Android.mk
 
 LOCAL_SHARED_LIBRARIES += libMcClient
 include $(BUILD_SHARED_LIBRARY)
-
-# =============================================================================
-ifneq ($(filter-out Generic,$(PLATFORM)),)
-  $(call import-module,$(COMP_PATH_QualcommQSEEComAPI))
-endif
