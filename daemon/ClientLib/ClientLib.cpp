@@ -545,7 +545,7 @@ __MC_CLIENT_LIB_API mcResult_t mcWaitNotification(
 {
     mcResult_t mcResult = MC_DRV_OK;
 
-    devMutex.lock();
+    // devMutex.lock();
     LOG_I("===%s()===", __FUNCTION__);
 
     do {
@@ -614,7 +614,7 @@ __MC_CLIENT_LIB_API mcResult_t mcWaitNotification(
 
     } while (false);
 
-    devMutex.unlock();
+    // devMutex.unlock();
     return mcResult;
 }
 
