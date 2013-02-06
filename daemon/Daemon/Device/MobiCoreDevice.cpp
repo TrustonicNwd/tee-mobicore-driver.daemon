@@ -1,8 +1,9 @@
 /** @addtogroup MCD_MCDIMPL_DAEMON_DEV
  * @{
  * @file
- *
- *
+ */
+
+/*
  * <!-- Copyright Giesecke & Devrient GmbH 2009 - 2012 -->
  *
  * Redistribution and use in source and binary forms, with or without
@@ -248,36 +249,39 @@ bool MobiCoreDevice::waitMcpNotification(void)
 mcResult_t MobiCoreDevice::openSession(
     Connection                      *deviceConnection,
     loadDataOpenSession_ptr         pLoadDataOpenSession,
-    MC_DRV_CMD_OPEN_SESSION_struct  *cmdOpenSession,
-    mcDrvRspOpenSessionPayload_ptr  pRspOpenSessionPayload
-)
+    uint32_t                        tciHandle,
+    uint32_t                        tciLen,
+    mcDrvRspOpenSessionPayload_ptr  pRspOpenSessionPayload)
 {
     do {
         addr_t tci;
         uint32_t len;
-        uint32_t handle = cmdOpenSession->handle;
 
-        if (!findContiguousWsm(handle, &tci, &len)) {
-            LOG_E("Failed to find contiguous WSM %u", handle);
+        if (!findContiguousWsm(tciHandle, &tci, &len)) {
+            LOG_E("Failed to find contiguous WSM %u", tciHandle);
             return MC_DRV_ERR_DAEMON_WSM_HANDLE_NOT_FOUND;
         }
 
-        if (!lockWsmL2(handle)) {
-            LOG_E("Failed to lock contiguous WSM %u", handle);
+        if (!lockWsmL2(tciHandle)) {
+            LOG_E("Failed to lock contiguous WSM %u", tciHandle);
             return MC_DRV_ERR_DAEMON_WSM_HANDLE_NOT_FOUND;
         }
+
+        if (tciLen == 0 ||  tciLen > len) {
+            LOG_E("Invalid TCI len from client %u, driver = %u",
+                  pLoadDataOpenSession->len, len);
+            return MC_DRV_ERR_TCI_GREATER_THAN_WSM;
+        }
+
 
         // Write MCP open message to buffer
         mcpMessage->cmdOpen.cmdHeader.cmdId = MC_MCP_CMD_OPEN_SESSION;
-        mcpMessage->cmdOpen.uuid = cmdOpenSession->uuid;
+        mcpMessage->cmdOpen.uuid = pLoadDataOpenSession->tlHeader->mclfHeaderV2.uuid;
         mcpMessage->cmdOpen.wsmTypeTci = WSM_CONTIGUOUS;
         mcpMessage->cmdOpen.adrTciBuffer = (uint32_t)(tci);
         mcpMessage->cmdOpen.ofsTciBuffer = 0;
-        mcpMessage->cmdOpen.lenTciBuffer = len;
-
-        LOG_I(" Using phys=%p, len=%d as TCI buffer",
-              (addr_t)(cmdOpenSession->tci),
-              cmdOpenSession->len);
+        mcpMessage->cmdOpen.lenTciBuffer = tciLen;
+        LOG_I(" Using phys=%p, len=%d as TCI buffer", (addr_t)tci, tciLen);
 
         // check if load data is provided
         mcpMessage->cmdOpen.wsmTypeLoadData = WSM_L2;
@@ -295,7 +299,7 @@ mcResult_t MobiCoreDevice::openSession(
         // Wait till response from MC is available
         if (!waitMcpNotification()) {
             // Here Mobicore can be considered dead.
-            unlockWsmL2(handle);
+            unlockWsmL2(tciHandle);
             return MC_DRV_ERR_DAEMON_MCI_ERROR;
         }
 
@@ -304,7 +308,7 @@ mcResult_t MobiCoreDevice::openSession(
             LOG_E("CMD_OPEN_SESSION got invalid MCP command response(0x%X)", mcpMessage->rspHeader.rspId);
             // Something is messing with our MCI memory, we cannot know if the Trustlet was loaded.
             // Had in been loaded, we are loosing track of it here.
-            unlockWsmL2(handle);
+            unlockWsmL2(tciHandle);
             return MC_DRV_ERR_DAEMON_MCI_ERROR;
         }
 
@@ -312,7 +316,7 @@ mcResult_t MobiCoreDevice::openSession(
 
         if (mcRet != MC_MCP_RET_OK) {
             LOG_E("MCP OPEN returned code %d.", mcRet);
-            unlockWsmL2(handle);
+            unlockWsmL2(tciHandle);
             return MAKE_MC_DRV_MCP_ERROR(mcRet);
         }
 
@@ -329,7 +333,7 @@ mcResult_t MobiCoreDevice::openSession(
 
         trustletSessions.push_back(trustletSession);
 
-        trustletSession->addBulkBuff(new CWsm((void *)pLoadDataOpenSession->offs, pLoadDataOpenSession->len, handle, 0));
+        trustletSession->addBulkBuff(new CWsm((void *)pLoadDataOpenSession->offs, pLoadDataOpenSession->len, tciHandle, 0));
 
         // We have some queued notifications and we need to send them to them
         // trustlet session

@@ -33,10 +33,10 @@
 
 #include <inttypes.h>      // ANSI C99
 
-
-#define SOCK_PATH "#mcdaemon"
 #include "mcUuid.h"
 #include "mcVersionInfo.h"
+
+#define SOCK_PATH "#mcdaemon"
 
 typedef enum {
     MC_DRV_CMD_PING                 = 0,
@@ -51,6 +51,28 @@ typedef enum {
     MC_DRV_CMD_UNMAP_BULK_BUF       = 9,
     MC_DRV_CMD_GET_VERSION          = 10,
     MC_DRV_CMD_GET_MOBICORE_VERSION = 11,
+    MC_DRV_CMD_OPEN_TRUSTLET        = 12,
+
+    // Registry Commands
+
+    // Auth token OPS
+    MC_DRV_REG_STORE_AUTH_TOKEN     = 0x100000,
+    MC_DRV_REG_READ_AUTH_TOKEN      = 0x100001,
+    MC_DRV_REG_DELETE_AUTH_TOKEN    = 0x100002,
+    // Root container OPS
+    MC_DRV_REG_READ_ROOT_CONT       = 0x100003,
+    MC_DRV_REG_WRITE_ROOT_CONT      = 0x100004,
+    MC_DRV_REG_DELETE_ROOT_CONT     = 0x100005,
+    // Service Provider Container OPS
+    MC_DRV_REG_READ_SP_CONT         = 0x100006,
+    MC_DRV_REG_WRITE_SP_CONT        = 0x100007,
+    MC_DRV_REG_DELETE_SP_CONT       = 0x100008,
+    // Trustlet Container OPS
+    MC_DRV_REG_READ_TL_CONT         = 0x100009,
+    MC_DRV_REG_WRITE_TL_CONT        = 0x10000A,
+    MC_DRV_REG_DELETE_TL_CONT       = 0x10000B,
+    // Shared Object Data write
+    MC_DRV_REG_WRITE_SO_DATA        = 0x10000C,
 } mcDrvCmd_t;
 
 typedef struct {
@@ -62,8 +84,8 @@ typedef struct {
     uint32_t  responseId;
 } mcDrvResponseHeader_t;
 
-#define MC_DEVICE_ID_DEFAULT    0 /**< The default device ID */
 
+#define MC_DEVICE_ID_DEFAULT    0 /**< The default device ID */
 
 //--------------------------------------------------------------
 struct MC_DRV_CMD_OPEN_DEVICE_struct {
@@ -105,6 +127,26 @@ typedef struct {
     mcDrvRspOpenSessionPayload_t  payload;
 } mcDrvRspOpenSession_t;
 
+//--------------------------------------------------------------
+struct MC_DRV_CMD_OPEN_TRUSTLET_struct {
+    uint32_t  commandId;
+    uint32_t  deviceId;
+    uint32_t  trustlet_len;
+    uint32_t  tci;
+    uint32_t  handle;
+    uint32_t  len;
+};
+
+typedef struct {
+    uint32_t  sessionId;
+    uint32_t  deviceSessionId;
+    uint32_t  sessionMagic;
+} mcDrvRspOpenTrustletPayload_t, *mcDrvRspOpenTrustletPayload_ptr;
+
+typedef struct {
+    mcDrvResponseHeader_t          header;
+    mcDrvRspOpenTrustletPayload_t  payload;
+} mcDrvRspOpenTrustlet_t;
 
 //--------------------------------------------------------------
 struct MC_DRV_CMD_CLOSE_SESSION_struct {
@@ -115,7 +157,6 @@ struct MC_DRV_CMD_CLOSE_SESSION_struct {
 typedef struct {
     mcDrvResponseHeader_t         header;
 } mcDrvRspCloseSession_t;
-
 
 //--------------------------------------------------------------
 struct MC_DRV_CMD_NOTIFY_struct {
@@ -188,7 +229,6 @@ struct MC_DRV_CMD_GET_MOBICORE_VERSION_struct {
     uint32_t  commandId;
 };
 
-
 typedef struct {
     mcVersionInfo_t versionInfo;
 } mcDrvRspGetMobiCoreVersionPayload_t, *mcDrvRspGetMobiCoreVersionPayload_ptr;
@@ -204,6 +244,7 @@ typedef union {
     MC_DRV_CMD_OPEN_DEVICE_struct       mcDrvCmdOpenDevice;
     MC_DRV_CMD_CLOSE_DEVICE_struct      mcDrvCmdCloseDevice;
     MC_DRV_CMD_OPEN_SESSION_struct      mcDrvCmdOpenSession;
+    MC_DRV_CMD_OPEN_TRUSTLET_struct     mcDrvCmdOpenTrustlet;
     MC_DRV_CMD_CLOSE_SESSION_struct     mcDrvCmdCloseSession;
     MC_DRV_CMD_NQ_CONNECT_struct        mcDrvCmdNqConnect;
     MC_DRV_CMD_NOTIFY_struct            mcDrvCmdNotify;

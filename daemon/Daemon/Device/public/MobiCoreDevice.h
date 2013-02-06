@@ -130,10 +130,11 @@ public:
 
     mcResult_t openSession(Connection *deviceConnection,
                            loadDataOpenSession_ptr         pLoadDataOpenSession,
-                           MC_DRV_CMD_OPEN_SESSION_struct  *cmdOpenSession,
+                           uint32_t                        tciHandle,
+                           uint32_t                        tciLen,
                            mcDrvRspOpenSessionPayload_ptr  pRspOpenSessionPayload);
 
-    TrustletSession *registerTrustletConnection( Connection *connection,
+    TrustletSession *registerTrustletConnection(Connection *connection,
             MC_DRV_CMD_NQ_CONNECT_struct  *cmdNqConnect);
 
     // Internal function
@@ -185,8 +186,6 @@ public:
      * */
     virtual bool initDevice(
         const char  *devFile,
-        bool        loadMobiCore,
-        const char  *mobicoreImage,
         bool        enableScheduler
     ) = 0;
 
@@ -210,6 +209,8 @@ public:
      * Cleanup all orphaned bulk buffers.
      */
     virtual bool cleanupWsmL2(void) = 0;
+
+    virtual bool setupLog(void) = 0;
 
     /**
      * Allocates persistent WSM memory for TL (won't be released when TLC exits).

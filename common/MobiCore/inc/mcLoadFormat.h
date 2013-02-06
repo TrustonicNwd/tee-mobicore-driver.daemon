@@ -10,7 +10,7 @@
  * MobiCore Load Format declarations.
  *
  * Holds the definitions for the layout of MobiCore Trustlet Blob.
- * <!-- Copyright Giesecke & Devrient GmbH 2009-2012 -->
+ * <!-- Copyright Trustonic 2013-2014 -->
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,7 +44,8 @@
 #include "mcDriverId.h"
 
 #define MCLF_VERSION_MAJOR   2
-#define MCLF_VERSION_MINOR   1
+#define MCLF_VERSION_MINOR   2
+#define MCLF_VERSION_MINOR_CURRENT   1
 
 #define MC_SERVICE_HEADER_MAGIC_BE         ((uint32_t)('M'|('C'<<8)|('L'<<16)|('F'<<24))) /**< "MCLF" in big endian integer representation */
 #define MC_SERVICE_HEADER_MAGIC_LE         ((uint32_t)(('M'<<24)|('C'<<16)|('L'<<8)|'F')) /**< "MCLF" in little endian integer representation */
@@ -111,7 +112,7 @@ typedef struct {
  */
 
 /**
- * Version 2.1 MCLF header.
+ * Version 2.1/2.2 MCLF header.
  */
 typedef struct {
     mclfIntro_t             intro;           /**< MCLF header start with the mandatory intro. */
@@ -138,12 +139,22 @@ typedef struct {
     uint32_t                serviceVersion; /**< Version of the interface the driver exports. */
 
 // These should be put on next MCLF update:
-//    mcSuid_t                permittedSuid;  /**< Starting 2.2: If nonzero, suid which is allowed to execute binary */
-//    uint32_t                permittedHwCf;  /**< Starting 2.2: If nonzero, hw configuration which is allowed to execute binary */
+//    mcSuid_t                permittedSuid;  /**< Starting 2.3: If nonzero, suid which is allowed to execute binary */
+//    uint32_t                permittedHwCf;  /**< Starting 2.3: If nonzero, hw configuration which is allowed to execute binary */
 
 } mclfHeaderV2_t, *mclfHeaderV2_ptr;
 /** @} */
 
+
+/**
+ * Version 2.3 MCLF header.
+ */
+typedef struct {
+    mclfHeaderV2_t          mclfHeaderV2;
+    mcSuid_t                permittedSuid;  /**< Starting 2.3: If nonzero, suid which is allowed to execute binary */
+    uint32_t                permittedHwCfg; /**< Starting 2.3: If nonzero, hw configuration which is allowed to execute binary */
+} mclfHeaderV23_t, *mclfHeaderV23_ptr;
+/** @} */
 
 /**
  * Version 2 MCLF text segment header.
@@ -185,6 +196,17 @@ typedef union {
     mclfIntro_t    intro;           /**< Intro for data structure identification. */
     mclfHeaderV2_t mclfHeaderV2;    /**< Version 2 header */
 } mclfHeader_t, *mclfHeader_ptr;
+
+// Version 2.3 changes header definition
+// Above structure is hard-coded into many places.
+// So new changes are made into separate structure.
+#define MCLF_HEADER_SIZE_V23 (0x080)
+
+// Actual (known) length can be calculated using macro
+#define MCLF_HEADER_SIZE(version) ((version)>0x20002?(MCLF_HEADER_SIZE_V23):sizeof(mclfHeader_t))
+
+// This is only minimum size, so nothing below this makes sense.
+#define MCLF_BINARY_MIN_SIZE(version) (MCLF_HEADER_SIZE_V23+sizeof(mclfTextHeader_t))
 
 #endif /* MCLOADFORMAT_H_ */
 

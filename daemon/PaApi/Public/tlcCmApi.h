@@ -35,8 +35,8 @@
 
 #include "MobiCoreDriverApi.h"
 #include "mcUuid.h"
-#include "tlCmApi.h"
-#include "tlCmError.h"
+#include "TlCm/2.0/tlCmApi.h"
+#include "TlCm/tlCmError.h"
 
 #ifdef __cplusplus
 extern "C" {

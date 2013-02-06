@@ -3,8 +3,9 @@
  * @file
  *
  * Entry of the MobiCore Driver.
- *
- * <!-- Copyright Giesecke & Devrient GmbH 2009 - 2012 -->
+ */
+
+/* <!-- Copyright Giesecke & Devrient GmbH 2009 - 2012 -->
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,7 +44,7 @@
 #include "mc_linux.h"
 
 #include "MobiCoreDriverDaemon.h"
-#include "MobiCoreRegistry.h"
+#include "PrivateRegistry.h"
 #include "MobiCoreDevice.h"
 
 #include "NetlinkServer.h"
@@ -64,21 +65,14 @@ static void checkMobiCoreVersion(MobiCoreDevice *mobiCoreDevice);
 //------------------------------------------------------------------------------
 MobiCoreDriverDaemon::MobiCoreDriverDaemon(
     bool enableScheduler,
-    bool loadMobicore,
-    std::string mobicoreImage,
-    unsigned int donateRamSize,
     bool loadDriver,
-    std::string driverPath
-)
+    std::vector<std::string> drivers)
 {
     mobiCoreDevice = NULL;
 
     this->enableScheduler = enableScheduler;
-    this->loadMobicore = loadMobicore;
-    this->mobicoreImage = mobicoreImage;
-    this->donateRamSize = donateRamSize;
     this->loadDriver = loadDriver;
-    this->driverPath = driverPath;
+    this->drivers = drivers;
 
     for (int i = 0; i < MAX_SERVERS; i++) {
         servers[i] = NULL;
@@ -127,8 +121,6 @@ void MobiCoreDriverDaemon::run(
     LOG_I("Initializing MobiCore Device");
     if (!mobiCoreDevice->initDevice(
                 "/dev/" MC_ADMIN_DEVNODE,
-                loadMobicore,
-                mobicoreImage.c_str(),
                 enableScheduler)) {
         LOG_E("Could not initialize MobiCore!");
         return;
@@ -137,12 +129,6 @@ void MobiCoreDriverDaemon::run(
 
     LOG_I("Checking version of MobiCore");
     checkMobiCoreVersion(mobiCoreDevice);
-
-    if (donateRamSize > 0) {
-        // Donate additional RAM to MC
-        LOG_I("Donating %u Kbytes to Mobicore", donateRamSize / 1024);
-        mobiCoreDevice->donateRam(donateRamSize);
-    }
 
     if ( mobiCoreDevice->mobicoreAlreadyRunning() ) {
         // MC is already initialized, remove all pending sessions
@@ -157,7 +143,8 @@ void MobiCoreDriverDaemon::run(
 
     // Load device driver if requested
     if (loadDriver) {
-        loadDeviceDriver(driverPath);
+        for (unsigned int i = 0; i < drivers.size(); i++)
+            loadDeviceDriver(drivers[i]);
     }
 
     LOG_I("Creating socket servers");
@@ -232,13 +219,6 @@ bool MobiCoreDriverDaemon::loadDeviceDriver(
 
     do {
         //mobiCoreDevice
-        FILE *fs = fopen (driverPath.c_str(), "rb");
-        if (!fs) {
-            LOG_E("%s: failed: cannot open %s", __FUNCTION__, driverPath.c_str());
-            break;
-        }
-        fclose(fs);
-
         LOG_I("%s: loading %s", __FUNCTION__, driverPath.c_str());
 
         regObj = mcRegistryGetDriverBlob(driverPath.c_str());
@@ -260,25 +240,21 @@ bool MobiCoreDriverDaemon::loadDeviceDriver(
         loadDataOpenSession.baseAddr = pWsm->physAddr;
         loadDataOpenSession.offs = ((uint32_t) regObj->value) & 0xFFF;
         loadDataOpenSession.len = regObj->len;
-        loadDataOpenSession.tlHeader = (mclfHeader_ptr) regObj->value;
+        loadDataOpenSession.tlHeader = (mclfHeader_ptr) (regObj->value + regObj->tlStartOffset);
 
-        MC_DRV_CMD_OPEN_SESSION_struct  cmdOpenSession;
         tci = (uint8_t *)malloc(DRIVER_TCI_LEN);
         pTciWsm = mobiCoreDevice->allocateContiguousPersistentWsm(DRIVER_TCI_LEN);
         if (pTciWsm == NULL) {
             LOG_E("allocating WSM TCI for Trustlet failed");
             break;
         }
-        cmdOpenSession.deviceId = MC_DEVICE_ID_DEFAULT;
-        cmdOpenSession.tci = (uint32_t)pTciWsm->physAddr;
-        cmdOpenSession.len = DRIVER_TCI_LEN;
-        cmdOpenSession.handle = pTciWsm->handle;
 
         conn = new Connection();
         uint32_t mcRet = mobiCoreDevice->openSession(
                              conn,
                              &loadDataOpenSession,
-                             &cmdOpenSession,
+                             pTciWsm->handle,
+                             pTciWsm->len,
                              &(rspOpenSession.payload));
 
         // Unregister physical memory from kernel module.
@@ -347,9 +323,18 @@ bool MobiCoreDriverDaemon::loadDeviceDriver(
     }
 
 //------------------------------------------------------------------------------
-void MobiCoreDriverDaemon::processOpenDevice(
-    Connection  *connection
-)
+inline bool getData(Connection *con, void *buf, uint32_t len)
+{
+    uint32_t rlen = con->readData(buf, len);
+    if (rlen < len || rlen < 0) {
+        LOG_E("reading from Client failed");
+        return false;
+    }
+    return true;
+}
+
+//------------------------------------------------------------------------------
+void MobiCoreDriverDaemon::processOpenDevice(Connection *connection)
 {
     MC_DRV_CMD_OPEN_DEVICE_struct cmdOpenDevice;
     RECV_PAYLOAD_FROM_CLIENT(connection, &cmdOpenDevice);
@@ -403,9 +388,7 @@ void MobiCoreDriverDaemon::processCloseDevice(
 
 
 //------------------------------------------------------------------------------
-void MobiCoreDriverDaemon::processOpenSession(
-    Connection  *connection
-)
+void MobiCoreDriverDaemon::processOpenSession(Connection *connection)
 {
     MC_DRV_CMD_OPEN_SESSION_struct cmdOpenSession;
     RECV_PAYLOAD_FROM_CLIENT(connection, &cmdOpenSession);
@@ -415,11 +398,99 @@ void MobiCoreDriverDaemon::processOpenSession(
     CHECK_DEVICE(device, connection);
 
     // Get service blob from registry
-    regObject_t *regObj = mcRegistryGetServiceBlob(&(cmdOpenSession.uuid));
+    regObject_t *regObj = mcRegistryGetServiceBlob(&cmdOpenSession.uuid);
     if (NULL == regObj) {
         writeResult(connection, MC_DRV_ERR_TRUSTLET_NOT_FOUND);
         return;
     }
+    if (regObj->len == 0) {
+        free(regObj);
+        writeResult(connection, MC_DRV_ERR_TRUSTLET_NOT_FOUND);
+        return;
+    }
+    LOG_I(" Sharing Service loaded at %p with Secure World", (addr_t)(regObj->value));
+
+    CWsm_ptr pWsm = device->registerWsmL2((addr_t)(regObj->value), regObj->len, 0);
+    if (pWsm == NULL) {
+        LOG_E("allocating WSM for Trustlet failed");
+        writeResult(connection, MC_DRV_ERR_DAEMON_KMOD_ERROR);
+        return;
+    }
+    // Initialize information data of open session command
+    loadDataOpenSession_t loadDataOpenSession;
+    loadDataOpenSession.baseAddr = pWsm->physAddr;
+    loadDataOpenSession.offs = ((uint32_t) regObj->value) & 0xFFF;
+    loadDataOpenSession.len = regObj->len;
+    loadDataOpenSession.tlHeader = (mclfHeader_ptr) (regObj->value + regObj->tlStartOffset);
+
+    mcDrvRspOpenSession_t rspOpenSession;
+    mcResult_t ret = device->openSession(
+                         connection,
+                         &loadDataOpenSession,
+                         cmdOpenSession.handle,
+                         cmdOpenSession.len,
+                         &rspOpenSession.payload);
+
+    // Unregister physical memory from kernel module.
+    LOG_I(" Service buffer was copied to Secure world and processed. Stop sharing of buffer.");
+
+    // This will also destroy the WSM object.
+    if (!device->unregisterWsmL2(pWsm)) {
+        // TODO-2012-07-02-haenellu: Can this ever happen? And if so, we should assert(), also TL might still be running.
+        writeResult(connection, MC_DRV_ERR_DAEMON_KMOD_ERROR);
+        return;
+    }
+
+    // Free memory occupied by Trustlet data
+    free(regObj);
+
+    if (ret != MC_DRV_OK) {
+        LOG_E("Service could not be loaded.");
+        writeResult(connection, ret);
+    } else {
+        rspOpenSession.header.responseId = ret;
+        connection->writeData(
+            &rspOpenSession,
+            sizeof(rspOpenSession));
+    }
+}
+
+//------------------------------------------------------------------------------
+void MobiCoreDriverDaemon::processOpenTrustlet(Connection *connection)
+{
+    MC_DRV_CMD_OPEN_TRUSTLET_struct cmdOpenTrustlet;
+    RECV_PAYLOAD_FROM_CLIENT(connection, &cmdOpenTrustlet);
+
+    // Device required
+    MobiCoreDevice  *device = (MobiCoreDevice *) (connection->connectionData);
+    CHECK_DEVICE(device, connection);
+
+    uint32_t len = cmdOpenTrustlet.trustlet_len;
+    void *payload = (void*)malloc(len);
+    uint32_t rlen = connection->readData(payload, len);
+    if (rlen < 0) {
+        LOG_E("reading from Client failed");
+        /* it is questionable, if writing to broken socket has any effect here. */
+        writeResult(connection, MC_DRV_ERR_DAEMON_SOCKET);
+        free(payload);
+    }
+    if (rlen != len) {
+        LOG_E("wrong buffer length %i received from Client", rlen);
+        writeResult(connection, MC_DRV_ERR_DAEMON_SOCKET);
+        free(payload);
+        return;
+    }
+
+    // Get service blob from registry
+    regObject_t *regObj = mcRegistryMemGetServiceBlob((uint8_t*)payload, len);
+
+    // Free the payload object no matter what
+    free(payload);
+    if (regObj == NULL) {
+        writeResult(connection, MC_DRV_ERR_TRUSTLET_NOT_FOUND);
+        return;
+    }
+
     if (regObj->len == 0) {
         free(regObj);
         writeResult(connection, MC_DRV_ERR_TRUSTLET_NOT_FOUND);
@@ -444,8 +515,9 @@ void MobiCoreDriverDaemon::processOpenSession(
     mcResult_t ret = device->openSession(
                          connection,
                          &loadDataOpenSession,
-                         &cmdOpenSession,
-                         &(rspOpenSession.payload));
+                         cmdOpenTrustlet.handle,
+                         cmdOpenTrustlet.len,
+                         &rspOpenSession.payload);
 
     // Unregister physical memory from kernel module.
     LOG_I(" Service buffer was copied to Secure world and processed. Stop sharing of buffer.");
@@ -537,11 +609,8 @@ void MobiCoreDriverDaemon::processNqConnect(Connection *connection)
 
 
 //------------------------------------------------------------------------------
-void MobiCoreDriverDaemon::processNotify(
-    Connection  *connection
-)
+void MobiCoreDriverDaemon::processNotify(Connection  *connection)
 {
-
     // Read entire command data
     MC_DRV_CMD_NOTIFY_struct  cmd;
     //RECV_PAYLOAD_FROM_CLIENT(connection, &cmd);
@@ -691,6 +760,132 @@ void MobiCoreDriverDaemon::processGetMobiCoreVersion(
         sizeof(rspGetMobiCoreVersion));
 }
 
+//------------------------------------------------------------------------------
+void MobiCoreDriverDaemon::processRegistryReadData(uint32_t commandId, Connection  *connection)
+{
+    #define MAX_DATA_SIZE 512
+    mcDrvResponseHeader_t rspRegistry = { responseId : MC_DRV_ERR_INVALID_OPERATION };
+    void *buf = malloc(MAX_DATA_SIZE); 
+    uint32_t len = MAX_DATA_SIZE;
+    mcSoAuthTokenCont_t auth;
+    mcSpid_t spid;
+    mcUuid_t uuid;
+
+    switch(commandId) {
+    case MC_DRV_REG_READ_AUTH_TOKEN:
+        rspRegistry.responseId = mcRegistryReadAuthToken(&auth);
+        buf = &auth;
+        len = sizeof(mcSoAuthTokenCont_t);
+        break;
+    case MC_DRV_REG_READ_ROOT_CONT:
+        rspRegistry.responseId = mcRegistryReadRoot(buf, &len);
+        break;
+    case MC_DRV_REG_READ_SP_CONT:
+        if (!getData(connection, &spid, sizeof(spid)))
+            break;
+        rspRegistry.responseId = mcRegistryReadSp(spid, buf, &len);
+        break;
+    case MC_DRV_REG_READ_TL_CONT:
+        if (!getData(connection, &uuid, sizeof(uuid)))
+            break;
+        rspRegistry.responseId = mcRegistryReadTrustletCon(&uuid, buf, &len);
+        break;
+    default:
+        break;
+    }
+    connection->writeData(&rspRegistry, sizeof(rspRegistry));
+    if(rspRegistry.responseId != MC_DRV_ERR_INVALID_OPERATION)
+        connection->writeData(buf, len);
+}
+
+//------------------------------------------------------------------------------
+void MobiCoreDriverDaemon::processRegistryWriteData(uint32_t commandId, Connection *connection)
+{
+    mcDrvResponseHeader_t rspRegistry = { responseId : MC_DRV_ERR_INVALID_OPERATION };
+    uint32_t soSize;
+    void *so;
+    // First read the SO data size
+    if(!getData(connection, &soSize, sizeof(soSize))){
+        LOG_E("Failed to read SO data size");
+        connection->writeData(&rspRegistry, sizeof(rspRegistry));
+        return;    
+    }
+    so = malloc(soSize);
+
+    switch(commandId) {
+    case MC_DRV_REG_STORE_AUTH_TOKEN: {
+        if (!getData(connection, so, soSize))
+            break;
+        rspRegistry.responseId = mcRegistryStoreAuthToken(so, soSize);
+        break;
+    }
+    case MC_DRV_REG_WRITE_ROOT_CONT: {
+        if (!getData(connection, so, soSize))
+            break;
+        rspRegistry.responseId = mcRegistryStoreRoot(so, soSize);
+        break;
+    }
+    case MC_DRV_REG_WRITE_SP_CONT: {
+        mcSpid_t spid;
+        if (!getData(connection, &spid, sizeof(spid)))
+            break;
+        if (!getData(connection, so, soSize))
+            break;
+        rspRegistry.responseId = mcRegistryStoreSp(spid, so, soSize);
+        break;
+    }
+    case MC_DRV_REG_WRITE_TL_CONT: {
+        mcUuid_t uuid;
+        if (!getData(connection, &uuid, sizeof(uuid)))
+            break;
+        if (!getData(connection, so, soSize))
+            break;
+        rspRegistry.responseId = mcRegistryStoreTrustletCon(&uuid, so, soSize);
+        break;
+    }
+    case MC_DRV_REG_WRITE_SO_DATA: {
+        if (!getData(connection, so, soSize))
+            break;
+        rspRegistry.responseId = mcRegistryStoreData(so, soSize);
+        break;
+    }
+    default:
+        break;
+    }
+    free(so);
+    connection->writeData(&rspRegistry, sizeof(rspRegistry));
+}
+
+//------------------------------------------------------------------------------
+void MobiCoreDriverDaemon::processRegistryDeleteData(uint32_t commandId, Connection *connection)
+{
+    mcDrvResponseHeader_t rspRegistry = { responseId : MC_DRV_ERR_INVALID_OPERATION };
+
+    switch(commandId) {
+    case MC_DRV_REG_DELETE_AUTH_TOKEN:
+        rspRegistry.responseId = mcRegistryDeleteAuthToken();
+        break;
+    case MC_DRV_REG_DELETE_ROOT_CONT:
+        rspRegistry.responseId = mcRegistryCleanupRoot();
+        break;
+    case MC_DRV_REG_DELETE_SP_CONT:
+        mcSpid_t spid;
+        if (!getData(connection, &spid, sizeof(spid)))
+            break;
+        rspRegistry.responseId = mcRegistryCleanupSp(spid);
+        break;
+    case MC_DRV_REG_DELETE_TL_CONT:
+        mcUuid_t uuid;
+        if (!getData(connection, &uuid, sizeof(uuid)))
+            break;
+        rspRegistry.responseId = mcRegistryCleanupTrustlet(&uuid);
+        break;
+    default:
+        break;
+    }
+
+    connection->writeData(&rspRegistry, sizeof(rspRegistry));
+}
 
 //------------------------------------------------------------------------------
 bool MobiCoreDriverDaemon::handleConnection(
@@ -728,10 +923,6 @@ bool MobiCoreDriverDaemon::handleConnection(
             LOG_E("Timeout.");
             break;
         }
-        if (rlen != sizeof(mcDrvCommandHeader)) {
-            LOG_E("Header length %i is not right.", (int)rlen);
-            break;
-        }
         ret = true;
 
         switch (mcDrvCommandHeader.commandId) {
@@ -746,6 +937,10 @@ bool MobiCoreDriverDaemon::handleConnection(
             //-----------------------------------------
         case MC_DRV_CMD_OPEN_SESSION:
             processOpenSession(connection);
+            break;
+            //-----------------------------------------
+        case MC_DRV_CMD_OPEN_TRUSTLET:
+            processOpenTrustlet(connection);
             break;
             //-----------------------------------------
         case MC_DRV_CMD_CLOSE_SESSION:
@@ -776,7 +971,32 @@ bool MobiCoreDriverDaemon::handleConnection(
             processGetMobiCoreVersion(connection);
             break;
             //-----------------------------------------
-
+        /* Registry functionality */
+        // Write Registry Data
+        case MC_DRV_REG_STORE_AUTH_TOKEN:
+        case MC_DRV_REG_WRITE_ROOT_CONT:
+        case MC_DRV_REG_WRITE_SP_CONT:
+        case MC_DRV_REG_WRITE_TL_CONT:
+        case MC_DRV_REG_WRITE_SO_DATA:
+            processRegistryWriteData(mcDrvCommandHeader.commandId, connection);
+            break;
+            //-----------------------------------------
+        // Read Registry Data
+        case MC_DRV_REG_READ_AUTH_TOKEN:
+        case MC_DRV_REG_READ_ROOT_CONT:
+        case MC_DRV_REG_READ_SP_CONT:
+        case MC_DRV_REG_READ_TL_CONT:
+            processRegistryReadData(mcDrvCommandHeader.commandId, connection);
+            break;
+            //-----------------------------------------
+        // Delete registry data
+        case MC_DRV_REG_DELETE_AUTH_TOKEN:
+        case MC_DRV_REG_DELETE_ROOT_CONT:
+        case MC_DRV_REG_DELETE_SP_CONT:
+        case MC_DRV_REG_DELETE_TL_CONT:
+            processRegistryDeleteData(mcDrvCommandHeader.commandId, connection);
+            break;
+            //-----------------------------------------
         default:
             LOG_E("Unknown command: %d=0x%x",
                   mcDrvCommandHeader.commandId,
@@ -805,9 +1025,7 @@ void printUsage(
     fprintf(stderr, "Start MobiCore Daemon\n\n");
     fprintf(stderr, "-h\t\tshow this help\n");
     fprintf(stderr, "-b\t\tfork to background\n");
-    fprintf(stderr, "-m IMAGE\tload mobicore from IMAGE to DDR\n");
     fprintf(stderr, "-s\t\tdisable daemon scheduler(default enabled)\n");
-    fprintf(stderr, "-d SIZE\t\tdonate SIZE bytes to mobicore(disabled on most platforms)\n");
     fprintf(stderr, "-r DRIVER\t\tMobiCore driver to load at start-up\n");
 }
 
@@ -828,10 +1046,7 @@ void terminateDaemon(
 /**
  * Main entry of the MobiCore Driver Daemon.
  */
-int main(
-    int argc,
-    char *args[]
-)
+int main(int argc, char *args[])
 {
     // Create the MobiCore Driver Singleton
     MobiCoreDriverDaemon *mobiCoreDriverDaemon = NULL;
@@ -844,16 +1059,12 @@ int main(
     int c, errFlag = 0;
     // Scheduler enabled by default
     int schedulerFlag = 1;
-    // Mobicore loading disable by default
-    int mobicoreFlag = 0;
     // Autoload driver at start-up
     int driverLoadFlag = 0;
-    std::string mobicoreImage, driverPath;
-    // Ram donation disabled by default
-    int donationSize = 0;
+    std::vector<std::string> drivers;
     // By default don't fork
     bool forkDaemon = false;
-    while ((c = getopt(argc, args, "m:d:r:sbh")) != -1) {
+    while ((c = getopt(argc, args, "r:sbh")) != -1) {
         switch (c) {
         case 'h': /* Help */
             errFlag++;
@@ -861,27 +1072,19 @@ int main(
         case 's': /* Disable Scheduler */
             schedulerFlag = 0;
             break;
-        case 'd': /* Ram Donation size */
-            donationSize = atoi(optarg);
-            break;
-        case 'm': /* Load mobicore image */
-            mobicoreFlag = 1;
-            mobicoreImage = optarg;
-            break;
         case 'b': /* Fork to background */
             forkDaemon = true;
             break;
         case 'r': /* Load mobicore driver at start-up */
             driverLoadFlag = 1;
-            driverPath = optarg;
+            drivers.push_back(optarg);
             break;
-        case ':':       /* -d or -m without operand */
+        case ':':       /* -r operand */
             fprintf(stderr, "Option -%c requires an operand\n", optopt);
             errFlag++;
             break;
         case '?':
-            fprintf(stderr,
-                    "Unrecognized option: -%c\n", optopt);
+            fprintf(stderr, "Unrecognized option: -%c\n", optopt);
             errFlag++;
         }
     }
@@ -929,14 +1132,9 @@ int main(
     mobiCoreDriverDaemon = new MobiCoreDriverDaemon(
         /* Scheduler status */
         schedulerFlag,
-        /* Mobicore loading to DDR */
-        mobicoreFlag,
-        mobicoreImage,
-        /* Ram Donation */
-        donationSize,
         /* Auto Driver loading */
         driverLoadFlag,
-        driverPath);
+        drivers);
 
     // Start the driver
     mobiCoreDriverDaemon->run();

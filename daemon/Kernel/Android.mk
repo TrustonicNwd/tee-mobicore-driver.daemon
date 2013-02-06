@@ -8,6 +8,11 @@
 
 include $(LOCAL_PATH)/Kernel/Platforms/Generic/Android.mk
 
+# Include platform specific sub-makefiles
+ifdef $(PLATFORM)
+  include $(LOCAL_PATH)/Kernel/Platforms/$(PLATFORM)/Android.mk
+endif
+
 # Add new source files here
 LOCAL_SRC_FILES += Kernel/CKMod.cpp
 

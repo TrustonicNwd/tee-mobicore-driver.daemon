@@ -5,7 +5,7 @@
  * Maps LOG_*() macros to __android_log_print() if LOG_ANDROID is defined.
  * Adds some extra info to log output like LOG_TAG, file name and line number.
  *
- * <!-- Copyright Giesecke & Devrient GmbH 2010 - 2011 -->
+ * <!-- Copyright Trustonic 2012-2013 -->
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -119,7 +119,7 @@
             { \
                 _LOG_E("  *****************************"); \
                 _LOG_E("  *** ERROR: "__VA_ARGS__); \
-                _LOG_E("  *** Detected in %s:%i/%s()", __FILE__, __LINE__, __FUNCTION__); \
+                _LOG_E("  *** Detected in %s/%u()", __FUNCTION__, __LINE__); \
                 _LOG_E("  *****************************"); \
             } while(1!=1)
 

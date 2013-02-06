@@ -2,7 +2,7 @@
  * @ingroup  MC_DATA_TYPES
  * @{
  *
- * <!-- Copyright Giesecke & Devrient GmbH 2009-2012 -->
+ * <!-- Copyright Trustonic 2013-2014 -->
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,10 +39,17 @@
 #include "mcSo.h"
 #include "mcSuid.h"
 
-#define CONTAINER_VERSION_MAJOR   2
-#define CONTAINER_VERSION_MINOR   0
-
 #define CONTAINER_FORMAT_SO21 1
+/** Support for trustlet container 2.1 */
+#define CONTAINER_FORMAT_TL21 1
+
+#define CONTAINER_VERSION_MAJOR   2
+/** Support for the old format */
+#ifdef CONTAINER_FORMAT_TL21
+    #define CONTAINER_VERSION_MINOR   1
+#else
+    #define CONTAINER_VERSION_MINOR   0
+#endif
 
 #define MC_CONT_SYMMETRIC_KEY_SIZE      32 
 #define MC_CONT_PUBLIC_KEY_SIZE         320
@@ -113,6 +120,10 @@ typedef enum {
     CONT_TYPE_TLDATA
 } contType_t;
 
+/** SHA256 checksum. */
+typedef struct {
+    uint8_t data[32];
+} mcSha256_t;
 
 /** @defgroup MC_CONTAINER_CRYPTO_OBJECTS Container secrets.
  * Data that is stored encrypted within the container.
@@ -158,7 +169,7 @@ typedef union {
 /** SoC Container */
 typedef struct {
     contType_t type;
-    uint32_t version;
+    mcContVersion_t version;
     mcContainerAttribs_t attribs;
     mcSuid_t suid;
     // Secrets.
@@ -168,7 +179,7 @@ typedef struct {
 /** */
 typedef struct {
     contType_t type;
-    uint32_t version;
+    mcContVersion_t version;
     mcContainerAttribs_t attribs;
     mcSuid_t suid;
     mcRootid_t rootid;
@@ -180,7 +191,7 @@ typedef struct {
 /** */
 typedef struct {
     contType_t type;
-    uint32_t version;
+    mcContVersion_t version;
     mcContainerAttribs_t attribs;
     mcSpid_t spid;
     mcUuidChild_t children;
@@ -191,18 +202,30 @@ typedef struct {
 /** */
 typedef struct {
     contType_t type;
-    uint32_t version;
+    mcContVersion_t version;
     mcContainerAttribs_t attribs;
     mcSpid_t parent;
     mcUuid_t uuid;
     // Secrets.
     mcCoTltCont_t co;
-} mcTltCont_t;
+} mcTltContCommon_t;
+
+/** */
+typedef struct {
+    mcTltContCommon_t common;
+} mcTltCont_2_0_t;
+
+/** */
+typedef struct {
+    mcTltContCommon_t common;
+    mcSha256_t skSpTltEnc; 
+    mcContVersion_t tltVersion;
+} mcTltCont_2_1_t;
 
 /** */
 typedef struct {
     contType_t type;
-    uint32_t version;
+    mcContVersion_t version;
     mcUuid_t uuid;
     mcPid_t pid;
     // Secrets.
@@ -259,9 +282,35 @@ typedef struct {
 /** */
 typedef struct {
     mcSoHeader_t soHeader;
-    mcTltCont_t cont;
-    uint8_t hashAndPad[SO_CONT_HASH_AND_PAD_SIZE(sizeof(mcTltCont_t), sizeof(mcCoTltCont_t))];
-} mcSoTltCont_t;
+    mcTltCont_2_0_t cont;
+    uint8_t hashAndPad[SO_CONT_HASH_AND_PAD_SIZE(sizeof(mcTltCont_2_0_t), sizeof(mcCoTltCont_t))];
+} mcSoTltCont_2_0_t;
+
+typedef struct {
+    mcSoHeader_t soHeader;
+    mcTltCont_2_1_t cont;
+    uint8_t hashAndPad[SO_CONT_HASH_AND_PAD_SIZE(sizeof(mcTltCont_2_1_t), sizeof(mcCoTltCont_t))];
+} mcSoTltCont_2_1_t;
+
+
+#ifdef CONTAINER_FORMAT_TL21
+    typedef mcSoTltCont_2_0_t mcSoTltCont_t;
+
+/*typedef union {
+    mcSoTltCont_2_0_t soTlt_2_0_t;
+    mcSoTltCont_2_1_t soTlt_2_1_t;
+} mcSoTltCont_t;*/
+
+#else
+    typedef mcTltContCommon_t mcTltCont_t;
+
+    typedef struct {
+        mcSoHeader_t soHeader;
+        mcTltCont_t cont;
+        uint8_t hashAndPad[SO_CONT_HASH_AND_PAD_SIZE(sizeof(mcTltCont_t), sizeof(mcCoTltCont_t))];
+    } mcSoTltCont_t ;
+#endif
+
 
 /** */
 typedef struct {
@@ -276,6 +325,17 @@ typedef struct {
     mcSoSpCont_t soSp;
     mcSoTltCont_t soTlt;
 } mcSoContainerPath_t;
+
+/** Trustlet Blob length info */
+typedef struct {
+    uint32_t        magic;             /**< New blob format magic number*/
+    uint32_t        rootContBlobSize;  /**< Root container blob size */
+    uint32_t        spContBlobSize;    /**< SP container blob size */
+    uint32_t        tlContBlobSize;    /**< Tl container blob size */
+    uint32_t        reserved[4];       /**< Reserved for further Use */
+} mcBlobLenInfo_t, *mcBlobLenInfo_ptr;
+
+#define MC_TLBLOBLEN_MAGIC 0x7672746C
 
 /** @} */
 

@@ -3,7 +3,8 @@
  * @file
  *
  * MobiCore Driver Kernel Module Interface.
- *
+ */
+/*
  * <!-- Copyright Giesecke & Devrient GmbH 2009 - 2012 -->
  *
  * Redistribution and use in source and binary forms, with or without
@@ -498,6 +499,27 @@ mcResult_t CMcKMod::cleanupWsmL2(void)
     }
 
     ret = ioctl(fdKMod, MC_IO_CLEAN_WSM, 0);
+    if (ret != 0) {
+        LOG_ERRNO("ioctl MC_IO_UNREG_WSM");
+        LOG_E("ret = %d", ret);
+    }
+
+    return ret;
+}
+
+//------------------------------------------------------------------------------
+mcResult_t CMcKMod::setupLog(void)
+{
+    int ret = 0;
+
+    LOG_I(" Setting up the memory logging system");
+
+    if (!isOpen()) {
+        LOG_E("no connection to kmod");
+        return MC_DRV_ERR_KMOD_NOT_OPEN;
+    }
+
+    ret = ioctl(fdKMod, MC_IO_LOG_SETUP, 0);
     if (ret != 0) {
         LOG_ERRNO("ioctl MC_IO_UNREG_WSM");
         LOG_E("ret = %d", ret);

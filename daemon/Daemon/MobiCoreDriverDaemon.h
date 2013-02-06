@@ -75,19 +75,15 @@ public:
      * Create daemon object
      *
      * @param enableScheduler Enable NQ IRQ scheduler
-     * @param loadMobicore Load mobicore image to DDR
-     * @param mobicoreImage Mobicore image path
-     * @param donateRamSize Ram donation size in bytes
+     * @param loadDriver Load driver at daemon startup
+     * @param driverPath Startup driver path
      */
     MobiCoreDriverDaemon(
         bool enableScheduler,
-        /**< Mobicore loading to DDR */
-        bool loadMobicore,
-        std::string mobicoreImage,
-        unsigned int donateRamSize,
+
         /**< Mobicore driver loading at start-up */
         bool loadDriver,
-        std::string driverPath
+        std::vector<std::string> drivers
     );
 
     virtual ~MobiCoreDriverDaemon(
@@ -107,18 +103,12 @@ public:
     );
 
 private:
-
     MobiCoreDevice *mobiCoreDevice;
     /**< Flag to start/stop the scheduler */
     bool enableScheduler;
-    /**< Flag to load mobicore image to DDR */
-    bool loadMobicore;
-    /**< Mobicore image location */
-    std::string mobicoreImage;
-    /**< Ram size to donate */
-    unsigned int donateRamSize;
+    /**< Flag to load drivers at startup */
     bool loadDriver;
-    std::string driverPath;
+    std::vector<std::string> drivers;
     /**< List of resources for the loaded drivers */
     driverResourcesList_t driverResources;
     /**< List of servers processing connections */
@@ -145,49 +135,108 @@ private:
      * @param driverPath Path to the driver file
      * @return True for success/false for failure
      */
-    bool loadDeviceDriver(
-        std::string driverPath
-    );
+    bool loadDeviceDriver(std::string driverPath);
 
-    void processOpenDevice(
-        Connection *connection
-    );
+    /**
+     * Open Device command
+     *
+     * @param connection Connection object
+     */
+    void processOpenDevice(Connection *connection);
 
-    void processOpenSession(
-        Connection *connection
-    );
+    /**
+     * Open Session command
+     *
+     * @param connection Connection object
+     */
+    void processOpenSession(Connection *connection);
 
-    void processNqConnect(
-        Connection *connection
-    );
+    /**
+     * Open Trustlet command
+     *
+     * @param connection Connection object
+     */
+    void processOpenTrustlet(Connection *connection);
 
-    void processCloseDevice(
-        Connection *connection
-    );
+    /**
+     * NQ Connect command
+     *
+     * @param connection Connection object
+     */
+    void processNqConnect(Connection *connection);
 
-    void processNotify(
-        Connection *connection
-    );
+    /**
+     * Close Device command
+     *
+     * @param connection Connection object
+     */
+    void processCloseDevice(Connection *connection);
 
-    void processCloseSession(
-        Connection *connection
-    );
+    /**
+     * Notify command
+     *
+     * @param connection Connection object
+     */
+    void processNotify(Connection *connection);
 
-    void processMapBulkBuf(
-        Connection *connection
-    );
+    /**
+     * Close Session command
+     *
+     * @param connection Connection object
+     */
+    void processCloseSession(Connection *connection);
 
-    void processUnmapBulkBuf(
-        Connection *connection
-    );
+    /**
+     * Map Bulk buf command
+     *
+     * @param connection Connection object
+     */
+    void processMapBulkBuf(Connection *connection);
 
-    void processGetVersion(
-        Connection *connection
-    );
+    /**
+     * Unmap bulk buf command
+     *
+     * @param connection Connection object
+     */
+    void processUnmapBulkBuf(Connection *connection);
 
-    void processGetMobiCoreVersion(
-        Connection *connection
-    );
+    /**
+     * Get Version command
+     *
+     * @param connection Connection object
+     */
+    void processGetVersion(Connection *connection);
+
+    /**
+     * Get MobiCore version command
+     *
+     * @param connection Connection object
+     */
+    void processGetMobiCoreVersion(Connection *connection);
+
+    /**
+     * Generic Registry read command
+     *
+     * @param commandId Actual command id
+     * @param connection Connection object
+     */
+    void processRegistryReadData(uint32_t commandId, Connection *connection);
+
+    /**
+     * Generic Registry write command
+     *
+     * @param commandId Actual command id
+     * @param connection Connection object
+     */
+    void processRegistryWriteData(uint32_t commandId, Connection *connection);
+
+    /**
+     * Generic Registry Delete command
+     *
+     * @param commandId Actual command id
+     * @param connection Connection object
+     */
+    void processRegistryDeleteData(uint32_t commandId, Connection *connection);
 };
 
 #endif /* MOBICOREDRIVER_H_ */

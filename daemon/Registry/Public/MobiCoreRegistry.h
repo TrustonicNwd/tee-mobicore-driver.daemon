@@ -5,8 +5,9 @@
  *
  * @file
  * Mobicore Driver Registry.
- *
- * <!-- Copyright Giesecke & Devrient GmbH 2009 - 2012 -->
+ */
+ 
+/* <!-- Copyright Giesecke & Devrient GmbH 2009 - 2012 -->
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,30 +43,19 @@
 extern "C" {
 #endif
 
-    /**
-     * Registry object.
-     */
-    typedef struct {
-        uint32_t len;
-        uint8_t value[];
-    } regObject_t;
-
-    /** Maximum size of a trustlet in bytes. */
-#define MAX_TL_SIZE     (1 * 1024 * 1024)
-
-//-----------------------------------------------------------------
-
     /** Stores an authentication token in registry.
      * @param  so Authentication token secure object.
+     * @param  size Authentication token object size
      * @return MC_DRV_OK if successful, otherwise error code.
      */
-    mcResult_t mcRegistryStoreAuthToken(const mcSoAuthTokenCont_t *so);
+    mcResult_t mcRegistryStoreAuthToken(void *so, uint32_t size);
 
     /** Reads an authentication token from registry.
      * @param[out] so Authentication token secure object.
+     * @param[out] size Authentication token secure object size
      * @return MC_DRV_OK if successful, otherwise error code.
      */
-    mcResult_t mcRegistryReadAuthToken(mcSoAuthTokenCont_t *so);
+    mcResult_t mcRegistryReadAuthToken(void *so, uint32_t *size);
 
     /** Deletes the authentication token secure object from the registry.
      * @return MC_DRV_OK if successful, otherwise error code.
@@ -74,29 +64,32 @@ extern "C" {
 
     /** Stores a root container secure object in the registry.
      * @param so Root container secure object.
+     * @param size Root container secure object size
      * @return MC_DRV_OK if successful, otherwise error code.
      */
-    mcResult_t mcRegistryStoreRoot(const mcSoRootCont_t *so);
+    mcResult_t mcRegistryStoreRoot(void *so, uint32_t size);
 
     /** Reads a root container secure object from the registry.
      * @param[out] so Root container secure object.
+     * @param[out] size Root container secure object size
      * @return MC_DRV_OK if successful, otherwise error code.
      */
-    mcResult_t mcRegistryReadRoot(mcSoRootCont_t *so);
+     mcResult_t mcRegistryReadRoot(void *so, uint32_t *size);
 
     /** Stores a service provider container secure object in the registry.
      * @param spid Service provider ID.
      * @param so Service provider container secure object.
      * @return MC_DRV_OK if successful, otherwise error code.
      */
-    mcResult_t mcRegistryStoreSp(mcSpid_t spid, const mcSoSpCont_t *so);
+    mcResult_t mcRegistryStoreSp(mcSpid_t spid, void *so, uint32_t size);
 
     /** Reads a service provider container secure object from the registry.
      * @param spid Service provider ID.
      * @param[out] so Service provider container secure object.
+     * @param[out] size Service provider container secure object size
      * @return MC_DRV_OK if successful, otherwise error code.
      */
-    mcResult_t mcRegistryReadSp(mcSpid_t spid, mcSoSpCont_t *so);
+     mcResult_t mcRegistryReadSp(mcSpid_t spid, void *so, uint32_t *size);
 
     /** Deletes a service provider recursively, including all trustlets and
      * data.
@@ -108,16 +101,18 @@ extern "C" {
     /** Stores a trustlet container secure object in the registry.
      * @param uuid Trustlet UUID.
      * @param so Trustlet container secure object.
+     * @param size Trustlet container secure object size
      * @return MC_DRV_OK if successful, otherwise error code.
      */
-    mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, const mcSoTltCont_t *so);
+    mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, void *so, uint32_t size);
 
     /** Reads a trustlet container secure object from the registry.
      * @param uuid Trustlet UUID.
      * @param[out] so Trustlet container secure object.
+     * @param[out] size Trustlet container secure object size
      * @return MC_DRV_OK if successful, otherwise error code.
      */
-    mcResult_t mcRegistryReadTrustletCon(const mcUuid_t *uuid, mcSoTltCont_t *so);
+    mcResult_t mcRegistryReadTrustletCon(const mcUuid_t *uuid, void *so, uint32_t *size);
 
     /** Deletes a trustlet container secure object and all of its associated data.
      * @param uuid Trustlet UUID.
@@ -127,47 +122,16 @@ extern "C" {
 
     /** Stores a data container secure object in the registry.
      * @param so Data container secure object.
+     * @param size Data container secure object size
      * @return MC_DRV_OK if successful, otherwise error code.
      */
-    mcResult_t mcRegistryStoreData(const mcSoDataCont_t *so);
-
-    /** Reads a data container secure object from the registry.
-     * @param context (service provider = 0; trustlet = 1).
-     * @param cid Service provider or UUID.
-     * @param pid Personalization data identifier.
-     * @param[out] so Data container secure object.
-     * @param maxLen Maximum size (in bytes) of the destination buffer (so).
-     * @return MC_DRV_OK if successful, otherwise error code.
-     */
-    mcResult_t mcRegistryReadData(
-        uint32_t context,
-        const mcCid_t *cid,
-        mcPid_t pid,
-        mcSoDataCont_t *so,
-        uint32_t maxLen
-    );
+    mcResult_t mcRegistryStoreData(void *so, uint32_t size);
 
     /** Deletes the root container and all of its associated service provider
      * containers.
      * @return MC_DRV_OK if successful, otherwise error code.
      */
     mcResult_t mcRegistryCleanupRoot(void);
-
-    /** Returns a registry object for a given service.
-     * @param uuid service UUID
-     * @return Registry object.
-     * @note It is the responsibility of the caller to free the registry object
-     * allocated by this function.
-     */
-    regObject_t *mcRegistryGetServiceBlob(const mcUuid_t  *uuid);
-
-    /** Returns a registry object for a given service.
-     * @param driverFilename driver filename
-     * @return Registry object.
-     * @note It is the responsibility of the caller to free the registry object
-     * allocated by this function.
-     */
-    regObject_t *mcRegistryGetDriverBlob(const char *driverFilename);
 
 #ifdef __cplusplus
 }

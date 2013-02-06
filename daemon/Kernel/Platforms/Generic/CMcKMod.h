@@ -129,6 +129,8 @@ public:
 
     mcResult_t findContiguousWsm(uint32_t handle, addr_t *phys, uint32_t *len);
 
+    mcResult_t setupLog(void);
+
     /**
     * Tell stub to start MobiCore from given physical address
     */

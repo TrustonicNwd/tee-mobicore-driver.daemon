@@ -14,7 +14,7 @@
  * @image html DoxyOverviewDrvApi500x.png
  * @image latex DoxyOverviewDrvApi500x.png "MobiCore Overview" width=12cm
  *
- * <!-- Copyright Giesecke & Devrient GmbH 2009 - 2012 -->
+ * <!-- Copyright Trustonic 2013-2014 -->
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -236,6 +236,35 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenSession(
     uint8_t            *tci,
     uint32_t           tciLen
 );
+
+/** Open a new session to a Trustlet. The trustlet will be loaded from the memory
+ * buffer
+ *
+ * Write MCP open message to buffer and notify MobiCore about the availability of a new command.
+ * Waits till the MobiCore responses with the new session ID (stored in the MCP buffer).
+ *
+ * @param [in,out] session On success, the session data will be returned. Note that session.deviceId has to be the device id of an opened device.
+ * @param [in] trustlet memory buffer containing the trustlet binary
+ * @param [in] tlen length of the memory buffer containing the trustlet
+ * @param [in] tci TCI buffer for communicating with the trustlet.
+ * @param [in] tciLen Length of the TCI buffer. Maximum allowed value is MC_MAX_TCI_LEN.
+ *
+ * @return MC_DRV_OK if operation has been successfully completed.
+ * @return MC_DRV_INVALID_PARAMETER if session parameter is invalid.
+ * @return MC_DRV_ERR_UNKNOWN_DEVICE when device id is invalid.
+ * @return MC_DRV_ERR_DAEMON_UNREACHABLE when problems with daemon socket occur.
+ * @return MC_DRV_ERR_UNKNOWN_DEVICE when daemon returns an error.
+ *
+ * Uses a Mutex.
+ */
+__MC_CLIENT_LIB_API mcResult_t mcOpenTrustlet(
+    mcSessionHandle_t  *session,
+    uint8_t            *trustlet,
+    uint32_t           tLen,
+    uint8_t            *tci,
+    uint32_t           tciLen
+);
+
 
 /** Close a Trustlet session.
  *

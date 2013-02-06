@@ -1,7 +1,7 @@
 /**
  * @addtogroup MC_UUID mcUuid - Universally Unique Identifier.
  *
- * <!-- Copyright Giesecke & Devrient GmbH 2011-2012 -->
+ * <!-- Copyright Trustonic 2013-2014 -->
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

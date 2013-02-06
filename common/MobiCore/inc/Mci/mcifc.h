@@ -66,6 +66,9 @@
 #define MC_FC_STORE_BINFO          ((uint32_t)(-201))  /**< write a 32bit value in secure DDRRAM in incremented art (max 2kB) */
 #define MC_FC_LOAD_BINFO           ((uint32_t)(-202))  /**< load a 32bit value from secure DDRRAM using an offset */
 
+// Broadcom Specific Fastcalls
+#define MC_FC_BCM_VC_CORE_START    ((uint32_t)(-301)) /**<  Set the VC Core start address*/
+
 #define MC_FC_MAX_ID         ((uint32_t)(0xFFFF0000))  /**< Maximum allowed FastCall ID */
 
 // r1 is requested status (0,1,2), on return r2 holds this status value

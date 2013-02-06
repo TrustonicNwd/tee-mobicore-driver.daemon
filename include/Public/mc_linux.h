@@ -25,6 +25,7 @@
  * </table>
  *
  * <!-- Copyright Giesecke & Devrient GmbH 2010-2012 -->
+ * <!-- Copyright Trustonic Limited 2013 -->
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -222,6 +223,11 @@ struct mc_ioctl_resolv_cont_wsm {
 /** Get the phys address & len of a allocated contiguous buffer. Only available
  * to the daemon */
 #define MC_IO_RESOLVE_CONT_WSM	_IOWR(MC_IOC_MAGIC, 16, struct mc_ioctl_execute)
+
+/*
+ * Setup the mem traces when called.
+ * Only available to the daemon */
+#define MC_IO_LOG_SETUP		_IO(MC_IOC_MAGIC, 17)
 
 #endif /* _MC_LINUX_H_ */
 /** @} */

@@ -3,8 +3,9 @@
  * @file
  *
  * Connection data.
- *
- * <!-- Copyright Giesecke & Devrient GmbH 2009 - 2012 -->
+ */
+
+/* <!-- Copyright Giesecke & Devrient GmbH 2009 - 2012 -->
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +37,8 @@
 #include <errno.h>
 
 #include "Connection.h"
+#include <sys/ioctl.h>
+#include <poll.h>
 
 //#define LOG_VERBOSE
 #include "log.h"
@@ -78,10 +81,14 @@ bool Connection::connect(const char *dest)
     int32_t len;
 
     assert(NULL != dest);
-
+    if (sizeof(remote.sun_path) - 1 < strlen(dest)) {
+        LOG_E("Invalid destination socket %s", dest);
+        return false;
+    }
     LOG_I(" Connecting to %s socket", dest);
     remote.sun_family = AF_UNIX;
-    strncpy(remote.sun_path, dest, sizeof(remote.sun_path) - 1);
+    memset(remote.sun_path, 0, sizeof(remote.sun_path));
+    strncpy(remote.sun_path, dest, strlen(dest));
     if ((socketDescriptor = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
         LOG_ERRNO("Can't open stream socket.");
         return false;
@@ -133,7 +140,7 @@ size_t Connection::readData(void *buffer, uint32_t len, int32_t timeout)
     }
 
     // Handle case of no descriptor ready
-    if (0 == ret) {
+    if (ret == 0) {
         LOG_W(" Timeout during select() / No more notifications.");
         return -2;
     }
@@ -158,12 +165,10 @@ size_t Connection::readData(void *buffer, uint32_t len, int32_t timeout)
 //------------------------------------------------------------------------------
 size_t Connection::writeData(void *buffer, uint32_t len)
 {
-    size_t ret;
+    assert(buffer != NULL);
+    assert(socketDescriptor != -1);
 
-    assert(NULL != buffer);
-    assert(-1 != socketDescriptor);
-
-    ret = send(socketDescriptor, buffer, len, 0);
+    size_t ret = send(socketDescriptor, buffer, len, 0);
     if (ret != len) {
         LOG_ERRNO("could not send all data, because send");
         LOG_E("ret = %d", ret);
@@ -205,6 +210,23 @@ int Connection::waitData(int32_t timeout)
     }
 
     return 0;
+}
+
+//------------------------------------------------------------------------------
+bool Connection::isConnectionAlive(void)
+{
+    assert(socketDescriptor != -1);
+    int retval;
+    struct pollfd ufds[1];      
+    ufds[0].fd = socketDescriptor;
+    ufds[0].events = POLLRDHUP;
+
+    retval = poll(ufds, 1, 10);
+    if (retval < 0 || retval > 0) {
+      LOG_ERRNO("poll");
+      return false;
+    }
+    return true;
 }
 
 /** @} */

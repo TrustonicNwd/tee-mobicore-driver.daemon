@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <ContentManagementRequest xmlns="http://www.mcore.gi-de.com/2012/04/schema/EnrollmentService">
+            <commands>
+2  begin soc auth         <command id="1" type="CMP" value="AgAAAKQAAAAAAAAA7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u6qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqrMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMw=" ignoreError="true"/>
+0  authenticate           <command id="2" type="CMP" value="AAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=" ignoreError="true"/>
+9  register activate      <command id="3" type="CMP" value="CQAAAGQAAAAAAAAABwAAAAAAAAABAQEBAQEBAQEBAgICAgICAgICAgMDAwMDAwMDAwMEBAQEBAQEBAQEBQUFBQUFBQUBAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fIA==" ignoreError="true"/>
+28 auth terminate         <command id="4" type="CMP" value="HAAAACwAAAAAAAAAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=" ignoreError="true"/>
+1  begin root auth        <command id="5" type="CMP" value="AQAAAA==" ignoreError="true"/>
+            </commands>
+    </ContentManagementRequest>
+
+
+These are in the next message (file cgi-bin/00000000-4455-6677-8899-aabbccddeeff) in order to test session handling
+            <commands>
+0  authenticate           <command id="6" type="CMP" value="AAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=" ignoreError="true"/>
+16 sp register activate   <command id="7" type="CMP" value="EAAAAGQAAAAAAAAACAAAAAAAAAABAQEBAQEBAQEBAgICAgICAgICAgMDAwMDAwMDAwMEBAQEBAQEBAQEBQUFBQUFBQUBAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fIA==" ignoreError="true"/>
+28 auth terminate       <command id="8" type="CMP" value="HAAAACwAAAAAAAAAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=" ignoreError="true"/>
+            </commands>

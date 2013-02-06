@@ -31,7 +31,7 @@
  */
 
 #include "tlcCmApi.h"
-#include "tlCmUuid.h"
+#include "TlCm/tlCmUuid.h"
 
 #include "log.h"
 

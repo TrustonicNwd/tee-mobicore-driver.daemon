@@ -1,8 +1,9 @@
 /** @addtogroup MCD_MCDIMPL_DAEMON_DEV
  * @{
  * @file
- *
- *
+ */
+
+/*
  * <!-- Copyright Giesecke & Devrient GmbH 2009 - 2012 -->
  *
  * Redistribution and use in source and binary forms, with or without
@@ -92,8 +93,6 @@ TrustZoneDevice::~TrustZoneDevice(
  */
 bool TrustZoneDevice::initDevice(
     const char  *devFile,
-    bool        loadMobiCore,
-    const char  *mobicoreImage,
     bool        enableScheduler)
 {
     notificationQueue_t *nqStartOut;
@@ -129,6 +128,9 @@ bool TrustZoneDevice::initDevice(
     if (!mciReused) {
         // Wipe memory before first usage
         bzero(mciBuffer, MCI_BUFFER_SIZE);
+
+        // Here we are safe to setup the MobiCore logs
+        setupLog();
 
         // Init MC with NQ and MCP buffer addresses
         int ret = pMcKMod->fcInit(0, NQ_BUFFER_SIZE, NQ_BUFFER_SIZE, MCP_BUFFER_SIZE);
@@ -516,6 +518,15 @@ bool TrustZoneDevice::findContiguousWsm(uint32_t handle, addr_t *phys, uint32_t 
         return false;
     }
     LOG_I("Resolved buffer with handle %u to %p", handle, phys);
+    return true;
+}
+//------------------------------------------------------------------------------
+bool TrustZoneDevice::setupLog(void)
+{
+    if (pMcKMod->setupLog()) {
+        LOG_E("pMcKMod->setupLog failed");
+        return false;
+    }
     return true;
 }
 

@@ -73,7 +73,8 @@ CMutex devMutex;
 Device *resolveDeviceId(uint32_t deviceId)
 {
     for (list<Device *>::iterator iterator = devices.begin();
-            iterator != devices.end(); ++iterator) {
+         iterator != devices.end();
+         ++iterator) {
         Device  *device = (*iterator);
 
         if (device->deviceId == deviceId) {
@@ -116,10 +117,21 @@ bool removeDevice(uint32_t deviceId)
 #define CHECK_DEVICE(device) \
     if (NULL == device) \
     { \
-        LOG_E("Device not found"); \
+        LOG_E("Device has not been found"); \
         mcResult = MC_DRV_ERR_UNKNOWN_DEVICE; \
         break; \
     }
+
+#define CHECK_DEVICE_CLOSED(device,  deviceId) \
+    if (NULL == device && MC_DEVICE_ID_DEFAULT == deviceId) \
+    { \
+        LOG_E("Device not open"); \
+        mcResult = MC_DRV_ERR_DAEMON_DEVICE_NOT_OPEN; \
+        break; \
+    } else \
+    	CHECK_DEVICE(device);
+
+
 
 #define CHECK_NOT_NULL(X) \
     if (NULL == X) \
@@ -264,9 +276,18 @@ __MC_CLIENT_LIB_API mcResult_t mcCloseDevice(
     LOG_I("===%s(%i)===", __FUNCTION__, deviceId);
     do {
         Device *device = resolveDeviceId(deviceId);
-        CHECK_DEVICE(device);
+        // CHECK_DEVICE(device);
+        CHECK_DEVICE_CLOSED(device, deviceId);
 
         Connection *devCon = device->connection;
+
+        // Check if daemon is still alive
+        if (!devCon->isConnectionAlive()) {
+            removeDevice(deviceId);
+            LOG_E("Daemon is  dead removing device");
+            mcResult = MC_DRV_ERR_DAEMON_UNREACHABLE;
+            break;
+        }
 
         // Return if not all sessions have been closed
         // TODO-2012-08-31-haenellu: improve check, if device connection is dead, this makes no more sense.
@@ -454,6 +475,175 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenSession(
     return mcResult;
 }
 
+//------------------------------------------------------------------------------
+__MC_CLIENT_LIB_API mcResult_t mcOpenTrustlet(
+    mcSessionHandle_t  *session,
+    uint8_t            *trustlet,
+    uint32_t           tlen,
+    uint8_t            *tci,
+    uint32_t           len
+)
+{
+    mcResult_t mcResult = MC_DRV_OK;
+
+    devMutex.lock();
+    LOG_I("===%s()===", __FUNCTION__);
+
+    do {
+        CHECK_NOT_NULL(session);
+        CHECK_NOT_NULL(trustlet);
+        CHECK_NOT_NULL(tci);
+
+        if (len > MC_MAX_TCI_LEN) {
+            LOG_E("TCI length is longer than %d", MC_MAX_TCI_LEN);
+            mcResult = MC_DRV_ERR_TCI_TOO_BIG;
+            break;
+        }
+
+        // Get the device associated with the given session
+        Device *device = resolveDeviceId(session->deviceId);
+        CHECK_DEVICE(device);
+
+        Connection *devCon = device->connection;
+
+        // Get the physical address of the given TCI
+        CWsm_ptr pWsm = device->findContiguousWsm(tci);
+        if (pWsm == NULL) {
+            LOG_E("Could not resolve physical address of TCI");
+            mcResult = MC_DRV_ERR_WSM_NOT_FOUND;
+            break;
+        }
+
+        if (pWsm->len < len) {
+            LOG_E("mcOpenSession(): length is more than allocated TCI");
+            mcResult = MC_DRV_ERR_TCI_GREATER_THAN_WSM;
+            break;
+        }
+
+        SEND_TO_DAEMON(devCon, MC_DRV_CMD_OPEN_TRUSTLET,
+                       session->deviceId,
+                       (uint32_t)tlen,
+                       NULL,
+                       (uint32_t)pWsm->handle,
+                       len);
+
+        // Send the full trustlet data
+        int ret = devCon->writeData(trustlet, tlen);
+        if(ret < 0) {
+            LOG_E("sending to Daemon failed."); \
+            mcResult = MC_DRV_ERR_SOCKET_WRITE; \
+            break;
+        }
+
+        // Read command response
+        RECV_FROM_DAEMON(devCon, &mcResult);
+
+        if (mcResult != MC_DRV_OK) {
+            // TODO-2012-09-06-haenellu: Remove this code once tests can handle it
+
+            if (MC_DRV_ERROR_MAJOR(mcResult) != MC_DRV_ERR_MCP_ERROR) {
+                LOG_E("Daemon could not open session, responseId %d.", mcResult);
+            } else {
+                uint32_t mcpResult = MC_DRV_ERROR_MCP(mcResult);
+                LOG_E("MobiCore reported failing of MC_MCP_CMD_OPEN_SESSION command, mcpResult %d.", mcpResult);
+
+                // IMPROVEMENT-2012-09-03-haenellu: Remove this switch case and use MCP code in tests.
+                switch (mcpResult) {
+                case MC_MCP_RET_ERR_WRONG_PUBLIC_KEY:
+                    mcResult = MC_DRV_ERR_WRONG_PUBLIC_KEY;
+                    break;
+                case MC_MCP_RET_ERR_CONTAINER_TYPE_MISMATCH:
+                    mcResult = MC_DRV_ERR_CONTAINER_TYPE_MISMATCH;
+                    break;
+                case MC_MCP_RET_ERR_CONTAINER_LOCKED:
+                    mcResult = MC_DRV_ERR_CONTAINER_LOCKED;
+                    break;
+                case MC_MCP_RET_ERR_SP_NO_CHILD:
+                    mcResult = MC_DRV_ERR_SP_NO_CHILD;
+                    break;
+                case MC_MCP_RET_ERR_TL_NO_CHILD:
+                    mcResult = MC_DRV_ERR_TL_NO_CHILD;
+                    break;
+                case MC_MCP_RET_ERR_UNWRAP_ROOT_FAILED:
+                    mcResult = MC_DRV_ERR_UNWRAP_ROOT_FAILED;
+                    break;
+                case MC_MCP_RET_ERR_UNWRAP_SP_FAILED:
+                    mcResult = MC_DRV_ERR_UNWRAP_SP_FAILED;
+                    break;
+                case MC_MCP_RET_ERR_UNWRAP_TRUSTLET_FAILED:
+                    mcResult = MC_DRV_ERR_UNWRAP_TRUSTLET_FAILED;
+                    break;
+                default:
+                    // TODO-2012-09-06-haenellu: Remove line and adapt codes in tests.
+                    mcResult = MC_DRV_ERR_MCP_ERROR;
+                    break;
+                }
+            }
+            break; // loading of Trustlet failed, unlock mutex and return
+        }
+
+        // read payload
+        mcDrvRspOpenSessionPayload_t rspOpenSessionPayload;
+        RECV_FROM_DAEMON(devCon, &rspOpenSessionPayload);
+
+        // Register session with handle
+        session->sessionId = rspOpenSessionPayload.sessionId;
+
+        LOG_I(" Service is started. Setting up channel for notifications.");
+
+        // Set up second channel for notifications
+        Connection *sessionConnection = new Connection();
+        if (!sessionConnection->connect(SOCK_PATH)) {
+            LOG_E("Could not connect to %s", SOCK_PATH);
+            delete sessionConnection;
+            // Here we know we couldn't connect to the Daemon.
+            // Maybe we should use existing connection to close Trustlet.
+            mcResult = MC_DRV_ERR_SOCKET_CONNECT;
+            break;
+        }
+
+        do {
+            SEND_TO_DAEMON(sessionConnection, MC_DRV_CMD_NQ_CONNECT,
+                           session->deviceId,
+                           session->sessionId,
+                           rspOpenSessionPayload.deviceSessionId,
+                           rspOpenSessionPayload.sessionMagic);
+
+            RECV_FROM_DAEMON(sessionConnection, &mcResult);
+
+            if (mcResult != MC_DRV_OK) {
+                LOG_E("CMD_NQ_CONNECT failed, respId=%d", mcResult);
+                break;
+            }
+
+        } while (0);
+
+        if (mcResult != MC_DRV_OK) {
+            delete sessionConnection;
+            // Here we know we couldn't communicate well with the Daemon.
+            // Maybe we should use existing connection to close Trustlet.
+            break; // unlock mutex and return
+        }
+
+        // there is no payload.
+
+        // Session has been established, new session object must be created
+        device->createNewSession(session->sessionId, sessionConnection);
+
+        LOG_I(" Successfully opened session %d.", session->sessionId);
+
+    } while (false);
+
+// TODO: enable as soon as there are more error codes
+//    if (mcResult == MC_DRV_ERR_SOCKET_WRITE || mcResult == MC_DRV_ERR_SOCKET_READ) {
+//        LOG_E("Connection is dead, removing device.");
+//        removeDevice(session->deviceId);
+//    }
+
+    devMutex.unlock();
+
+    return mcResult;
+}
 
 //------------------------------------------------------------------------------
 __MC_CLIENT_LIB_API mcResult_t mcCloseSession(mcSessionHandle_t *session)
@@ -545,7 +735,12 @@ __MC_CLIENT_LIB_API mcResult_t mcWaitNotification(
 {
     mcResult_t mcResult = MC_DRV_OK;
 
-    // devMutex.lock();
+    // TODO-2012-11-02-gurel: devMutex locking and unlocking had to be commented out
+    // below. Otherwise, when there are multiple threads in Nwd TLC side, we endup a
+    // deadlock situation, e.g. one thread waits for notification and another one sends
+    // notification.
+
+    //devMutex.lock();
     LOG_I("===%s()===", __FUNCTION__);
 
     do {
@@ -614,7 +809,7 @@ __MC_CLIENT_LIB_API mcResult_t mcWaitNotification(
 
     } while (false);
 
-    // devMutex.unlock();
+    //devMutex.unlock();
     return mcResult;
 }
 
@@ -635,7 +830,12 @@ __MC_CLIENT_LIB_API mcResult_t mcMallocWsm(
 
     do {
         Device *device = resolveDeviceId(deviceId);
-        CHECK_DEVICE(device);
+
+        // Is the device known
+        // CHECK_DEVICE(device);
+
+        // Is the device opened.
+        CHECK_DEVICE_CLOSED(device, deviceId)
 
         CHECK_NOT_NULL(wsm);
 
@@ -674,7 +874,12 @@ __MC_CLIENT_LIB_API mcResult_t mcFreeWsm(
 
         // Get the device associated wit the given session
         device = resolveDeviceId(deviceId);
+
+        // Is the device known
         CHECK_DEVICE(device);
+
+        // Is the device opened.
+        CHECK_DEVICE_CLOSED(device, deviceId)
 
         // find WSM object
         CWsm_ptr pWsm = device->findContiguousWsm(wsm);
@@ -721,7 +926,11 @@ __MC_CLIENT_LIB_API mcResult_t mcMap(
 
         // Determine device the session belongs to
         Device *device = resolveDeviceId(sessionHandle->deviceId);
+        // Is the device known
         CHECK_DEVICE(device);
+
+        // Is the device opened.
+        CHECK_DEVICE_CLOSED(device, sessionHandle->deviceId)
 
         Connection *devCon = device->connection;
 
@@ -807,7 +1016,11 @@ __MC_CLIENT_LIB_API mcResult_t mcUnmap(
 
         // Determine device the session belongs to
         Device *device = resolveDeviceId(sessionHandle->deviceId);
+        // Is the device known
         CHECK_DEVICE(device);
+
+        // Is the device opened.
+        CHECK_DEVICE_CLOSED(device, sessionHandle->deviceId)
 
         Connection  *devCon = device->connection;
 
@@ -879,7 +1092,11 @@ __MC_CLIENT_LIB_API mcResult_t mcGetSessionErrorCode(
 
         // Get device
         Device *device = resolveDeviceId(session->deviceId);
+        // Is the device known
         CHECK_DEVICE(device);
+
+        // Is the device opened.
+        CHECK_DEVICE_CLOSED(device, session->deviceId)
 
         // Get session
         Session *nqsession = device->resolveSessionId(session->sessionId);
@@ -919,7 +1136,12 @@ __MC_CLIENT_LIB_API mcResult_t mcGetMobiCoreVersion(
     do {
         Device *device = resolveDeviceId(deviceId);
 
+        // Is the device known
         CHECK_DEVICE(device);
+
+        // Is the device opened.
+        CHECK_DEVICE_CLOSED(device, deviceId)
+
         CHECK_NOT_NULL(versionInfo);
 
         Connection *devCon = device->connection;

@@ -94,6 +94,7 @@ typedef enum {
     MC_MCP_CMD_RESUME                    = 0x00000007,   /**< Resume MobiCore from suspension. */
     MC_MCP_CMD_DONATE_RAM                = 0x00000008,   /**< Donate RAM to MobiCore. */
     MC_MCP_CMD_GET_MOBICORE_VERSION      = 0x00000009,   /**< Get MobiCore version information. */
+    MC_MCP_CMD_CLOSE_MCP                 = 0x0000000A,   /**< Close MCP and unmap MCI. */
 } mcpCmdId_t;
 
 
@@ -102,11 +103,15 @@ typedef enum {
 
 /** Types of WSM known to the MobiCore.
  */
-typedef enum {
-    WSM_INVALID     = 0,    /**< Invalid memory type */
-    WSM_CONTIGUOUS  = 1,    /**< Reference to WSM points to a contiguous region of pages. */
-    WSM_L2          = 2,    /**< Reference to WSM points to an L2 table describing the memory region to share */
-}wsmType_t;
+typedef uint32_t wsmType_t;
+
+#define WSM_TYPE_MASK       0xFF
+#define WSM_INVALID         0       /**< Invalid memory type */
+#define WSM_CONTIGUOUS      1       /**< Reference to WSM points to a contiguous region of pages. */
+#define WSM_L2              2       /**< Reference to WSM points to an L2 table describing the memory region to share */
+#define WSM_WSM_UNCACHED    0x100   /**< Bitflag indicating that WSM should be uncached */
+#define WSM_L2_UNCACHED     0x100   /**< Bitflag indicating that L2 table should be uncached */
+
 
 /** Types of RAM known to the MobiCore.
  */

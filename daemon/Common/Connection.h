@@ -45,25 +45,17 @@
 
 class Connection
 {
-
 public:
     struct sockaddr_un remote; /**< Remote address */
     int32_t socketDescriptor; /**< Local socket descriptor */
     void *connectionData; /**< reference to data related with the connection */
     bool detached; /**< Connection state */
 
-    Connection(
-        void
-    );
+    Connection(void);
 
-    Connection(
-        int          socketDescriptor,
-        sockaddr_un  *remote
-    );
+    Connection(int socketDescriptor, sockaddr_un *remote);
 
-    virtual ~Connection(
-        void
-    );
+    virtual ~Connection(void);
 
     /**
      * Connect to destination.
@@ -71,9 +63,7 @@ public:
      * @param Destination pointer.
      * @return true on success.
      */
-    virtual bool connect(
-        const char *dest
-    );
+    virtual bool connect(const char *dest);
 
     /**
      * Read bytes from the connection.
@@ -114,6 +104,13 @@ public:
      * @return error code if otherwise
      */
     virtual int waitData(int32_t timeout);
+
+    /*
+     * Checks if the socket is  still connected to the daemon
+     *
+     * @return true if connection is still alive.
+     */
+    virtual bool isConnectionAlive(void);
 
 };
 

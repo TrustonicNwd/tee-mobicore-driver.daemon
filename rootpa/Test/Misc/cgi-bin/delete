@@ -1,0 +1,78 @@
+#!/usr/bin/perl
+
+
+#
+# for this to work, perl module needs to be installed.
+# in ubuntu run
+#
+# sudo apt-get install libapache2-mod-perl2
+# sudo apache2ctl restart
+#   
+# These scripts print to  /var/log/apache2/error.log
+# sudo  a2enmod perl
+#
+# "sudo a2enmod dav" to enable support for DELETE
+
+
+package ReceiveDeleteCommand;
+use strict;
+
+use Apache2::RequestIO (); 
+use Apache2::RequestUtil (); 
+use Apache2::RequestRec (); 
+use Apache2::Log (); 
+
+use Apache2::Const -compile => qw(OK DECLINED :log); 
+#use Apache2::Const -compile => qw(OK);
+
+sub handler { 
+    my $r = shift; 
+
+    # handle POST requests 
+    if ( $r->method() eq "DELETE" ) {
+       # handle DELETE requests     
+        $r->log->notice("RootPATest.delete: Delete Command Received"); 
+
+	    $r->content_type('text/plain');
+	    
+	    print "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?> \
+	    <ContentManagementRequest xmlns=\"http://www.mcore.gi-de.com/2012/04/schema/EnrollmentService\"> \
+		<commands>\
+		    <command id=\"11\" type=\"CMP\" ignoreError=\"true\"> \
+			<commandValue>\
+				AQAAAA==\
+			</commandValue>\
+		    </command>\
+	\
+		    <command id=\"12\" type=\"CMP\" ignoreError=\"true\"> \
+			<commandValue>\
+	AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=\
+			</commandValue>\
+		    </command>
+	\
+		    <command id=\"13\" type=\"CMP\" ignoreError=\"true\"> \
+		        <commandValue>\
+CwAAAAAAAABEVWZ3iJmqu8zd7v8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=\
+			</commandValue>\
+		    </command>\
+	\
+		    <command id=\"14\" type=\"CMP\" ignoreError=\"true\"> \
+		        <commandValue>\
+				HAAAAAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8g\
+			</commandValue>\
+		    </command>\
+
+		</commands>\
+	    </ContentManagementRequest>";
+
+
+    } else {
+        $r->log->notice("RootPATest.delete: HTTP command was not DELETE, returning cmp command for root cont delete");
+    }
+    
+
+    return Apache2::Const::OK;
+} 
+
+1;
+

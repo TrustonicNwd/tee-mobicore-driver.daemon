@@ -89,8 +89,6 @@ public:
      */
     bool initDevice(
         const char  *devFile,
-        bool        loadMobiCore,
-        const char  *mobicoreImage,
         bool        enableScheduler
     );
 
@@ -130,6 +128,8 @@ public:
      * Allocates persistent WSM memory for TL (won't be fried when TLC exits).
      */
     CWsm_ptr allocateContiguousPersistentWsm(uint32_t len);
+
+    bool setupLog(void);
 
     bool schedulerAvailable(void);
 

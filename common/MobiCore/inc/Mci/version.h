@@ -29,6 +29,6 @@
 #define MCI_VERSION_H_
 
 #define MCI_VERSION_MAJOR 0
-#define MCI_VERSION_MINOR 4
+#define MCI_VERSION_MINOR 5
 
 #endif /** MCI_VERSION_H_ */
