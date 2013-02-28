@@ -112,20 +112,20 @@ int regGetSpState(mcSpid_t spid, mcContainerState_t* stateP)
 
 // tlt
 
-int regReadTlt(const mcUuid_t* uuidP, TLTCONTAINERP* tltP, uint32_t* containerSize)
+int regReadTlt(const mcUuid_t* uuidP, TLTCONTAINERP* tltP, uint32_t* containerSize, mcSpid_t spid)
 {
     *containerSize = CONTAINER_BUFFER_SIZE; // this will be update to actual size with the registry call    
     *tltP=malloc(CONTAINER_BUFFER_SIZE);
     if(NULL==*tltP) return MC_DRV_ERR_NO_FREE_MEMORY;
-    return mcRegistryReadTrustletCon(uuidP, *tltP, containerSize);
+    return mcRegistryReadTrustletCon(uuidP, spid, *tltP, containerSize);
 }
 
-int regWriteTlt(const mcUuid_t* uuidP, const TLTCONTAINERP tltP, uint32_t containerSize)
+int regWriteTlt(const mcUuid_t* uuidP, const TLTCONTAINERP tltP, uint32_t containerSize, mcSpid_t spid)
 {
-    return mcRegistryStoreTrustletCon(uuidP, tltP, containerSize);
+    return mcRegistryStoreTrustletCon(uuidP, spid, tltP, containerSize);
 }
 
-int regCleanupTlt(const mcUuid_t* uuidP)
+int regCleanupTlt(const mcUuid_t* uuidP, mcSpid_t spid)
 {
-    return mcRegistryCleanupTrustlet(uuidP);
+    return mcRegistryCleanupTrustlet(uuidP, spid);
 }

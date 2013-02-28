@@ -284,7 +284,7 @@ int main(int argc, char* argv[] )
     if(checkResult( executeCmpCommands(numberOfCommands, commandsP, responsesP, &internalError),"executeCmpCommands" ))
     {
         checkResult( 0==internalError,"executeCmpCommands, internalError");
-        checkCmpResults(numberOfCommands, responsesP);
+        testStatus_=checkCmpResults(numberOfCommands, responsesP);
     }
     cleanup(numberOfCommands, commandsP, responsesP);
     

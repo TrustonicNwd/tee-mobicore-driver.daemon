@@ -102,10 +102,11 @@ bool Device::hasSessions(void)
 
 
 //------------------------------------------------------------------------------
-void Device::createNewSession(uint32_t sessionId, Connection  *connection)
+Session *Device::createNewSession(uint32_t sessionId, Connection  *connection)
 {
     Session *session = new Session(sessionId, pMcKMod, connection);
     sessionList.push_back(session);
+    return session;
 }
 
 
@@ -226,6 +227,30 @@ CWsm_ptr Device::findContiguousWsm(addr_t  virtAddr)
     }
 
     return pWsm;
+}
+
+
+//------------------------------------------------------------------------------
+mcResult_t Device::mapBulkBuf(addr_t buf, uint32_t len, BulkBufferDescriptor **blkBuf)
+{
+    addr_t pPhysWsmL2;
+    uint32_t handle;
+
+    *blkBuf = NULL;
+
+    // Prepare the interface structure for memory registration in Kernel Module
+    mcResult_t ret = pMcKMod->registerWsmL2(buf, len, 0, &handle, &pPhysWsmL2);
+    if (ret != MC_DRV_OK) {
+        LOG_V(" mcKMod->registerWsmL2() failed with %x", ret);
+        return ret;
+    }
+
+    LOG_V(" addBulkBuf - Handle of L2 Table = %u", handle);
+
+    // Create new descriptor - secure virtual virtual set to 0, unknown!
+    *blkBuf = new BulkBufferDescriptor(buf, 0x0, len, handle, pPhysWsmL2);
+
+    return MC_DRV_OK;
 }
 
 /** @} */

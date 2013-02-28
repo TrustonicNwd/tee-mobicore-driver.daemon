@@ -60,4 +60,7 @@ rootpaerror_t httpPostAndReceiveCommand(const char* const inputP, const char** l
 rootpaerror_t httpPutAndReceiveCommand(const char* const inputP, const char** linkP, const char** relP, const char** commandP);
 rootpaerror_t httpDeleteAndReceiveCommand(const char** linkP, const char** relP, const char** commandP);
 
+void setCertPath(const char* localPathP, const char* certPathP);
+
+
 #endif //SECLIENT_H

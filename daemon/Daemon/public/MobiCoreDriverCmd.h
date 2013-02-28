@@ -131,6 +131,7 @@ typedef struct {
 struct MC_DRV_CMD_OPEN_TRUSTLET_struct {
     uint32_t  commandId;
     uint32_t  deviceId;
+    mcSpid_t  spid;
     uint32_t  trustlet_len;
     uint32_t  tci;
     uint32_t  handle;

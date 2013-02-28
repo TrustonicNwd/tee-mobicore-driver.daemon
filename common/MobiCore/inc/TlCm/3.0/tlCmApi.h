@@ -6,7 +6,7 @@
  * The CMTL (Content Management Trustlet) is responsible for implementing
  * CMP commands and generating approriate CMP responses.
  *
- * Copyright © Trustonic Limited 2013.
+ * Copyright Â© Trustonic Limited 2013.
  *
  * All rights reserved.
  * 

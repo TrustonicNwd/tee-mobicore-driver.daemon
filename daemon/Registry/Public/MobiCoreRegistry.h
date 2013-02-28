@@ -104,28 +104,23 @@ extern "C" {
      * @param size Trustlet container secure object size
      * @return MC_DRV_OK if successful, otherwise error code.
      */
-    mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, void *so, uint32_t size);
+    mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, const mcSpid_t spid, void *so, uint32_t size);
 
     /** Reads a trustlet container secure object from the registry.
      * @param uuid Trustlet UUID.
+     * @param spid SPID of the trustlet container
      * @param[out] so Trustlet container secure object.
      * @param[out] size Trustlet container secure object size
      * @return MC_DRV_OK if successful, otherwise error code.
      */
-    mcResult_t mcRegistryReadTrustletCon(const mcUuid_t *uuid, void *so, uint32_t *size);
+    mcResult_t mcRegistryReadTrustletCon(const mcUuid_t *uuid, const mcSpid_t spid, void *so, uint32_t *size);
 
     /** Deletes a trustlet container secure object and all of its associated data.
      * @param uuid Trustlet UUID.
+     * @param spid Service provider ID
      * @return MC_DRV_OK if successful, otherwise error code.
      */
-    mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t *uuid);
-
-    /** Stores a data container secure object in the registry.
-     * @param so Data container secure object.
-     * @param size Data container secure object size
-     * @return MC_DRV_OK if successful, otherwise error code.
-     */
-    mcResult_t mcRegistryStoreData(void *so, uint32_t size);
+    mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t *uuid, const mcSpid_t spid);
 
     /** Deletes the root container and all of its associated service provider
      * containers.

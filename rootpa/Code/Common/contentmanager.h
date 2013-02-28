@@ -34,6 +34,8 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "rootpa.h"
 
+#define NOTIFICATION_WAIT_TIMEOUT_MS 3000 // wait for 3 seconds max
+
 rootpaerror_t executeContentManagementCommands(int numberOfCommands, CmpMessage* commandsP, CmpMessage* responsesP, uint32_t* internalError);
 rootpaerror_t uploadSo(uint8_t* containerDataP, uint32_t containerLength, uint32_t* regRetP);
 rootpaerror_t openCmtlSession();

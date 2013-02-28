@@ -202,7 +202,7 @@ on the file storage location
 @param storageDirP NULL terminated char array containing the path to the storage location
 */
 
-void setPaths(const char* storageDirP);
+void setPaths(const char* storageDirP, const char* certDirP);
 
 /**
 This is helper function for setting SE address. 

@@ -40,6 +40,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "provisioningagent.h"
 
 #define SPID_DEVELOPER_SP 0
+#define CERT_PATH "/system/etc/security/cacerts"
 
 JavaVM* jvmP_ = NULL;
 const jint VERSION=JNI_VERSION_1_2;
@@ -119,7 +120,7 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_executeCmpCom
     }
     delete commands;
     delete responses;
-    LOGD("<<Java_com_gd_mobicore_pa_jni_CommonPAWrapper_executeCmpCommands\n");
+    LOGD("<<Java_com_gd_mobicore_pa_jni_CommonPAWrapper_executeCmpCommands %d\n", ret);
 
     return ret;
 }
@@ -407,7 +408,7 @@ void setFilesPath(JNIEnv* envP, jobject obj)
     if(jpath!=NULL)
     {    
         const char* pathP = envP->GetStringUTFChars((jstring)jpath, false);
-        setPaths(pathP);
+        setPaths(pathP, CERT_PATH);
         if(NULL == pathP)
         {
             LOGE("setFilesPath pathP==NULL");    

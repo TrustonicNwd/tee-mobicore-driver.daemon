@@ -120,6 +120,16 @@ public:
     mcResult_t addBulkBuf(addr_t buf, uint32_t len, BulkBufferDescriptor **blkBuf);
 
     /**
+     * Just register the buffer previously created to the session
+     *
+     * @attention The virtual address can only be added one time. If the virtual address already exist, MC_DRV_ERR_BUFFER_ALREADY_MAPPED is returned.
+     *
+     * @param blkBuf pointer of the actual Bulk buffer descriptor with all address information.
+     *
+     */
+    void addBulkBuf(BulkBufferDescriptor *blkBuf);
+
+    /**
      * Remove address information of additional bulk buffer memory from session and
      * unregister virtual memory in kernel module
      *

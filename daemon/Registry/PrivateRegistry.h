@@ -112,23 +112,26 @@ extern "C" {
     /** Stores a trustlet container secure object in the registry.
      * @param uuid Trustlet UUID.
      * @param so Trustlet container secure object.
-     * @param size Trustlet container secure object size.
+     * @param size Trustlet container secure object size
      * @return MC_DRV_OK if successful, otherwise error code.
      */
-    mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, void *so, uint32_t size);
+    mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, const mcSpid_t spid, void *so, uint32_t size);
 
     /** Reads a trustlet container secure object from the registry.
      * @param uuid Trustlet UUID.
+     * @param spid SPID of the trustlet container
      * @param[out] so Trustlet container secure object.
+     * @param[out] size Trustlet container secure object size
      * @return MC_DRV_OK if successful, otherwise error code.
      */
-    mcResult_t mcRegistryReadTrustletCon(const mcUuid_t *uuid, void *so, uint32_t *size);
+    mcResult_t mcRegistryReadTrustletCon(const mcUuid_t *uuid, const mcSpid_t spid, void *so, uint32_t *size);
 
     /** Deletes a trustlet container secure object and all of its associated data.
      * @param uuid Trustlet UUID.
+     * @param spid Service provider ID
      * @return MC_DRV_OK if successful, otherwise error code.
      */
-    mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t *uuid);
+    mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t *uuid, const mcSpid_t spid);
 
     /** Stores a data container secure object in the registry.
      * @param so Data container secure object.
@@ -159,13 +162,14 @@ extern "C" {
     mcResult_t mcRegistryCleanupRoot(void);
 
     /** Returns a registry object for a given service from memory
+     * @param spid Service provider ID(ignored for System TLs)
      * @param trustlet buffer with trustlet binary
      * @param tlSize buffer size
      * @return Registry object.
      * @note It is the responsibility of the caller to free the registry object
      * allocated by this function.
      */
-    regObject_t *mcRegistryMemGetServiceBlob(void *trustlet, uint32_t tlSize);
+    regObject_t *mcRegistryMemGetServiceBlob(mcSpid_t spid, void *trustlet, uint32_t tlSize);
 
     /** Returns a registry object for a given service.
      * @param uuid service UUID

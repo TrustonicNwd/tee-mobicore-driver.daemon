@@ -31,6 +31,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <rootpa.h>
 
 #define RETCODE_INDEX 3
+#define OLD_RETCODE_INDEX 1
 
 int createCommands(CmpMessage** commandsP, CmpMessage** responsesP);
 bool checkCmpResults(int numberOfCommands, CmpMessage* responsesP);

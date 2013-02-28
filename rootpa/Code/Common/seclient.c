@@ -32,12 +32,14 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <time.h>
 
 #include <curl/curl.h>
 
 #include "logging.h"
 #include "rootpaErrors.h"
 #include "seclient.h"
+#include "cacerts.h"
 
 #define HTTP_CODE_MOVED                 301
 #define HTTP_CODE_BAD_REQUEST           400
@@ -45,6 +47,18 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 #define HTTP_CODE_NOT_ACCEPTABLE        406
 #define HTTP_CODE_REQUEST_TIMEOUT       408
 #define HTTP_CODE_CONFLICT              409
+
+#ifdef __DEBUG
+#define NONEXISTENT_TEST_URL "http://10.255.255.8:9/"
+#endif
+
+#define CERT_PATH_MAX_LEN 256
+#define CECERT_FILENAME "cacert.pem"
+static char certificatePath_[CERT_PATH_MAX_LEN];
+static char certificateFilePath_[CERT_PATH_MAX_LEN];
+
+static int MAX_ATTEMPTS=30;  
+static const struct timespec SLEEPTIME={0,300*1000*1000}; // 0.3 seconds  --> 30x0.3 = 9 seconds
 
 rootpaerror_t httpCommunicate(const char* const inputP, const char** linkP, const char** relP, const char** commandP, httpMethod_t method);
 
@@ -148,6 +162,25 @@ static size_t writeMemoryCallback(void *contents, size_t size, size_t nmemb, voi
     return realsize;
 }
  
+#ifdef __DEBUG
+int debug_function (CURL * curl_handle, curl_infotype info, char* debugMessageP, size_t debugMessageSize, void * extrabufferP)
+{
+    if(debugMessageP!=NULL && debugMessageSize!=0)
+    {
+        char* msgP=malloc(debugMessageSize+1);
+        memcpy(msgP, debugMessageP, debugMessageSize);
+        msgP[debugMessageSize]=0;
+        LOGD("curl: %d %s",info, msgP);
+        free(msgP);
+    }
+    else
+    {
+        LOGD("curl: no debug msg %d %d", info, debugMessageSize);
+    }
+    return 0;
+}
+#endif
+
 bool copyHeader(void *contents, size_t length, char** headerP)
 {
     *headerP = malloc(length + 1);
@@ -229,34 +262,75 @@ static size_t writeHeaderCallback( void *ptr, size_t size, size_t nmemb, void *u
     return realSize;
 }
 
+uint32_t shorter(uint32_t first, uint32_t second)
+{
+    return (first>second?second:first);
+}
+
+void setCertPath(const char* localPathP, const char* certPathP)
+{
+    memset(certificatePath_, 0, CERT_PATH_MAX_LEN);
+    memset(certificateFilePath_, 0, CERT_PATH_MAX_LEN);
+    
+    if (certPathP!=NULL && (strlen(certPathP)+1)<CERT_PATH_MAX_LEN) 
+    {
+        strcpy(certificatePath_, certPathP);
+    }
+    
+    if (localPathP!=NULL && (strlen(localPathP)+1+sizeof(CECERT_FILENAME))<CERT_PATH_MAX_LEN) 
+    {
+        strcpy(certificateFilePath_, localPathP);
+        strcat(certificateFilePath_, "/");
+    }
+    strcat(certificateFilePath_, CECERT_FILENAME);
+}
+//
+// TODO-refactor: saveCertFile is duplicate from saveFile in xmlMessageHandler.c, move these to common place
+//
+void saveCertFile(char* filePath, char* fileContent)
+{
+    LOGD(">>saveCertFile %s", filePath);
+    FILE* fh;
+    if ((fh = fopen(filePath, "w")) != NULL) // recreating the file every time, this is not the most efficient way, but ensures 
+	{                                        // the file is updated in case rootpa and the required content is updated
+        fprintf(fh, "%s", fileContent);
+        fclose(fh);
+	}
+    else
+    {
+        LOGE("saveCertFile no handle %s", filePath);
+    }
+    LOGD("<<saveCertFile");
+}
+
 bool setBasicOpt(CURL* curl_handle, MemoryStruct* chunkP, HeaderStruct* headerChunkP, const char* linkP)
 {
-    if(curl_easy_setopt(curl_handle, CURLOPT_URL, linkP)!=0)
+    if(curl_easy_setopt(curl_handle, CURLOPT_URL, linkP)!=CURLE_OK)
     {
         LOGE("curl_easy_setopt CURLOPT_URL failed");
         return false;
     }
     
     /* reading response to memory instead of file */
-    if(curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, writeMemoryCallback)!=0)
+    if(curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, writeMemoryCallback)!=CURLE_OK)
     {
         LOGE("curl_easy_setopt CURLOPT_WRITEFUNCTION failed");
         return false;
     }
     
-    if(curl_easy_setopt(curl_handle, CURLOPT_HEADERFUNCTION, writeHeaderCallback)!=0)
+    if(curl_easy_setopt(curl_handle, CURLOPT_HEADERFUNCTION, writeHeaderCallback)!=CURLE_OK)
     {
         LOGE("curl_easy_setopt CURLOPT_HEADERFUNCTION failed");
         return false;
     }
 
-    if(curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *) chunkP)!=0)
+    if(curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *) chunkP)!=CURLE_OK)
     {
         LOGE("curl_easy_setopt CURLOPT_WRITEDATA failed");
         return false;
     }
 
-    if(curl_easy_setopt(curl_handle, CURLOPT_WRITEHEADER, (void *) headerChunkP)!=0)
+    if(curl_easy_setopt(curl_handle, CURLOPT_WRITEHEADER, (void *) headerChunkP)!=CURLE_OK)
     {
         LOGE("curl_easy_setopt CURLOPT_WRITEHEADER failed");
         return false;
@@ -265,66 +339,95 @@ bool setBasicOpt(CURL* curl_handle, MemoryStruct* chunkP, HeaderStruct* headerCh
      
     /* some servers don't like requests that are made without a user-agent
        field, so we provide one */ 
-    if(curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "rpa/1.0")!=0)
+    if(curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "rpa/1.0")!=CURLE_OK)
     {
         LOGE("curl_easy_setopt CURLOPT_USERAGENT failed");
         return false;
     }
 
-    if(curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 1L)!=0)
+    if(curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 1L)!=CURLE_OK)
     {
         LOGE("curl_easy_setopt CURLOPT_USERAGENT failed");
         return false;
     }
 
-    if(curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 120L)!=0)  // timeout after 120 seconds
+
+    saveCertFile(certificateFilePath_, CA_CERTIFICATES);
+    
+    LOGD("curl_easy_setopt CURLOPT_CAINFO %s", certificateFilePath_);
+    if(curl_easy_setopt(curl_handle, CURLOPT_CAINFO,  certificateFilePath_)!=CURLE_OK)
+    {
+        LOGE("curl_easy_setopt CURLOPT_CAINFO failed");
+        return false;
+    }
+
+    LOGD("curl_easy_setopt CURLOPT_CAPATH %s", certificatePath_);
+    if(curl_easy_setopt(curl_handle, CURLOPT_CAPATH,  certificatePath_)!=CURLE_OK)
+    {
+        LOGE("curl_easy_setopt CURLOPT_CAPATH failed");
+        return false;
+    }   
+
+    long int se_connection_timeout=120L; // timeout after 120 seconds
+#ifdef __DEBUG
+    curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, 1L);
+    curl_easy_setopt(curl_handle, CURLOPT_DEBUGFUNCTION, debug_function);   
+    
+    if(strncmp(linkP, NONEXISTENT_TEST_URL, shorter(strlen(NONEXISTENT_TEST_URL), strlen(linkP)))==0)
+    {
+        se_connection_timeout=3L; // reducing the connection timeout for testing purposes
+        MAX_ATTEMPTS=1; // this is for testint code, we are using nonexitent url here so no unncessary attempts
+        LOGD("setBasicOpt timeout set to %ld", se_connection_timeout);
+    }   
+#endif
+
+    if(curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, se_connection_timeout)!=CURLE_OK)
     {
         LOGE("curl_easy_setopt CURLOPT_TIMEOUT failed");
         return false;
     }
 
-
 // TODO-RELEASE, hopefully these are not needed but libcurl can use the environment variable settings.
 // if they are needed, the settings need to be obtained from the database
-// also disablingCURLOPT_SSL_VERIFYPEER is for testing purposes only
 //
-//    curl_easy_setopt(curl_handle,CURLOPT_PROXY, "http://web-proxy.intern:3128");
-//    curl_easy_setopt(curl_handle,CURLOPT_PROXYUSERNAME, "soukkote");
-//    curl_easy_setopt(curl_handle,CURLOPT_PROXYPASSWORD, "");
-//    curl_easy_setopt(curl_handle, CURLOPT_SSL_VERIFYPEER, 0L);
+//    curl_easy_setopt(curl_handle,CURLOPT_PROXY, "http://proxyaddress");
+//    curl_easy_setopt(curl_handle,CURLOPT_PROXYUSERNAME, "username");
+//    curl_easy_setopt(curl_handle,CURLOPT_PROXYPASSWORD, "read_proxy_password");
 
     return true;
 }
 
+
+
 bool setPutOpt(CURL* curl_handle, ResponseStruct* responseChunk)
 {
     LOGD(">>setPutOpt");
-    if (curl_easy_setopt(curl_handle, CURLOPT_READFUNCTION, readResponseCallback)!=0)
+    if (curl_easy_setopt(curl_handle, CURLOPT_READFUNCTION, readResponseCallback)!=CURLE_OK)
     {
         LOGE("curl_easy_setopt CURLOPT_READFUNCTION failed");
         return false;
     }
 
-    if (curl_easy_setopt(curl_handle, CURLOPT_UPLOAD, 1L)!=0)
+    if (curl_easy_setopt(curl_handle, CURLOPT_UPLOAD, 1L)!=CURLE_OK)
     {
         LOGE("curl_easy_setopt CURLOPT_UPLOAD failed");
         return false;
     }
 
-    if (curl_easy_setopt(curl_handle, CURLOPT_PUT, 1L)!=0)
+    if (curl_easy_setopt(curl_handle, CURLOPT_PUT, 1L)!=CURLE_OK)
     {
         LOGE("curl_easy_setopt CURLOPT_PUT failed");
         return false;
     }
 
-    if (curl_easy_setopt(curl_handle, CURLOPT_READDATA, responseChunk)!=0)
+    if (curl_easy_setopt(curl_handle, CURLOPT_READDATA, responseChunk)!=CURLE_OK)
     {
         LOGE("curl_easy_setopt CURLOPT_READDATA failed");
         return false;
     }
 
     long s=responseChunk->size;
-    if (curl_easy_setopt(curl_handle, CURLOPT_INFILESIZE, s)!=0)
+    if (curl_easy_setopt(curl_handle, CURLOPT_INFILESIZE, s)!=CURLE_OK)
     {
         LOGE("curl_easy_setopt CURLOPT_INFILESIZE_LARGE failed");
         return false;
@@ -336,8 +439,16 @@ bool setPutOpt(CURL* curl_handle, ResponseStruct* responseChunk)
 
 bool setPostOpt(CURL* curl_handle, const char* inputP)
 {
-    inputP?(LOGD(">>setPostOpt %d %s", (int) strlen(inputP), inputP)):(LOGD(">>setPostOpt "));
-    if (curl_easy_setopt(curl_handle, CURLOPT_POST, 1L)!=0)
+    if(inputP)
+    {
+        LOGD(">>setPostOpt %d %s", (int) strlen(inputP), inputP);
+    }
+    else
+    {
+        LOGD(">>setPostOpt");
+    }
+    
+    if (curl_easy_setopt(curl_handle, CURLOPT_POST, 1L)!=CURLE_OK)
     {
         LOGE("curl_easy_setopt CURLOPT_POST failed");
         return false;
@@ -345,14 +456,14 @@ bool setPostOpt(CURL* curl_handle, const char* inputP)
 
     if(NULL==inputP) 
     {
-        if (curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDSIZE, 0L)!=0)
+        if (curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDSIZE, 0L)!=CURLE_OK)
         {
             LOGE("curl_easy_setopt CURLOPT_POSTFIELDSIZE failed");
             return false;
         }
     }
         
-    if (curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, (void*) inputP)!=0)
+    if (curl_easy_setopt(curl_handle, CURLOPT_POSTFIELDS, (void*) inputP)!=CURLE_OK)
     {
         LOGE("curl_easy_setopt CURLOPT_POSTFIELDS failed");
         return false;
@@ -365,7 +476,7 @@ bool setPostOpt(CURL* curl_handle, const char* inputP)
 bool setDeleteOpt(CURL* curl_handle, const char* inputP)
 {
     LOGD(">>setDeleteOpt %s", inputP);
-    if (curl_easy_setopt(curl_handle, CURLOPT_CUSTOMREQUEST, "DELETE")!=0)
+    if (curl_easy_setopt(curl_handle, CURLOPT_CUSTOMREQUEST, "DELETE")!=CURLE_OK)
     {
         LOGE("curl_easy_setopt CURLOPT_CUSTOMREQUEST failed");
         return false;
@@ -380,7 +491,7 @@ CURL* curl_handle_=NULL;
 
 rootpaerror_t openSeClientAndInit()
 {
-    if(curl_global_init(CURL_GLOBAL_ALL)!=0)
+    if(curl_global_init(CURL_GLOBAL_ALL)!=CURLE_OK)
     {
         LOGE("curl_gloabal_init failed");
         return ROOTPA_ERROR_NETWORK;
@@ -407,6 +518,12 @@ void closeSeClientAndCleanup()
 
 rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, const char** relP, const char** commandP, httpMethod_t method)
 {
+    rootpaerror_t ret=ROOTPA_OK;
+    long int curlRet=CURLE_COULDNT_CONNECT;
+    long int http_code = 0;
+    int attempts=0;
+
+    
     LOGD(">>httpCommunicate");
     if(NULL==linkP || NULL==relP || NULL==commandP || NULL==*linkP)
     {
@@ -477,7 +594,6 @@ rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, con
 		}
 	}
 
-
     if(setBasicOpt(curl_handle_, &chunk, &headerChunk, *linkP)==false)
     {
         LOGE("setBasicOpt failed");
@@ -485,19 +601,25 @@ rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, con
         return ROOTPA_ERROR_NETWORK;    
     }
 
-    rootpaerror_t ret=ROOTPA_OK;
-    ret=curl_easy_perform(curl_handle_);
-    long int http_code = 0;
-    curl_easy_getinfo (curl_handle_, CURLINFO_RESPONSE_CODE, &http_code);
-    if(ret!=0)    
+    while(curlRet!=CURLE_OK && attempts++ < MAX_ATTEMPTS)
     {
-        LOGE("curl_easy_perform failed %d", ret);
+        curlRet=curl_easy_perform(curl_handle_);
+        LOGD("curl_easy_perform %ld %d", curlRet, attempts);
+        if(CURLE_OK==curlRet) break;
+        nanosleep(&SLEEPTIME,NULL);
+    }
+
+    curl_easy_getinfo (curl_handle_, CURLINFO_RESPONSE_CODE, &http_code);
+    if(curlRet!=CURLE_OK)    
+    {
+        LOGE("curl_easy_perform failed %ld", curlRet);
         free(chunk.memoryP);
         free(headerChunk.linkP);
         free(headerChunk.relP);
+        curl_easy_reset(curl_handle_);        
         return ROOTPA_ERROR_NETWORK;
     }
-    
+
     LOGD("http return code from SE %ld", (long int) http_code);    
     if ((200 <= http_code &&  http_code < 300) ||  HTTP_CODE_MOVED == http_code) 
     {
@@ -529,7 +651,7 @@ rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, con
     curl_easy_reset(curl_handle_);
     LOGD("%lu bytes retrieved\n", (long)chunk.size);
      
-    LOGD("<<httpCommunicate %ld %ld", (long int) ret, (long int) http_code); 
+    LOGD("<<httpCommunicate %d %ld %ld", (int) ret, (long int) http_code, (long int) curlRet); 
     return ret;
 }
 

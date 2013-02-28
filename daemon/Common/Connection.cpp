@@ -38,6 +38,7 @@
 
 #include "Connection.h"
 #include <sys/ioctl.h>
+#include <sys/socket.h>
 #include <poll.h>
 
 //#define LOG_VERBOSE
@@ -100,6 +101,7 @@ bool Connection::connect(const char *dest)
         LOG_ERRNO("connect()");
         return false;
     }
+    
     return true;
 }
 
@@ -229,4 +231,17 @@ bool Connection::isConnectionAlive(void)
     return true;
 }
 
+//------------------------------------------------------------------------------
+bool Connection::getPeerCredentials(struct ucred &cr)
+{
+    struct ucred cred;
+    int len = sizeof (cred);
+    assert(socketDescriptor != -1);
+    getsockopt(socketDescriptor, SOL_SOCKET, SO_PEERCRED, &cred, &len);
+    if (len == sizeof(cred)) {
+        cr = cred;
+        return true;
+    }
+    return false;
+}
 /** @} */

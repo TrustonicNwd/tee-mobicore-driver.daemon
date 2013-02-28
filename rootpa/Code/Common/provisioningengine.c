@@ -85,7 +85,7 @@ void addIntToUri(char* uriP, uint32_t addThis)
     memset(intInString, 0, 10);
     sprintf(intInString, "/%d", addThis);
     strcpy((uriP+strlen(uriP)), intInString);
-    LOGD("add int to URI %s %d", uriP, addThis);
+    LOGD("add int to URI %s %d", uriP, addThis);   
 }
 
 void cleanup(char** linkP, char** relP, char** commandP)
@@ -143,6 +143,8 @@ void doProvisioningWithSe(
     LOGD(">>doProvisioningWithSe");
     callbackP_=callbackP;
     rootpaerror_t ret=ROOTPA_OK;
+    rootpaerror_t tmpRet=ROOTPA_OK;
+    
     if(NULL==callbackP)
     {
         LOGE("No callbackP, can not respond to caller, this should not happen!");
@@ -243,25 +245,15 @@ void doProvisioningWithSe(
                 int mcVersionTag=0;
                 mcVersionInfo_t mcVersion;
 
-                ret=getSysInfoP(&osSpecificInfo);
-                if(ret!=ROOTPA_OK)
-                { 
-                    LOGE("getSysInfoP returned an error %d", ret);
-                    callbackP(ERROR, ret, NULL);  // informing SP.PA on problems but continuing anyway 
-                                            // to provide information to SE
-                                                           
-                }
-                ret=getVersionP(&mcVersionTag, &mcVersion);
-                if(ret!=ROOTPA_OK)
-                { 
-                    LOGE("getVersionP returned an error %d", ret);
-                    callbackP(ERROR, ret, NULL);  // informing SP.PA on problems but continuing anyway 
-                                            // to provide information to SE
-                                            
-                }
-                                                                           
-                ret=buildXmlSystemInfo(&responseP, mcVersionTag, &mcVersion, &osSpecificInfo);
+                tmpRet=getSysInfoP(&osSpecificInfo);
+                if(tmpRet!=ROOTPA_OK) ret=tmpRet;                
 
+                tmpRet=getVersionP(&mcVersionTag, &mcVersion);
+                if(tmpRet!=ROOTPA_OK) ret=tmpRet;
+                
+                tmpRet=buildXmlSystemInfo(&responseP, mcVersionTag, &mcVersion, &osSpecificInfo);
+                if(tmpRet!=ROOTPA_OK) ret=tmpRet;
+                
                 free(osSpecificInfo.imeiEsnP);
                 free(osSpecificInfo.mnoP);
                 free(osSpecificInfo.brandP);
@@ -269,14 +261,12 @@ void doProvisioningWithSe(
                 free(osSpecificInfo.hardwareP);
                 free(osSpecificInfo.modelP);
                 free(osSpecificInfo.versionP);
-                
-                if(ret!=ROOTPA_OK) callbackP(ERROR, ret, NULL);  // informing SP.PA on problems but continuing anyway 
-                                                           // to provide information to SE
-                
-                ret=httpPutAndReceiveCommand(responseP, &linkP, &relP, &commandP);
+
+                tmpRet=httpPutAndReceiveCommand(responseP, &linkP, &relP, &commandP);
+                if(tmpRet!=ROOTPA_OK) ret=tmpRet;
                 if(ret!=ROOTPA_OK)
                 {
-                    LOGE("httpPutAndReceiveCommand returned an error %d", ret);
+                    LOGE("getSysInfoP, getVersionP or buildXmlSystemInfo or httpPutAndReceiveCommand returned an error %d", ret);
                     callbackP(ERROR, ret, NULL);
                     workToDo=false;
                 }
@@ -311,10 +301,6 @@ void doProvisioningWithSe(
                 ret=handleXmlMessage(commandP, &responseP);
                 setCallbackP(NULL);
 
-                if(ret!=ROOTPA_OK) callbackP(ERROR, ret, NULL);  // informing SP.PA on problems but continuing anyway 
-                                                           // to provide information to SE
-
-
                 if(NULL==responseP)
                 {
                     if(ROOTPA_OK==ret) ret=ROOTPA_ERROR_XML;  
@@ -322,7 +308,8 @@ void doProvisioningWithSe(
                 }
                 else
                 {
-                    ret=httpPostAndReceiveCommand(responseP, &linkP, &relP, &commandP);
+                    tmpRet=httpPostAndReceiveCommand(responseP, &linkP, &relP, &commandP);
+                    if(tmpRet!=ROOTPA_OK) ret=tmpRet;
                 }
                 
                 if(ret!=ROOTPA_OK)

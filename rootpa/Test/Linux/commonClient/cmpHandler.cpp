@@ -412,7 +412,18 @@ bool checkCmpResults(int numberOfCommands, CmpMessage* responsesP)
     bool result=true;
     for(int i=0;i<numberOfCommands;i++)
     {
-        if(responsesP[i].length <= 0 || *((uint32_t*)responsesP[i].contentP+RETCODE_INDEX) != 0)
+        uint32_t retCode=0;
+        
+        if(0==i || 1==i || 4==i)
+        {
+            *((uint32_t*)responsesP[i].contentP+OLD_RETCODE_INDEX);
+        }
+        else
+        {
+            *((uint32_t*)responsesP[i].contentP+RETCODE_INDEX);        
+        }
+        
+        if(responsesP[i].length <= 0 || retCode != 0)
         {
             cout << "==== FAILURE: cmpResult "<< i << "\n";
             result=false;

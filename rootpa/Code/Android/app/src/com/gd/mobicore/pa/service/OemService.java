@@ -35,7 +35,6 @@ import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.Bundle;
-import android.util.Log;
 
 import java.util.Random;
 
@@ -65,12 +64,13 @@ public class OemService extends BaseService {
         public CommandResult unregisterRootContainer(){
             Log.d(TAG,">>RootPAServiceIfc.Stub.unregisterRootContainer"); 
 
-            doProvisioningLockSuid_=OEM_UID_FOR_LOCK+new Random().nextInt(); // this may override the uid used in lock, which means it will not be
+            int tmpSuid=OEM_UID_FOR_LOCK+new Random().nextInt(); // this may override the uid used in lock, which means it will not be
             
-            if(!OemService.this.acquireLock(doProvisioningLockSuid_, false).isOk()){
+            if(!OemService.this.acquireLock(tmpSuid, false).isOk()){
                 return new CommandResult(CommandResult.ROOTPA_ERROR_LOCK);
             }
 
+            doProvisioningLockSuid_=tmpSuid;
             Log.d(TAG,"RootPAServiceIfc.Stub.unregisterRootContainer calling JNI");
             
             boolean[] isRegistered = new boolean[1];
@@ -116,10 +116,11 @@ public class OemService extends BaseService {
     
     @Override
     public IBinder onBind(Intent intent){
-        se_ = intent.getByteArrayExtra("SE");  // TODO-RELEASE: this makes sense at testing time, does it make sense in released code!!!
-        Log.d(TAG,"OemService binding: "+new String(se_));
+        se_ = intent.getByteArrayExtra("SE");
+        Log.setLoggingLevel(intent.getIntExtra("LOG",0));
+        Log.i(TAG,"OemService binding");
+        if(se_!=null) Log.d(TAG,new String(se_));
         return mBinder;
-
     }
 
     @Override

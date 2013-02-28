@@ -258,12 +258,13 @@ mcResult_t mcRegistryCleanupSp(mcSpid_t spid)
 }
 
 //------------------------------------------------------------------------------
-mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, void *so, uint32_t size)
+mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, mcSpid_t spid, void *so, uint32_t size)
 {
     typedef struct {
         uint32_t commandId;
         uint32_t soSize;
         mcUuid_t uuid;
+        mcSpid_t spid;
         uint8_t so;
     } storeCmd;
 
@@ -272,6 +273,7 @@ mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, void *so, uint32_t s
     
     cmd->commandId = MC_DRV_REG_WRITE_TL_CONT;
     cmd->soSize = size;
+    cmd->spid = spid;
     memcpy(&cmd->uuid, uuid, sizeof(mcUuid_t));
     memcpy(&cmd->so, so, size);
 
@@ -282,15 +284,17 @@ mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, void *so, uint32_t s
 
 
 //------------------------------------------------------------------------------
-mcResult_t mcRegistryReadTrustletCon(const mcUuid_t *uuid, void *so, uint32_t *size)
+mcResult_t mcRegistryReadTrustletCon(const mcUuid_t *uuid, mcSpid_t spid, void *so, uint32_t *size)
 {
     struct {
         uint32_t commandId;
         mcUuid_t uuid;
+        mcSpid_t spid;
     } cmd;
     mcResult_t ret;
     uint32_t rsize;
     cmd.commandId = MC_DRV_REG_READ_TL_CONT;
+    cmd.spid = spid;
     memcpy(&cmd.uuid, uuid, sizeof(mcUuid_t));
 
     rsize = *size;
@@ -300,14 +304,16 @@ mcResult_t mcRegistryReadTrustletCon(const mcUuid_t *uuid, void *so, uint32_t *s
 }
 
 //------------------------------------------------------------------------------
-mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t *uuid)
+mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t *uuid, const mcSpid_t spid)
 {
     struct {
         uint32_t commandId;
         mcUuid_t uuid;
+        mcSpid_t spid;
     } cmd;
 
     cmd.commandId = MC_DRV_REG_DELETE_TL_CONT;
+    cmd.spid = spid;
     memcpy(&cmd.uuid, uuid, sizeof(mcUuid_t));
 
     return writeBlobData(&cmd, sizeof(cmd));

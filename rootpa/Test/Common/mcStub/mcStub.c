@@ -421,6 +421,8 @@ __MC_CLIENT_LIB_API mcResult_t mcUnmap(
 
 #define ROOTID 7
 #define SPID 8
+#define SPID_UNKNOWN 12
+#define SPID_UNKNOWN_TLT_CONT_INDICES 16
 static const mcUuid_t TLTUUID={{3,3,3,3,4,4,4,4,5,5,5,5,6,6,6,6}};
 static const mcSoAuthTokenCont_t AUTHTOKENCONT={{16843009,16843009,(mcSoContext_t)16843009,(mcSoLifeTime_t)16843009,{16843009,
                                       {{2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}}},33686018,
@@ -468,6 +470,29 @@ static const mcSoSpCont_t SPCONT={{16843009,16843009,(mcSoContext_t)16843009,(mc
                                   };
 
 
+static const mcSoSpCont_t SPCONT_UNKNOWN_TLT_CONT_INDICES={{16843009,16843009,(mcSoContext_t)16843009,(mcSoLifeTime_t)16843009,{16843009,                    // [header               
+                                  {{2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}}},33686018,                     // header                
+                                  50529027},{(contType_t)50529027,50529027,{(mcContainerState_t)4},50529027,                  // header] mcSpCont // state == 4 (SP_LOCKED)
+                                 {{{2,2,2,2,4,4,4,4,5,5,5,5,6,6,6,6}},{{2,2,2,2,                        // children 16/child 1
+                                  4,4,4,4,5,5,5,5,6,6,6,6}},{{0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,                         // 2
+                                  0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}},{{0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,                         // 3
+                                  0xFF,0xFF,0xFF,0xFF}},{{0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}},                        // 5
+                                  {{0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}},{{0xFF,0xFF,0xFF,0xFF,                        // 6
+                                  0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}},{{0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,                         // 7
+                                  0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}},{{0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,                   // 8
+                                  0xFF,0xFF,0xFF,0xFF}},{{0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}},                  // 10 childred so far
+                                  {{0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}},{{0xFF,0xFF,0xFF,0xFF,                  // 11
+                                  0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}},{{0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,                   // 12 
+                                  0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}},{{0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,                   // 13
+                                  0xFF,0xFF,0xFF,0xFF}},{{0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}},                  // 15 
+                                  {{0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF}}},{{{0x10101010,      // mcSymmetricKey (8 ints)
+                                  0x11111111,0x11111111,0x11111111,0x11111111,0x11111111,                                              // 340
+                                  0x12121212,0x12121212}}}},{0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,0x12,                // 360
+                                  0x13,0x13,0x13,0x13,0x13,0x13,0x13,0x13,0x13,0x13,0x13,0x13,0x13,0x13,0x13,0x13,0x13,0x13,0x13,0x13, // 380
+                                  0x14,0x14,0x14,0x14,0x14,0x14,0x14,0x14,0x14,0x14,0x14,0x14,0x14,0x14,0x14,0x14}                     // 396
+                                  };
+                                  
+                                  
 static const mcSoTltCont_2_0_t TLTCONT={{16843009,16843009,(mcSoContext_t)16843009,(mcSoLifeTime_t)16843009,{16843009,                   // [header               
                                   {{2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2}}},33686018,                        // header                
                                   50529027},{{(contType_t)0x03030303,0x03030303,{(mcContainerState_t)4},0x03030303,             // header]60  state=
@@ -488,6 +513,21 @@ static const mcSoDataCont_t DATACONT={{0x11111111,0x11111111,(mcSoContext_t)0x11
 
 static const cmpMac_t MAC={{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32}};
 
+static const int CHANGING_AUTH_TOKEN_CONTAINER = 0xFE;
+    
+static const suidData_t ANOTHER_SUID = {{
+    0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0x01, 0x01, 0x01, 0x01
+}};
+
+static const suidData_t OFFSET_OUT_SUID={{
+    0x04, 0x05, 0x06, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0x01, 0x01, 0x01, 0x01 }};
+
+static const suidData_t OFFSET_PLUS_LEN_OUT_SUID={{
+    0x04, 0x05, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0x01, 0x01, 0x01, 0x01 }};
+
+static const suidData_t RESPONSE_ID_WRONG_SUID={{
+    0x04, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0x01, 0x01, 0x01, 0x01 }};
+   
 static const suidData_t SOFTWARE_SUID = {{
     0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF
 }};
@@ -587,9 +627,13 @@ mcResult_t mcRegistryStoreAuthToken(const mcSoAuthTokenCont_t *so, uint32_t size
     if(memcmp(so,&AUTHTOKENCONT, smaller(size, sizeof(AUTHTOKENCONT)))==0)
     {
         return MC_DRV_OK;
-    }
+    }   
 
-    LOGE("FAILURE: mcStub:mcRegistryStoreAuthToken invalid authToken (size %d)", size);
+    if(so->soHeader.type != CHANGING_AUTH_TOKEN_CONTAINER) // checking special case for error case testing, that is not failure
+    {
+        LOGE("FAILURE: ");
+    }
+    LOGE("mcStub:mcRegistryStoreAuthToken invalid authToken (size %d)", size);    
     return MC_DRV_ERR_INVALID_PARAMETER;
 }
 
@@ -616,13 +660,28 @@ it writes values later used by that
 mcResult_t mcRegistryReadSp(mcSpid_t spid, mcSoSpCont_t* container, uint32_t* size)
 {
     LOGI("mcStub:mcRegistryReadSp");
-    if(NULL==container || spid != SPID)
+
+    if(spid != SPID && spid != SPID_UNKNOWN_TLT_CONT_INDICES )
     {
-        LOGE("FAILURE: mcStub:mcRegistryReadSp invalid parameter container==%ld, spid==%d expecting %d", (long int) container,spid,SPID);
-        return MC_DRV_ERR_INVALID_PARAMETER;    
+        LOGE("mcStub:mcRegistryReadSp invalid parameter spid==%d expecting %d",spid,SPID); // in some tests this is expected
+        return MC_DRV_ERR_INVALID_DEVICE_FILE;
     }
+
+    if(NULL==container)
+    {
+        LOGE("FAILURE: mcStub:mcRegistryReadSp invalid parameter container==%ld", (long int) container);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
+    
     *size=sizeof(SPCONT);
-    memcpy(container, &SPCONT, *size); 
+    if(SPID_UNKNOWN_TLT_CONT_INDICES==spid)
+    {
+        memcpy(container, &SPCONT_UNKNOWN_TLT_CONT_INDICES, *size);     
+    }
+    else
+    {
+        memcpy(container, &SPCONT, *size); 
+    }
     return MC_DRV_OK;
 }
 
@@ -659,20 +718,28 @@ mcResult_t mcRegistryCleanupSp(mcSpid_t spid)
     return MC_DRV_OK;
 }
 
-mcResult_t mcRegistryReadTrustletCon(const mcUuid_t* uuid, mcSoTltCont_t* so, uint32_t* size)
+mcResult_t mcRegistryReadTrustletCon(const mcUuid_t* uuid, mcSpid_t spid, mcSoTltCont_t* so, uint32_t* size)
 {
     LOGI("mcStub:mcRegistryReadTrustletCon");
-    if(NULL==so || NULL==uuid || memcmp(&TLTUUID, uuid, sizeof(mcUuid_t))!=0)
+
+    if(NULL==so || NULL==uuid )
     {
-        LOGE("FAILURE: mcStub:mcRegistryReadTrustletCon invalid parameter %ld %ld", (long int) so, ((uuid==NULL)?(long int)uuid:(uint32_t)(uuid->value[0])));
+        LOGE("FAILURE: mcStub:mcRegistryReadTrustletCon invalid parameter %ld %ld", (long int) so, (long int)uuid);
         return MC_DRV_ERR_INVALID_PARAMETER;    
     }
+    
+    if(memcmp(&TLTUUID, uuid, sizeof(mcUuid_t))!=0)
+    {
+        LOGE("mcStub:mcRegistryReadSp invalid parameter uuid[0]==%d",(uint32_t)(uuid->value[0]));
+        return MC_DRV_ERR_INVALID_DEVICE_FILE;
+    }
+    
     *size=sizeof(TLTCONT);
     memcpy(so, &TLTCONT, *size); 
     return MC_DRV_OK;
 }
 
-mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, const mcSoTltCont_t *so, uint32_t size)
+mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, mcSpid_t spid, const mcSoTltCont_t *so, uint32_t size)
 {
     callRequiresTltWrite_=false;
     LOGI("mcStub:mcRegistryStoreTrustletCon");
@@ -693,12 +760,12 @@ mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, const mcSoTltCont_t 
     return MC_DRV_ERR_INVALID_PARAMETER;
 }
 
-mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t* uuid)
+mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t* uuid, mcSpid_t spid)
 {
     LOGI("mcStub:mcRegistryCleanupTrustlet");
     callRequiresTltCleanup_=false;
 
-    if(NULL==uuid || memcmp(&storedTltUuid_, uuid, sizeof(mcUuid_t))!=0 || memcmp(&TLTUUID, uuid, sizeof(mcUuid_t))!=0)
+    if(NULL==uuid || memcmp(&storedTltUuid_, uuid, sizeof(mcUuid_t))!=0 || memcmp(&TLTUUID, uuid, sizeof(mcUuid_t))!=0 )
     {
         LOGE("FAILURE: mcStub:mcRegistryCleanupTrustlet invalid parameter %ld %ld %d", (long int) uuid, ((uuid==NULL)?(long int)uuid:(uuid->value[0])), storedTltUuid_.value[0]);
         memset(&storedTltUuid_,0,sizeof(mcUuid_t));
@@ -706,29 +773,6 @@ mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t* uuid)
     }
     memset(&storedTltUuid_,0,sizeof(mcUuid_t));
     return MC_DRV_OK;
-}
-
-mcResult_t mcRegistryStoreData(const mcSoDataCont_t* so, uint32_t size)
-{
-    LOGI("mcStub:mcRegistryStoreData");
-    callRequiresDataWrite_=false;
-
-
-    if(NULL==so)
-    {
-        LOGE("FAILURE: mcStub:mcRegistryStoreData so == NULL");
-        return MC_DRV_ERR_INVALID_PARAMETER;    
-    }
-
-// comparing only first 140 bytes here because we never initialized more for testing
-    if(memcmp(so, &DATACONT, smaller(size, 140))==0)
-    {
-        return MC_DRV_OK;
-    }
-
-    LOGE("FAILURE: mcStub:mcRegistryStoreData not correctly formatted data cont %d ... %d", ((uint8_t*)so)[0],((uint8_t*)so)[139]);
-    return MC_DRV_ERR_INVALID_PARAMETER;
-
 }
 
 
@@ -805,6 +849,34 @@ uint8_t* setElement(uint32_t elementNbr, uint8_t* wsmP, uint32_t elementLength)
     return (mappedMemory_+elementP->offset);
 }
 
+cmpMapOffsetInfo_t* accessElement(uint32_t elementNbr, uint8_t* wsmP)
+{
+    if(0==elementNbr) return NULL;
+    elementNbr--;    
+    cmpMapOffsetInfo_t* elementP=(cmpMapOffsetInfo_t*)(wsmP+sizeof(cmpResponseHeaderTci_t));
+    elementP+=elementNbr;
+    return elementP;
+}
+
+uint32_t getOffset(uint32_t elementNbr, uint8_t* wsmP)
+{
+    return accessElement(elementNbr, wsmP)->offset;
+}
+
+uint32_t getLen(uint32_t elementNbr, uint8_t* wsmP)
+{
+    return accessElement(elementNbr, wsmP)->len;
+}
+
+
+void modifyOffset(uint32_t elementNbr, uint8_t* wsmP, uint32_t offset, uint32_t len)
+{
+    LOGI("mcStub: modifyOffset %d %d %d", elementNbr, offset, len);    
+    accessElement(elementNbr, wsmP)->offset=offset;
+    accessElement(elementNbr, wsmP)->len=len;    
+}
+
+
 void handleGetSuid(uint8_t* cmpP, uint8_t* cmpRspP)
 {
     memcpy(((cmpRspGetSuid_t*)(cmpRspP))->suid.suidData.data, &SOFTWARE_SUID, sizeof(SOFTWARE_SUID));
@@ -833,19 +905,42 @@ void handleGetVersion(uint8_t* cmpP, uint8_t* cmpRspP)
 
 void handleGenerateAuthToken(uint8_t* cmpP, uint8_t* cmpRspP)
 {
-    if(!socAuthenticated_)
-    {
-        ((cmpResponseHeader_t*)(cmpRspP))->returnCode=RET_ERR_EXT_SECURITY_STATUS_NOT_SATISFIED;
-        return;
-    }
-   
+    suidData_t cmdSuid;
+    memcpy(&cmdSuid,&((cmpCmdGenAuthToken_t*)cmpP)->cmd.sdata.suid.suidData,sizeof(suidData_t));
     memcpy(&((cmpRspGenAuthToken_t*)(cmpRspP))->soAuthCont, &AUTHTOKENCONT ,sizeof(AUTHTOKENCONT));
+    uint8_t* containerTargetP=NULL;
+    containerTargetP=setElement(2, storedWsm_, sizeof(mcSoAuthTokenCont_t));        
+    memcpy(containerTargetP, &AUTHTOKENCONT ,sizeof(AUTHTOKENCONT));
+
+    /**
+    the following lines are for testing various error cases with RootPAClient
+    */    
+    if(memcmp(&ANOTHER_SUID,&cmdSuid,sizeof(suidData_t))==0)
+    {
+        ((mcSoAuthTokenCont_t*)containerTargetP)->soHeader.type=CHANGING_AUTH_TOKEN_CONTAINER;
+    }
+    else if(memcmp(&OFFSET_OUT_SUID,&cmdSuid,sizeof(suidData_t))==0)
+    {
+        // doing this with the container
+        uint32_t offset=getOffset(2,storedWsm_);
+        uint32_t len=getLen(2,storedWsm_);
+        offset=mappedMemoryLen_+3;
+        modifyOffset(2, storedWsm_, offset, len);
+    }
+    else if(memcmp(&OFFSET_PLUS_LEN_OUT_SUID,&cmdSuid,sizeof(suidData_t))==0)
+    {
+        // doing this with the actual message        
+        uint32_t offset=getOffset(1,storedWsm_);
+        uint32_t len=getLen(1,storedWsm_);
+        len=mappedMemoryLen_+3;
+        modifyOffset(1, storedWsm_, offset, len);
+    }
+    else if(memcmp(&RESPONSE_ID_WRONG_SUID,&cmdSuid,sizeof(suidData_t))==0)
+    {
+        *((uint32_t*)(cmpRspP))=RSP_ID(MC_CMP_CMD_BEGIN_SP_AUTHENTICATION); // could be anything but GEN_AUTH_TOKEN, we are using real value
+    }    
     
     ((cmpResponseHeader_t*)(cmpRspP))->returnCode=SUCCESSFUL; // (tlCmError.h)
-
-    uint8_t* containerTargetP=setElement(2, storedWsm_, sizeof(mcSoAuthTokenCont_t));
-
-    memcpy(containerTargetP, &AUTHTOKENCONT ,sizeof(AUTHTOKENCONT));
 }
 
 void handleAuthenticate(uint8_t* cmpP, uint8_t* cmpRspP)
@@ -1251,6 +1346,13 @@ void handleTltContUnregister(uint8_t* cmpP, uint8_t* cmpRspP)
 
 void handleAuthenticateTerminate(uint8_t* cmpP, uint8_t* cmpRspP)
 {
+    
+    if(!spAuthenticated_ && !socAuthenticated_ && !rootAuthenticated_)
+    {
+        ((cmpResponseHeader_t*)(cmpRspP))->returnCode=RET_ERR_EXT_SECURITY_STATUS_NOT_SATISFIED;
+        return;
+    }
+    
     socAuthenticated_=false;
     rootAuthenticated_=false;
     spAuthenticated_=false;
@@ -1487,7 +1589,7 @@ RootCleanup_ %d AuthTokenDelete_ %d SpCleanup_ %d TltCleanup_ %d",
         LOGE("FAILURE: mcStub:handleMessage getting element failed %ld", (long int) origCmpP);
         return;
     }    
-    uint8_t* cmpP=malloc(cmpCommandLength+300);  // TODO-Tero: this +300 is here to get rid of Valgrind varnings. It seems that (at least) one of the messages
+    uint8_t* cmpP=malloc(cmpCommandLength+300);  // TODO-Tero: this +300 is here to get rid of Valgrind varnings. It seems that (at least) one of the messages   
     memset(cmpP, 0, cmpCommandLength+300);       // that has size of 116 when received from RootPA/Client is understood bigger in mcStub and it causes problems with Valgrind
     memcpy(cmpP, origCmpP, cmpCommandLength);    // very likely it is handleAuthenticate
     
@@ -1511,6 +1613,8 @@ RootCleanup_ %d AuthTokenDelete_ %d SpCleanup_ %d TltCleanup_ %d",
     memset(cmpRspP, 0, mcStub_getResponseSize(commandId));
     cmpResponseHeaderTci_t* responseInfoP = (cmpResponseHeaderTci_t*) storedWsm_;    
 
+    *((uint32_t*)(mappedMemory_))=RSP_ID(commandId);
+    
     if(sessionOpen_==false)
     {
         LOGI("mcStub.handleMessage: FAILURE, session not open");
@@ -1609,11 +1713,17 @@ RootCleanup_ %d AuthTokenDelete_ %d SpCleanup_ %d TltCleanup_ %d",
     free(cnt1P);
     free(cnt2P);
 
-    *((uint32_t*)(mappedMemory_))=RSP_ID(commandId);
     responseInfoP->version=NEW_CMP_VERSION;
-    responseInfoP->responseId=RSP_ID(commandId);        
+    responseInfoP->responseId=*((uint32_t*)(mappedMemory_));
     responseInfoP->len=0;
-    LOGI("mcStub: returning wsmP_ ver=0x%x rspId=0x%x neededBytes=%d elementoff=%d, elementSize=%d", *((int*)storedWsm_), *((int*)(storedWsm_+4)), *((int*)(storedWsm_+8)), *((int*)(storedWsm_+12)), *((int*)(storedWsm_+16)) );
+    LOGI("mcStub: returning wsmP_ ver=0x%x rspId=0x%x neededBytes=%d elementoff=%d, elementSize=%d container1off=%d, container1Size=%d", 
+                                                        *((int*)storedWsm_), 
+                                                        *((int*)(storedWsm_+4)), 
+                                                        *((int*)(storedWsm_+8)), 
+                                                        *((int*)(storedWsm_+12)), 
+                                                        *((int*)(storedWsm_+16)), 
+                                                        *((int*)(storedWsm_+20)), 
+                                                        *((int*)(storedWsm_+24)));
 
     return;
 }

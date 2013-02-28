@@ -145,6 +145,10 @@ public class CommandResult implements Parcelable{
         return result_;
     }
 
+    public void setValue(int value){
+        result_=value;
+    }    
+    
     public boolean isOk(){
         return (result_==ROOTPA_OK);
     }

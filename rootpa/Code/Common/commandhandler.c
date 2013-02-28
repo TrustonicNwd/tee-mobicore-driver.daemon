@@ -42,6 +42,8 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "contentmanager.h"
 #include "provisioningengine.h"
 #include "xmlmessagehandler.h"
+#include "seclient.h"
+
 
 #define GET_VERSION_COMMAND_LENGTH 4
 #define GET_SUID_COMMAND_LENGTH 4
@@ -209,9 +211,9 @@ rootpaerror_t  isSpContainerRegistered(mcSpid_t spid, bool* isRegisteredP)
     if(NULL==isRegisteredP) return ROOTPA_ERROR_ILLEGAL_ARGUMENT;
 
     int state;
-    mcResult_t result=getSpContainerState(spid, &state);
+    ret=getSpContainerState(spid, &state);
     
-    if(MC_DRV_OK == result)
+    if(ROOTPA_OK == ret)
     {
         if(state != MC_CONT_STATE_UNREGISTERED)
         {
@@ -222,13 +224,10 @@ rootpaerror_t  isSpContainerRegistered(mcSpid_t spid, bool* isRegisteredP)
             *isRegisteredP=false;        
         }
     }
-    else if(MC_DRV_ERR_INVALID_DEVICE_FILE == result)
+    else if(ROOTPA_ERROR_INTERNAL_NO_CONTAINER == ret)
     {
-        *isRegisteredP=false;    
-    }
-    else
-    {
-        ret=ROOTPA_ERROR_REGISTRY;
+        *isRegisteredP=false;
+        ret=ROOTPA_OK;
     }
     
     LOGD("<<isSpContainerRegistered %d", *isRegisteredP);
@@ -247,13 +246,12 @@ rootpaerror_t getSpContainerState(mcSpid_t spid, mcContainerState_t* stateP)
     
     if(MC_DRV_ERR_INVALID_DEVICE_FILE == result)
     {
-        ret=ROOTPA_ERROR_INTERNAL_NO_CONTAINER;
+        ret=ROOTPA_ERROR_INTERNAL_NO_CONTAINER; // using this since it is changed to ROOTPA_OK and state NO_CONTAINER in the wrapper.
     }
     else if (result!=MC_DRV_OK)
     {
         ret=ROOTPA_ERROR_REGISTRY;
     }
-    
 
     LOGD("<<getSpContainerState %d", *stateP);
     return ret;
@@ -292,7 +290,7 @@ rootpaerror_t  getSpContainerStructure(mcSpid_t spid, SpContainerStructure* spCo
                 if(ROOTPA_OK == ret)
                 {
                     uint32_t tltContSize=0;
-                    result=regReadTlt(&spP->cont.children[i], &tltP, &tltContSize);
+                    result=regReadTlt(&spP->cont.children[i], &tltP, &tltContSize, spid);
                     if(MC_DRV_OK == result)
                     {
                         spContainerStructure->tltContainers[spContainerStructure->nbrOfTlts].state=((mcTltContCommon_t*)(((uint8_t*)tltP)+sizeof(mcSoHeader_t)))->attribs.state;
@@ -311,7 +309,7 @@ rootpaerror_t  getSpContainerStructure(mcSpid_t spid, SpContainerStructure* spCo
     }
     else if(MC_DRV_ERR_INVALID_DEVICE_FILE == result)
     {
-        ret=ROOTPA_ERROR_INTERNAL_NO_CONTAINER;
+        ret=ROOTPA_ERROR_INTERNAL_NO_CONTAINER; // using this since it is changed to ROOTPA_OK and state NO_CONTAINER in the wrapper.
     }
     else 
     {
@@ -485,15 +483,15 @@ rootpaerror_t setSeAddress(const char* addrP, uint32_t length)
     return setInitialAddress(addrP, length);
 }
 
-void setPaths(const char* storageDirP)
+void setPaths(const char* storageDirP, const char* certDirP)
 {
     setXsdPaths(storageDirP);
+    setCertPath(storageDirP, certDirP);
 }
 
 rootpaerror_t unregisterRootContainer(CallbackFunctionP callbackP, SystemInfoCallbackFunctionP systemInfoCallbackP)
 {
     LOGD("unregisterRootContainer");
-
 
 	mcSpid_t spid;
 	memset(&spid, 0x0, sizeof(mcSpid_t));

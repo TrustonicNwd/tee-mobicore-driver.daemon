@@ -1,6 +1,6 @@
 /** @addtogroup CMP
  *
- * Copyright © Trustonic Limited 2013.
+ * Copyright Â© Trustonic Limited 2013.
  *
  * All rights reserved.
  * 

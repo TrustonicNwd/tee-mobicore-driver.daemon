@@ -5,7 +5,7 @@
  * CMTL (Content Management Trustlet) error return code definitions.
  * Definition of all possible CMTL error return codes.
  *
- * Copyright © Trustonic Limited 2013.
+ * Copyright Â© Trustonic Limited 2013.
  *
  * All rights reserved.
  * 

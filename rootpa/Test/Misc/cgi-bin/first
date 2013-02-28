@@ -1,18 +1,13 @@
 #!/usr/bin/perl
 
-
 #
 # for this to work, perl module needs to be installed.
 # in ubuntu run
 #
 # sudo apt-get install libapache2-mod-perl2
 # sudo apache2ctl restart
-#   
-# These scripts print to  /var/log/apache2/error.log
 # sudo  a2enmod perl
-#
-# "sudo a2enmod dav" to enable support for DELETE
-
+# These scripts print to  /var/log/apache2/error.log
 
 package ReceiveFirstCommand;
 use strict;
@@ -63,6 +58,10 @@ sub handler {
 		</commands>
 	    </ContentManagementRequest>";
 
+    
+    }  else {
+        $r->log->notice("RootPATest.first: HTTP command was not POST");
+            $r->log->notice("RootPATest.first: but $r->method()"); 
     }
     
     return Apache2::Const::OK;

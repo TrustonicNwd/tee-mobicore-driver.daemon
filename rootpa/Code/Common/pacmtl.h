@@ -34,6 +34,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <MobiCoreDriverApi.h>
 #include <TlCm/3.0/tlCmApi.h>
+#include "trustletchannel.h"
 #include "rootpa.h"
 
 #define CMP_VERSION 0x00030000
@@ -52,7 +53,7 @@ void setCmdMapInfo(uint8_t* wsmP, const mcBulkMap_t* mapInfoP);
 
 void setCmdCmpVersionAndCmdId(uint8_t* wsmP, cmpCommandId_t commandId);
 
-void getRspElementInfo(uint32_t* elementNbrP, uint8_t* wsmP, uint32_t* elementOffsetP, uint32_t* elementLengthP);
+bool getRspElementInfo(uint32_t* elementNbrP, CMTHANDLE handle, uint32_t* elementOffsetP, uint32_t* elementLengthP);
 
 uint32_t getRspCmpVersion(const uint8_t* wsmP);
 

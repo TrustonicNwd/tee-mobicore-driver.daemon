@@ -132,6 +132,7 @@ public:
                            loadDataOpenSession_ptr         pLoadDataOpenSession,
                            uint32_t                        tciHandle,
                            uint32_t                        tciLen,
+                           uint32_t                        tciOffset,
                            mcDrvRspOpenSessionPayload_ptr  pRspOpenSessionPayload);
 
     TrustletSession *registerTrustletConnection(Connection *connection,
@@ -143,12 +144,14 @@ public:
     // Do more checks
     mcResult_t closeSession(Connection *deviceConnection, uint32_t sessionId);
 
+    virtual mcResult_t notify(Connection *deviceConnection, uint32_t  sessionId);
     virtual void notify(uint32_t  sessionId) = 0;
 
-    mcResult_t mapBulk(uint32_t sessionId, uint32_t handle, uint32_t pAddrL2, uint32_t offsetPayload,
-                       uint32_t lenBulkMem, uint32_t *secureVirtualAdr);
+    mcResult_t mapBulk(Connection *deviceConnection, uint32_t sessionId, uint32_t handle, uint32_t pAddrL2,
+                        uint32_t offsetPayload, uint32_t lenBulkMem, uint32_t *secureVirtualAdr);
 
-    mcResult_t unmapBulk(uint32_t sessionId, uint32_t handle, uint32_t secureVirtualAdr, uint32_t lenBulkMem);
+    mcResult_t unmapBulk(Connection *deviceConnection, uint32_t sessionId, uint32_t handle,
+                        uint32_t secureVirtualAdr, uint32_t lenBulkMem);
 
     void start();
 

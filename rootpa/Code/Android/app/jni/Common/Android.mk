@@ -77,13 +77,6 @@ else
     LOCAL_MODULE    := provisioningagent
 endif
 
-#LOCAL_LDLIBS += -lMcRegistry
-
-#LOCAL_ALLOW_UNDEFINED_SYMBOLS := true
-#LOCAL_SHARED_LIBRARIES  += libMcClient
-#LOCAL_SHARED_LIBRARIES  += libMcRegistry
-#LOCAL_SHARED_LIBRARIES  += liblog
-
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_STATIC_LIBRARY)

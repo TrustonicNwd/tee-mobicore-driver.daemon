@@ -59,6 +59,6 @@ int regCleanupSp(mcSpid_t spid);
 
 int regGetSpState(mcSpid_t spid, mcContainerState_t* stateP);
 
-int regReadTlt(const mcUuid_t* uuidP, TLTCONTAINERP* tltP, uint32_t* containerSize);
-int regWriteTlt(const mcUuid_t* uuidP, const TLTCONTAINERP tltP, uint32_t containerSize);
-int regCleanupTlt(const mcUuid_t* uuidP);
+int regReadTlt(const mcUuid_t* uuidP, TLTCONTAINERP* tltP, uint32_t* containerSize, mcSpid_t spid);
+int regWriteTlt(const mcUuid_t* uuidP, const TLTCONTAINERP tltP, uint32_t containerSize, mcSpid_t spid);
+int regCleanupTlt(const mcUuid_t* uuidP, mcSpid_t spid);

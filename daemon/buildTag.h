@@ -1,4 +1,4 @@
-/** Build tag created during build by ./Out/_build/_src/Scripts/trunk/00025766/Out/setBuildTag.sh.
+/** Build tag created during build by ./Out/_build/_src/Scripts/trunk/00028793/Out/setBuildTag.sh.
  * <-- Copyright Giesecke & Devrient GmbH 2012-2012 -->
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,4 +26,4 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #define MOBICORE_COMPONENT_BUILD_TAG \
-		"*** GC_MSM8960_Release_V014 ###"
+		"*** GC_MSM8960_Release_V015 ###"

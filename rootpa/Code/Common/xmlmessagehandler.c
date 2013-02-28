@@ -45,7 +45,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "enrollmentservicexmlschema.h"
 #include "xmlmessagehandler.h"
 #include "contentmanager.h"
-#include "provisioningengine.h" //TODO-Tero
+#include "provisioningengine.h"
 #include "base64.h"
 
 #define ENROLLMENT_SERVICE_NS_PREFIX 0 // "mces" 
@@ -114,8 +114,11 @@ char* errorCodeToString(rootpaerror_t errorCode)
         case ROOTPA_ERROR_LOCK:
             return STRING_ROOTPA_ERROR_LOCK;
 
-        case ROOTPA_ERROR_COMMAND_EXECUTION:
-            return STRING_ROOTPA_ERROR_COMMAND_EXECUTION;
+//
+// this is not currently understood by SE
+//
+//        case ROOTPA_ERROR_COMMAND_EXECUTION:
+//            return STRING_ROOTPA_ERROR_COMMAND_EXECUTION;
 
         case ROOTPA_ERROR_REGISTRY:
             return STRING_ROOTPA_ERROR_REGISTRY;
@@ -330,7 +333,12 @@ uint32_t extractCmpCommand(CmpMessage** cmpCommandsP, uint32_t numberOfCmpComman
     {
         LOGE("handleCmpCommand: was not able to realloc");
         // In this case we can not return an error to SE unless we set some of the earlier errors. 
-        // TODO-RELEASE: if ignoreError is false should we free all and set numberOfCmpCommands to 0?
+        if(!ignoreError)
+        {
+            free(*cmpCommandsP);
+            *cmpCommandsP=NULL;
+            numberOfCmpCommands=0;
+        }
     }
     return numberOfCmpCommands;
 }
@@ -384,10 +392,15 @@ uint32_t handleUploadCommand(commandtype_t commandType,
 
     if(NULL == tmpCommandsP)
     {
-        LOGE("handleUploadCommand: was not able to realloc, returning");
+        LOGE("handleUploadCommand: was not able to realloc, returning %d", ignoreError);
+        if(!ignoreError)
+        {
+            free(*uploadCommandsP);
+            *uploadCommandsP=NULL;
+            numberOfUploadCommands=0;
+        }
         return numberOfUploadCommands;
         // In this case we can not return an error to SE unless we set some of the earlier errors. 
-        // TODO-RELEASE: if ignoreError is false should we free all and set numberOfUploadCommands to 0?
     }
             
     localCommandsP=tmpCommandsP;
@@ -471,7 +484,8 @@ rootpaerror_t handleCommandAndFillResponse(xmlDocPtr xmlCommandP, xmlDocPtr xmlR
 {
     LOGD(">>handleCommandAndFillResponse");
     rootpaerror_t ret=ROOTPA_OK;
-
+    rootpaerror_t tmpRet=ROOTPA_OK;
+    
     xmlNodePtr rspRootElementP = xmlDocGetRootElement(xmlResponseP);    
     if(NULL==rspRootElementP) return ROOTPA_ERROR_XML;
    
@@ -497,12 +511,20 @@ rootpaerror_t handleCommandAndFillResponse(xmlDocPtr xmlCommandP, xmlDocPtr xmlR
             case CMP:
             {   
                 numberOfCmpCommands=extractCmpCommand(&cmpCommandsP, numberOfCmpCommands, id, commandValueP, ignoreError);
+                if(0==numberOfCmpCommands)
+                {
+                    ret=ROOTPA_ERROR_OUT_OF_MEMORY;                    
+                }
                 break;
             }
             case SO_UPLOAD:
             // intentional fallthrough
             case TLT_UPLOAD:
                 numberOfUploadCommands=handleUploadCommand(commandType, &uploadCommandsP, numberOfUploadCommands, id, commandValueP, ignoreError);
+                if(0==numberOfCmpCommands)
+                {
+                    ret=ROOTPA_ERROR_OUT_OF_MEMORY;
+                }                    
                 break;
             default:                
                 LOGE("handleCommandAndFillResponse: received unknown command");
@@ -510,6 +532,8 @@ rootpaerror_t handleCommandAndFillResponse(xmlDocPtr xmlCommandP, xmlDocPtr xmlR
                 break;
         }
         xmlFree(commandValueP);
+
+        if(ROOTPA_ERROR_OUT_OF_MEMORY == ret) break;
         
         if(commandType != CMP && 
           false == ignoreError && 
@@ -531,14 +555,15 @@ rootpaerror_t handleCommandAndFillResponse(xmlDocPtr xmlCommandP, xmlDocPtr xmlR
         }
         else
         {
-            ret=executeContentManagementCommands(numberOfCmpCommands, cmpCommandsP, cmpResponsesP, &internalError);
-            if(ROOTPA_OK!=ret)
+            tmpRet=executeContentManagementCommands(numberOfCmpCommands, cmpCommandsP, cmpResponsesP, &internalError);
+            if(ROOTPA_OK!=tmpRet)
             {
-                LOGE("call to executeContentManagementCommands failed with %d, continuing anyway", ret);
+                LOGE("call to executeContentManagementCommands failed with %d, continuing anyway", tmpRet);
                 // return code from executeContentManagementCommands is here more informative than anything else
                 // even in an error case we need to return response to SE, the errors are also included in the 
                 // actual CMP messages.
-            }   
+                ret=tmpRet;
+            }
         }
     }
     
@@ -546,15 +571,17 @@ rootpaerror_t handleCommandAndFillResponse(xmlDocPtr xmlCommandP, xmlDocPtr xmlR
     if (ret!=ROOTPA_ERROR_OUT_OF_MEMORY)
     {
         xmlNodePtr resultListNodeP=xmlNewChild(rspRootElementP, nameSpace_, BAD_CAST "commandResultList", NULL);
-        ret=handleCmpResponses(numberOfCmpCommands, cmpResponsesP, resultListNodeP); 
-        if(ROOTPA_OK!=ret)
+        tmpRet=handleCmpResponses(numberOfCmpCommands, cmpResponsesP, resultListNodeP); 
+        if(ROOTPA_OK!=tmpRet)
         {
-            LOGE("handleCommandAndFillResponse: not able to handle all Cmp responses, still continuing with UploadResponses %d", ret);
+            LOGE("handleCommandAndFillResponse: not able to handle all Cmp responses, still continuing with UploadResponses %d", tmpRet);
+            ret=tmpRet;
         }      
-        ret=handleUploadResponses(numberOfUploadCommands, uploadCommandsP, resultListNodeP);
-        if(ROOTPA_OK!=ret)
+        tmpRet=handleUploadResponses(numberOfUploadCommands, uploadCommandsP, resultListNodeP);
+        if(ROOTPA_OK!=tmpRet)
         {
-            LOGE("handleCommandAndFillResponse: not able to handle all Upload responses %d", ret);
+            LOGE("handleCommandAndFillResponse: not able to handle all Upload responses %d", tmpRet);
+            ret=tmpRet;
         }      
     }
     // cleanup what has not yet been cleaned
@@ -696,6 +723,7 @@ rootpaerror_t handleXmlMessage(const char* messageP, const char** responseP)
 {
     LOGD(">>handleXmlMessage");
     rootpaerror_t ret=ROOTPA_OK;
+    rootpaerror_t tmpRet=ROOTPA_OK;    
     *responseP=NULL; 
         
     if (NULL==messageP)
@@ -718,8 +746,9 @@ rootpaerror_t handleXmlMessage(const char* messageP, const char** responseP)
 
     if(!validXmlMessage(xmlDocP))
     {
-        LOGE("handleXmlMessage, invalid message %s", messageP);
+        LOGE("handleXmlMessage, invalid message %s", messageP); 
         ret=ROOTPA_ERROR_XML;
+        // attempting to parse the message anyway.
     }
 
     xmlDocPtr xmlResponseP=createXmlResponse(ret);
@@ -728,7 +757,8 @@ rootpaerror_t handleXmlMessage(const char* messageP, const char** responseP)
 
     if(xmlResponseP)
     {
-        ret=handleCommandAndFillResponse(xmlDocP, xmlResponseP);
+        tmpRet=handleCommandAndFillResponse(xmlDocP, xmlResponseP);
+        if(tmpRet!=ROOTPA_OK) ret=tmpRet;
     }
     else
     {
@@ -937,7 +967,7 @@ void setXsdPaths(const char* xsdpathP)
     memset(enrollmentServiceFullPath_, 0, XSD_PATH_MAX_LEN);
     memset(platformTypesFullPath_, 0, XSD_PATH_MAX_LEN);
 
-    if (xsdpathP!=NULL && strlen(xsdpathP)<(XSD_PATH_MAX_LEN+1+sizeof(ENROLLMENT_SERVICE_XSD_NAME))) // ENROLLMENT_SERVICE_XSD_NAME is the longer of the two
+    if (xsdpathP!=NULL && strlen(xsdpathP)+1+sizeof(ENROLLMENT_SERVICE_XSD_NAME)<XSD_PATH_MAX_LEN) // ENROLLMENT_SERVICE_XSD_NAME is the longer of the two
     {
         strcpy(enrollmentServiceFullPath_, xsdpathP);
         strcpy(platformTypesFullPath_, xsdpathP);

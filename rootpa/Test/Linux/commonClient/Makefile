@@ -89,6 +89,6 @@ $(OBJECTS): $(SOURCES)
 
 clean:
 	rm -rf *.o
-	rm -rf *.xsdrm     
+	rm -rf *.xsd
 	rm -rf $(ROOTPALIB)
 	rm -rf $(TESTAPP)     

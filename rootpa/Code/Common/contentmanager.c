@@ -109,6 +109,10 @@ rootpaerror_t executeContentManagementCommands(int numberOfCommands, CmpMessage*
                 {
                     // returning actual error in case of the command failed
                     ret=iRet;
+                    if(ROOTPA_OK==responsesP[i].hdr.ret)
+                    {
+                        responsesP[i].hdr.ret=ret;
+                    }
                     
                     if(commandsP[i].hdr.ignoreError==false)
                     {
@@ -189,6 +193,8 @@ rootpaerror_t executeOneCmpCommand(CMTHANDLE handle, CmpMessage* commandP, CmpMe
         {
             LOGE("executeOneCmpCommand not able to map memory %d", mcRet);
             ret=ROOTPA_ERROR_MOBICORE_CONNECTION;
+            commandP->hdr.intRet=mcRet;
+            responseP->hdr.intRet=mcRet;
             break;
         }
 
@@ -198,9 +204,11 @@ rootpaerror_t executeOneCmpCommand(CMTHANDLE handle, CmpMessage* commandP, CmpMe
             break;
         }
 
-        if (unlikely( !tltChannelTransmit(handle, MC_INFINITE_TIMEOUT))) // TODO-RELEASE is infinite timeout ok here?
+        if (unlikely( !tltChannelTransmit(handle, NOTIFICATION_WAIT_TIMEOUT_MS)))
         {
-            ret=ROOTPA_ERROR_MOBICORE_CONNECTION; 
+            ret=ROOTPA_ERROR_MOBICORE_CONNECTION;
+            commandP->hdr.intRet=handle->lasterror;
+            responseP->hdr.intRet=handle->lasterror;
             break;
         }
 
@@ -232,6 +240,8 @@ rootpaerror_t executeOneCmpCommand(CMTHANDLE handle, CmpMessage* commandP, CmpMe
         {
             LOGE("executeOneCmpCommand not able to free mapped memory %d", mcRet);
             ret=ROOTPA_ERROR_MOBICORE_CONNECTION;
+            commandP->hdr.intRet=mcRet;
+            responseP->hdr.intRet=mcRet;
             break;
         }
 
@@ -258,6 +268,7 @@ rootpaerror_t executeOneCmpCommand(CMTHANDLE handle, CmpMessage* commandP, CmpMe
     LOGD("freeing mapped memory %ld", (long int) handle->mappedP);    
     free(handle->mappedP);    
     if(commandP->hdr.ret==ROOTPA_OK) commandP->hdr.ret=ret;
+    if(responseP->hdr.ret==ROOTPA_OK) responseP->hdr.ret=ret;    
     LOGD("<<executeOneCmpCommand %d %d",commandId, ret);
     return ret;
 }

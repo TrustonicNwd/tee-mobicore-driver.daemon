@@ -164,6 +164,32 @@ void MobiCoreDriverDaemon::run(
     }
 }
 
+//------------------------------------------------------------------------------
+bool MobiCoreDriverDaemon::checkPermission(Connection *connection)
+{
+#ifdef NDEBUG
+    struct ucred cred;
+    if (!connection)
+        return true;
+
+    if (connection->getPeerCredentials(cred)) {
+        gid_t gid = getegid();
+        uid_t uid = geteuid();
+        LOG_I("Peer connection has pid = %u and uid = %u gid = %u", cred.pid, cred.uid, cred.gid);
+        LOG_I("Daemon has uid = %u gid = %u", cred.uid, cred.gid);
+        // If the daemon and the peer have the same uid or gid then we're good
+        if (gid == cred.gid || uid == cred.uid) {
+            return true;
+        }
+        return false;
+        
+    }
+    return false;
+#else
+    // In debug mode we allow the registry access
+    return true;
+#endif
+}
 
 //------------------------------------------------------------------------------
 MobiCoreDevice *MobiCoreDriverDaemon::getDevice(
@@ -255,6 +281,7 @@ bool MobiCoreDriverDaemon::loadDeviceDriver(
                              &loadDataOpenSession,
                              pTciWsm->handle,
                              pTciWsm->len,
+                             0,
                              &(rspOpenSession.payload));
 
         // Unregister physical memory from kernel module.
@@ -429,6 +456,7 @@ void MobiCoreDriverDaemon::processOpenSession(Connection *connection)
                          &loadDataOpenSession,
                          cmdOpenSession.handle,
                          cmdOpenSession.len,
+                         cmdOpenSession.tci,
                          &rspOpenSession.payload);
 
     // Unregister physical memory from kernel module.
@@ -482,7 +510,7 @@ void MobiCoreDriverDaemon::processOpenTrustlet(Connection *connection)
     }
 
     // Get service blob from registry
-    regObject_t *regObj = mcRegistryMemGetServiceBlob((uint8_t*)payload, len);
+    regObject_t *regObj = mcRegistryMemGetServiceBlob(cmdOpenTrustlet.spid, (uint8_t*)payload, len);
 
     // Free the payload object no matter what
     free(payload);
@@ -509,7 +537,7 @@ void MobiCoreDriverDaemon::processOpenTrustlet(Connection *connection)
     loadDataOpenSession.baseAddr = pWsm->physAddr;
     loadDataOpenSession.offs = ((uint32_t) regObj->value) & 0xFFF;
     loadDataOpenSession.len = regObj->len;
-    loadDataOpenSession.tlHeader = (mclfHeader_ptr) regObj->value;
+    loadDataOpenSession.tlHeader = (mclfHeader_ptr) (regObj->value + regObj->tlStartOffset);
 
     mcDrvRspOpenSession_t rspOpenSession;
     mcResult_t ret = device->openSession(
@@ -517,6 +545,7 @@ void MobiCoreDriverDaemon::processOpenTrustlet(Connection *connection)
                          &loadDataOpenSession,
                          cmdOpenTrustlet.handle,
                          cmdOpenTrustlet.len,
+                         cmdOpenTrustlet.tci,
                          &rspOpenSession.payload);
 
     // Unregister physical memory from kernel module.
@@ -640,11 +669,7 @@ void MobiCoreDriverDaemon::processNotify(Connection  *connection)
         return;
     }
 
-    // REV axh: we cannot trust the clientLib to give us a valid
-    //          sessionId here. Thus we have to check that it belongs to
-    //          the clientLib's process.
-
-    device->notify(cmd.sessionId);
+    device->notify(connection, cmd.sessionId);
     // NOTE: for notifications there is no response at all
 }
 
@@ -676,7 +701,7 @@ void MobiCoreDriverDaemon::processMapBulkBuf(Connection *connection)
     }
 
     // Map bulk memory to secure world
-    mcResult_t mcResult = device->mapBulk(cmd.sessionId, cmd.handle, pAddrL2,
+    mcResult_t mcResult = device->mapBulk(connection, cmd.sessionId, cmd.handle, pAddrL2,
                                           cmd.offsetPayload, cmd.lenBulkMem, &secureVirtualAdr);
 
     if (mcResult != MC_DRV_OK) {
@@ -703,7 +728,8 @@ void MobiCoreDriverDaemon::processUnmapBulkBuf(Connection *connection)
     CHECK_DEVICE(device, connection);
 
     // Unmap bulk memory from secure world
-    uint32_t mcResult = device->unmapBulk(cmd.sessionId, cmd.handle, cmd.secureVirtualAdr, cmd.lenBulkMem);
+    uint32_t mcResult = device->unmapBulk(connection, cmd.sessionId, cmd.handle,
+                                        cmd.secureVirtualAdr, cmd.lenBulkMem);
 
     if (mcResult != MC_DRV_OK) {
         LOG_V("MCP UNMAP returned code %d", mcResult);
@@ -765,11 +791,16 @@ void MobiCoreDriverDaemon::processRegistryReadData(uint32_t commandId, Connectio
 {
     #define MAX_DATA_SIZE 512
     mcDrvResponseHeader_t rspRegistry = { responseId : MC_DRV_ERR_INVALID_OPERATION };
-    void *buf = malloc(MAX_DATA_SIZE); 
+    void *buf = alloca(MAX_DATA_SIZE); 
     uint32_t len = MAX_DATA_SIZE;
     mcSoAuthTokenCont_t auth;
     mcSpid_t spid;
     mcUuid_t uuid;
+
+    if (!checkPermission(connection)) {
+        connection->writeData(&rspRegistry, sizeof(rspRegistry));
+        return;
+    }
 
     switch(commandId) {
     case MC_DRV_REG_READ_AUTH_TOKEN:
@@ -788,7 +819,9 @@ void MobiCoreDriverDaemon::processRegistryReadData(uint32_t commandId, Connectio
     case MC_DRV_REG_READ_TL_CONT:
         if (!getData(connection, &uuid, sizeof(uuid)))
             break;
-        rspRegistry.responseId = mcRegistryReadTrustletCon(&uuid, buf, &len);
+        if (!getData(connection, &spid, sizeof(spid)))
+            break;
+        rspRegistry.responseId = mcRegistryReadTrustletCon(&uuid, spid, buf, &len);
         break;
     default:
         break;
@@ -804,6 +837,12 @@ void MobiCoreDriverDaemon::processRegistryWriteData(uint32_t commandId, Connecti
     mcDrvResponseHeader_t rspRegistry = { responseId : MC_DRV_ERR_INVALID_OPERATION };
     uint32_t soSize;
     void *so;
+
+    if (!checkPermission(connection)) {
+        connection->writeData(&rspRegistry, sizeof(rspRegistry));
+        return;
+    }
+
     // First read the SO data size
     if(!getData(connection, &soSize, sizeof(soSize))){
         LOG_E("Failed to read SO data size");
@@ -836,11 +875,14 @@ void MobiCoreDriverDaemon::processRegistryWriteData(uint32_t commandId, Connecti
     }
     case MC_DRV_REG_WRITE_TL_CONT: {
         mcUuid_t uuid;
+        mcSpid_t spid;
         if (!getData(connection, &uuid, sizeof(uuid)))
+            break;
+        if (!getData(connection, &spid, sizeof(spid)))
             break;
         if (!getData(connection, so, soSize))
             break;
-        rspRegistry.responseId = mcRegistryStoreTrustletCon(&uuid, so, soSize);
+        rspRegistry.responseId = mcRegistryStoreTrustletCon(&uuid, spid, so, soSize);
         break;
     }
     case MC_DRV_REG_WRITE_SO_DATA: {
@@ -860,6 +902,12 @@ void MobiCoreDriverDaemon::processRegistryWriteData(uint32_t commandId, Connecti
 void MobiCoreDriverDaemon::processRegistryDeleteData(uint32_t commandId, Connection *connection)
 {
     mcDrvResponseHeader_t rspRegistry = { responseId : MC_DRV_ERR_INVALID_OPERATION };
+    mcSpid_t spid;
+
+    if (!checkPermission(connection)) {
+        connection->writeData(&rspRegistry, sizeof(rspRegistry));
+        return;
+    }
 
     switch(commandId) {
     case MC_DRV_REG_DELETE_AUTH_TOKEN:
@@ -869,7 +917,6 @@ void MobiCoreDriverDaemon::processRegistryDeleteData(uint32_t commandId, Connect
         rspRegistry.responseId = mcRegistryCleanupRoot();
         break;
     case MC_DRV_REG_DELETE_SP_CONT:
-        mcSpid_t spid;
         if (!getData(connection, &spid, sizeof(spid)))
             break;
         rspRegistry.responseId = mcRegistryCleanupSp(spid);
@@ -878,7 +925,9 @@ void MobiCoreDriverDaemon::processRegistryDeleteData(uint32_t commandId, Connect
         mcUuid_t uuid;
         if (!getData(connection, &uuid, sizeof(uuid)))
             break;
-        rspRegistry.responseId = mcRegistryCleanupTrustlet(&uuid);
+        if (!getData(connection, &spid, sizeof(spid)))
+            break;
+        rspRegistry.responseId = mcRegistryCleanupTrustlet(&uuid, spid);
         break;
     default:
         break;

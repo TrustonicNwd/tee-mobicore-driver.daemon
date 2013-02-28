@@ -67,9 +67,8 @@ CwAAAAAAAABEVWZ3iJmqu8zd7v8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
 
     } else {
-        $r->log->notice("RootPATest.delete: HTTP command was not DELETE, returning cmp command for root cont delete");
+        $r->log->notice("RootPATest.delete: HTTP command was not DELETE, but $r->method() returning cmp command for root cont delete");
     }
-    
 
     return Apache2::Const::OK;
 } 

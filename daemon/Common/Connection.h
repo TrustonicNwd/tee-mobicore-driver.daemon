@@ -112,6 +112,13 @@ public:
      */
     virtual bool isConnectionAlive(void);
 
+    /*
+     * Retrieve the peer's credentials(uid, pid, gid)
+     *
+     * @return true if connection peers could be retrieved
+     */
+    virtual bool getPeerCredentials(struct ucred &cr);
+
 };
 
 typedef std::list<Connection *>         connectionList_t;

@@ -329,6 +329,7 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenSession(
     LOG_I("===%s()===", __FUNCTION__);
 
     do {
+        uint32_t handle = 0;
         CHECK_NOT_NULL(session);
         CHECK_NOT_NULL(uuid);
         CHECK_NOT_NULL(tci);
@@ -341,29 +342,39 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenSession(
 
         // Get the device associated with the given session
         Device *device = resolveDeviceId(session->deviceId);
+        BulkBufferDescriptor *bulkBuf = NULL;
         CHECK_DEVICE(device);
 
         Connection *devCon = device->connection;
 
+        // First assume the TCI is a contiguous buffer
         // Get the physical address of the given TCI
         CWsm_ptr pWsm = device->findContiguousWsm(tci);
         if (pWsm == NULL) {
-            LOG_E("Could not resolve physical address of TCI");
-            mcResult = MC_DRV_ERR_WSM_NOT_FOUND;
-            break;
+            // Then assume it's a normal buffer that needs to be mapped
+            mcResult = device->mapBulkBuf(tci, len, &bulkBuf);
+            if (mcResult != MC_DRV_OK) {
+                bulkBuf = NULL;
+                LOG_E("Registering buffer failed. ret=%x", mcResult);
+                mcResult = MC_DRV_ERR_WSM_NOT_FOUND;;
+                break;
+            }
+            handle = bulkBuf->handle;
         }
-
-        if (pWsm->len < len) {
-            LOG_E("mcOpenSession(): length is more than allocated TCI");
-            mcResult = MC_DRV_ERR_TCI_GREATER_THAN_WSM;
-            break;
+        else {
+            if (pWsm->len < len) {
+                LOG_E("mcOpenSession(): length is more than allocated TCI");
+                mcResult = MC_DRV_ERR_TCI_GREATER_THAN_WSM;
+                break;
+            }
+            handle = pWsm->handle;
         }
 
         SEND_TO_DAEMON(devCon, MC_DRV_CMD_OPEN_SESSION,
                        session->deviceId,
                        *uuid,
-                       (uint32_t)0,
-                       (uint32_t)pWsm->handle,
+                       (uint32_t)(tci) & 0xFFF,
+                       (uint32_t)handle,
                        len);
 
         // Read command response
@@ -458,7 +469,10 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenSession(
         // there is no payload.
 
         // Session has been established, new session object must be created
-        device->createNewSession(session->sessionId, sessionConnection);
+        Session *sessionObj = device->createNewSession(session->sessionId, sessionConnection);
+        // If the session tci was a mapped buffer then register it
+        if(bulkBuf)
+            sessionObj->addBulkBuf(bulkBuf);
 
         LOG_I(" Successfully opened session %d.", session->sessionId);
 
@@ -478,6 +492,7 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenSession(
 //------------------------------------------------------------------------------
 __MC_CLIENT_LIB_API mcResult_t mcOpenTrustlet(
     mcSessionHandle_t  *session,
+    mcSpid_t           spid,
     uint8_t            *trustlet,
     uint32_t           tlen,
     uint8_t            *tci,
@@ -490,6 +505,7 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenTrustlet(
     LOG_I("===%s()===", __FUNCTION__);
 
     do {
+        uint32_t handle = 0;
         CHECK_NOT_NULL(session);
         CHECK_NOT_NULL(trustlet);
         CHECK_NOT_NULL(tci);
@@ -502,29 +518,40 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenTrustlet(
 
         // Get the device associated with the given session
         Device *device = resolveDeviceId(session->deviceId);
+        BulkBufferDescriptor *bulkBuf = NULL;
         CHECK_DEVICE(device);
 
         Connection *devCon = device->connection;
 
+        // First assume the TCI is a contiguous buffer
         // Get the physical address of the given TCI
         CWsm_ptr pWsm = device->findContiguousWsm(tci);
         if (pWsm == NULL) {
-            LOG_E("Could not resolve physical address of TCI");
-            mcResult = MC_DRV_ERR_WSM_NOT_FOUND;
-            break;
+            // Then assume it's a normal buffer that needs to be mapped
+            mcResult = device->mapBulkBuf(tci, len, &bulkBuf);
+            if (mcResult != MC_DRV_OK) {
+                bulkBuf = NULL;
+                LOG_E("Registering buffer failed. ret=%x", mcResult);
+                mcResult = MC_DRV_ERR_WSM_NOT_FOUND;;
+                break;
+            }
+            handle = bulkBuf->handle;
         }
-
-        if (pWsm->len < len) {
-            LOG_E("mcOpenSession(): length is more than allocated TCI");
-            mcResult = MC_DRV_ERR_TCI_GREATER_THAN_WSM;
-            break;
+        else {
+            if (pWsm->len < len) {
+                LOG_E("mcOpenSession(): length is more than allocated TCI");
+                mcResult = MC_DRV_ERR_TCI_GREATER_THAN_WSM;
+                break;
+            }
+            handle = pWsm->handle;
         }
 
         SEND_TO_DAEMON(devCon, MC_DRV_CMD_OPEN_TRUSTLET,
                        session->deviceId,
+                       spid,
                        (uint32_t)tlen,
-                       NULL,
-                       (uint32_t)pWsm->handle,
+                       (uint32_t)(tci) & 0xFFF,
+                       (uint32_t)handle,
                        len);
 
         // Send the full trustlet data
@@ -628,7 +655,10 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenTrustlet(
         // there is no payload.
 
         // Session has been established, new session object must be created
-        device->createNewSession(session->sessionId, sessionConnection);
+        Session *sessionObj = device->createNewSession(session->sessionId, sessionConnection);
+        // If the session tci was a mapped buffer then register it
+        if(bulkBuf)
+            sessionObj->addBulkBuf(bulkBuf);
 
         LOG_I(" Successfully opened session %d.", session->sessionId);
 

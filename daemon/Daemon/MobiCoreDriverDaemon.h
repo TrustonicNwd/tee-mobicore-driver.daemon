@@ -114,6 +114,8 @@ private:
     /**< List of servers processing connections */
     Server *servers[MAX_SERVERS];
 
+    bool checkPermission(Connection *connection);
+
     size_t writeResult(
         Connection  *connection,
         mcResult_t  code

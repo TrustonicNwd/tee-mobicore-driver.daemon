@@ -35,7 +35,6 @@ import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.Bundle;
-import android.util.Log;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -78,27 +77,37 @@ public class ProvisioningService extends BaseService {
         
         public CommandResult executeCmpCommands(int uid, List<CmpCommand> commands, List<CmpResponse> responses){
 
-            Log.d(TAG,">>RootPAServiceIfc.Stub.executeCmpCommands"); 
+            Log.d(TAG,">>RootPAServiceIfc.Stub.executeCmpCommands "+commands+" "+responses); 
 
+            if(commands==null||responses==null){ // having null out variable leads to null pointer exception in the client, however we still want to do checking so that there is not unncessary execution of the following code
+                Log.d(TAG,"RootPAServiceIfc.Stub.executeCmpCommands, illegal argument"); 
+                return new CommandResult(CommandResult.ROOTPA_ERROR_ILLEGAL_ARGUMENT);
+            }            
+            
             if(locked(uid)){
                 return new CommandResult(CommandResult.ROOTPA_ERROR_LOCK);
             }
             
-            int err=0;
+            int ret=CommandResult.ROOTPA_OK;
             try{
-                err=commonPAWrapper().executeCmpCommands(uid, commands, responses);
+                ret=commonPAWrapper().executeCmpCommands(uid, commands, responses);
             }catch(Exception e){
                 Log.e(TAG,"CommonPAWrapper().executeCmpCommands exception: ", e);
-                err=CommandResult.ROOTPA_ERROR_INTERNAL;
+                ret=CommandResult.ROOTPA_ERROR_INTERNAL;
             }
 
             Log.d(TAG,"<<RootPAServiceIfc.Stub.executeCmpCommands");
-            return new CommandResult(err);
+            return new CommandResult(ret);
         }
         
         public CommandResult isRootContainerRegistered(BooleanResult result){
             Log.d(TAG,">>RootPAServiceIfc.Stub.isRootContainerRegistered"); 
 
+            if(result==null){  // having null out variable leads to null pointer exception in the client, however we stll want to do checking so that there is not unncessary execution of the following code
+                Log.d(TAG,"RootPAServiceIfc.Stub.isRootContainerRegistered result null");
+                return new CommandResult(CommandResult.ROOTPA_ERROR_ILLEGAL_ARGUMENT);
+            }  
+            
             int internalUidForLock=new Random().nextInt();
             
             if(!ProvisioningService.this.acquireLock(internalUidForLock, false).isOk())
@@ -130,6 +139,12 @@ public class ProvisioningService extends BaseService {
 
         public CommandResult isSPContainerRegistered(SPID spid, BooleanResult result){
             Log.d(TAG,">>RootPAServiceIfc.Stub.isSPContainerRegistered"); 
+
+            if(spid==null || result==null){  // having null out variable leads to null pointer exception in the client, however we still want to do checking so that there is not unncessary execution of the following code
+                Log.d(TAG,"RootPAServiceIfc.Stub.isSPContainerRegistered spid "+spid+" result "+result);
+                return new CommandResult(CommandResult.ROOTPA_ERROR_ILLEGAL_ARGUMENT);
+            }
+
             boolean[] isRegistered = new boolean[1];
             int ret=CommandResult.ROOTPA_OK;
 
@@ -169,23 +184,23 @@ public class ProvisioningService extends BaseService {
                 return new CommandResult(CommandResult.ROOTPA_ERROR_LOCK);
             }
 
-            int err=CommandResult.ROOTPA_OK;
+            int ret=CommandResult.ROOTPA_OK;
             byte[] productId=new byte[64]; // max length of product id from mcVersionInfo.h
             Bundle versionBundle= new Bundle();
             List<String> keys = new ArrayList<String>();
             List<Integer> values = new ArrayList<Integer>();
 
             try{
-                err=commonPAWrapper().getVersion(productId, keys, values);
-                if(err == CommandResult.ROOTPA_OK && (keys.size() != values.size())){
-                    err=CommandResult.ROOTPA_ERROR_INTERNAL;                
+                ret=commonPAWrapper().getVersion(productId, keys, values);
+                if(ret == CommandResult.ROOTPA_OK && (keys.size() != values.size())){
+                    ret=CommandResult.ROOTPA_ERROR_INTERNAL;                
                 }
             }catch(Exception e){
                 Log.e(TAG,"CommonPAWrapper().getVersion exception: ", e);
-                err=CommandResult.ROOTPA_ERROR_INTERNAL;
+                ret=CommandResult.ROOTPA_ERROR_INTERNAL;
             }
 
-            if(err==CommandResult.ROOTPA_OK){
+            if(ret==CommandResult.ROOTPA_OK){
                 version.setProductId(new String(productId).trim());
 
                 for(int i=0; i<values.size(); i++){
@@ -203,8 +218,8 @@ public class ProvisioningService extends BaseService {
                 // we leave it the the next command if the problem remains
             }                    
 
-            Log.d(TAG,"<<RootPAServiceIfc.Stub.getVersion "+err); 
-            return new CommandResult(err);
+            Log.d(TAG,"<<RootPAServiceIfc.Stub.getVersion "+ret); 
+            return new CommandResult(ret);
         }
 
 
@@ -255,15 +270,13 @@ public class ProvisioningService extends BaseService {
             // we do not use uid here since we do not want to let the client to released the lock, it is done 
             // internally at CommonPAWrapper.java when sending Intents. 
             
-            doProvisioningLockSuid_=uid+PROVISIONING_UID_FOR_LOCK; // this may override the uid used in lock, which means it will not be 
-                                                                   // properly released if installTrustlet or delete are running.
-                                                                   // The timer will then release the lock.
+            int tmpSuid=uid+PROVISIONING_UID_FOR_LOCK+new Random().nextInt();
 
-
-            if(!ProvisioningService.this.acquireLock(doProvisioningLockSuid_, false).isOk()){
+            if(!ProvisioningService.this.acquireLock(tmpSuid, false).isOk()){
                 return new CommandResult(CommandResult.ROOTPA_ERROR_LOCK);
             }
-
+            doProvisioningLockSuid_=tmpSuid;
+            
             try{
                 ret=commonPAWrapper().doProvisioning(uid, spid.spid(), se_);
             }catch(Exception e){
@@ -286,12 +299,16 @@ public class ProvisioningService extends BaseService {
         public CommandResult getSPContainerStructure(SPID spid, SPContainerStructure cs){
             Log.d(TAG,">>RootPAServiceIfc.Stub.getSPContainerStructure"); 
 
+            if(spid==null||cs==null){ // having null out variable leads to null pointer exception in the client, however we still want to do checking so that there is not unncessary execution of the following code
+                return new CommandResult(CommandResult.ROOTPA_ERROR_ILLEGAL_ARGUMENT);
+            }            
+            
             int internalUidForLock=new Random().nextInt();
             if(!ProvisioningService.this.acquireLock(internalUidForLock, false).isOk())
             {
                 return new CommandResult(CommandResult.ROOTPA_ERROR_LOCK);
             }
-
+            
             int ret=CommandResult.ROOTPA_OK;
 
             final int CONTAINER_STATE_IDX=0;
@@ -367,6 +384,10 @@ public class ProvisioningService extends BaseService {
         public CommandResult getSPContainerState(SPID spid, SPContainerStateParcel state){
             Log.d(TAG,">>RootPAServiceIfc.Stub.getSPContainerState"); 
 
+            if(spid==null||state==null){ // having null out variable leads to null pointer exception in the client, however we still want to do checking so that there is not unncessary execution of the following code
+                return new CommandResult(CommandResult.ROOTPA_ERROR_ILLEGAL_ARGUMENT);
+            }
+
             int internalUidForLock=new Random().nextInt();
             if(!ProvisioningService.this.acquireLock(internalUidForLock, false).isOk())
             {
@@ -393,7 +414,7 @@ public class ProvisioningService extends BaseService {
                     ret=CommandResult.ROOTPA_ERROR_INTERNAL;                
                 }
             }else if (ret==CommandResult.ROOTPA_ERROR_INTERNAL_NO_CONTAINER){
-           	    state.setEnumeratedValue(SPContainerState.DOES_NOT_EXIST);            
+           	    state.setEnumeratedValue(SPContainerState.DOES_NOT_EXIST);
                 ret=CommandResult.ROOTPA_OK;
             }
 
@@ -476,7 +497,7 @@ public class ProvisioningService extends BaseService {
     @Override
     public void onLowMemory() {
         Log.d(TAG,"ProvisioningService onLowMemory");
-        super.onLowMemory();    
+        super.onLowMemory();
     }
 
     public void onDestroy(){
@@ -485,8 +506,10 @@ public class ProvisioningService extends BaseService {
     
     @Override
     public IBinder onBind(Intent intent){
-        se_ = intent.getByteArrayExtra("SE");  // TODO-RELEASE: this makes sense at testing time, does it make sense in released code!!!
-        Log.d(TAG,"ProvisioningService binding: "+new String(se_));
+        se_ = intent.getByteArrayExtra("SE");
+        Log.setLoggingLevel(intent.getIntExtra("LOG",0));
+        Log.i(TAG,"ProvisioningService binding");
+        if(se_!=null) Log.d(TAG,new String(se_));
         return mBinder;
     }
 

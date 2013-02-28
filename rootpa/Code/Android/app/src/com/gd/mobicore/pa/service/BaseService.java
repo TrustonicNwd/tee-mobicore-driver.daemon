@@ -33,7 +33,6 @@ package com.gd.mobicore.pa.service;
 
 import android.app.Service;
 import android.content.Intent;
-import android.util.Log;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -42,7 +41,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.gd.mobicore.pa.jni.CommonPAWrapper;
 import com.gd.mobicore.pa.ifc.RootPAProvisioningIntents;
 import com.gd.mobicore.pa.ifc.CommandResult;
-
 
 public abstract class BaseService extends Service {
     protected static final String TAG = "RootPA-J";    

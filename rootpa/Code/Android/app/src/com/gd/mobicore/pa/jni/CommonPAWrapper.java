@@ -36,8 +36,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package com.gd.mobicore.pa.jni;
 
-import android.util.Log;
-import android.content.Intent;
+import com.gd.mobicore.pa.service.Log;
 import android.os.Build;
 import android.os.Build.VERSION;
 import android.telephony.TelephonyManager;
@@ -124,5 +123,4 @@ public class CommonPAWrapper {
         service_.trustletInstallCallback(trustlet);
         Log.d(TAG,"<<CommonPAWrapper.trustletInstallCallback");        
     }
-
 }

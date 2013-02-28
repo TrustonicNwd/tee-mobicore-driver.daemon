@@ -39,14 +39,18 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
     #define LOGE(...)	__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
     #define LOGW(...) ((void)__android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__))
     #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__))
-    #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
+    #ifdef __DEBUG    
+        #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
+    #else
+        #define LOGD(scite ...)
+    #endif     
 #else
     #include <stdio.h>
 
     #define LOGE(fmt, ...)  printf(fmt "\n", ##__VA_ARGS__)    
     #define LOGW(fmt, ...)  printf(fmt "\n", ##__VA_ARGS__)    
     #define LOGI(fmt, ...)  printf(fmt "\n", ##__VA_ARGS__)    
-    #ifdef DEBUG
+    #ifdef __DEBUG
         #define LOGD(fmt, ...)  printf(fmt "\n", ##__VA_ARGS__)
     #else
         #define LOGD(fmt, ...)

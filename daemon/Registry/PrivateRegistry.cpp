@@ -60,8 +60,6 @@
 /** Maximum size of a shared object container in bytes. */
 #define MAX_SO_CONT_SIZE  (512)
 
-MC_CHECK_DATA_OBJECT_VERSION(MCLF, 2, 0);
-
 // Asserts expression at compile-time (to be used within a function body).
 #define ASSERT_STATIC(e) do { enum { assert_static__ = 1 / (e) }; } while (0)
 
@@ -177,9 +175,10 @@ static string getSpContFilePath(mcSpid_t spid)
 }
 
 //------------------------------------------------------------------------------
-static string getTlContFilePath(const mcUuid_t *uuid)
+static string getTlContFilePath(const mcUuid_t *uuid, const mcSpid_t spid)
 {
-    return getRegistryPath() + "/" + byteArrayToString(uuid, sizeof(*uuid)) + TL_CONT_FILE_EXT;
+    return getRegistryPath() + "/" + byteArrayToString(uuid, sizeof(*uuid))
+                + "." + uint32ToString(spid) + TL_CONT_FILE_EXT;
 }
 
 //------------------------------------------------------------------------------
@@ -375,14 +374,14 @@ mcResult_t mcRegistryReadSp(mcSpid_t spid, void *so, uint32_t *size)
 
 
 //------------------------------------------------------------------------------
-mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, void *so, uint32_t size)
+mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, const mcSpid_t spid, void *so, uint32_t size)
 {
     if ((uuid == NULL) || (so == NULL)) {
         LOG_E("mcRegistry store So.TrustletCont(uuid) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
 
-    const string &tlContFilePath = getTlContFilePath(uuid);
+    const string &tlContFilePath = getTlContFilePath(uuid, spid);
     LOG_I("store TLc: %s", tlContFilePath.c_str());
 
     FILE *fs = fopen(tlContFilePath.c_str(), "wb");
@@ -400,14 +399,14 @@ mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, void *so, uint32_t s
 
 
 //------------------------------------------------------------------------------
-mcResult_t mcRegistryReadTrustletCon(const mcUuid_t *uuid, void *so, uint32_t *size)
+mcResult_t mcRegistryReadTrustletCon(const mcUuid_t *uuid, const mcSpid_t spid, void *so, uint32_t *size)
 {
     if ((uuid == NULL) || (so == NULL)) {
         LOG_E("mcRegistry read So.TrustletCont(uuid) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
     size_t readBytes;
-    const string &tlContFilePath = getTlContFilePath(uuid);
+    const string &tlContFilePath = getTlContFilePath(uuid, spid);
     LOG_I("read TLc: %s", tlContFilePath.c_str());
 
     FILE *fs = fopen(tlContFilePath.c_str(), "rb");
@@ -518,7 +517,7 @@ mcResult_t mcRegistryReadData(uint32_t context, const mcCid_t *cid, mcPid_t pid,
 
 
 //------------------------------------------------------------------------------
-mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t *uuid)
+mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t *uuid, const mcSpid_t spid)
 {
     DIR            *dp;
     struct dirent  *de;
@@ -552,7 +551,7 @@ mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t *uuid)
         LOG_E("remove Tlb failed! errno: %d", e);
 //        return MC_DRV_ERR_UNKNOWN;     // a trustlet-binary must not be present ! (registered but not usable)
     }
-    string tlContFilePath = getTlContFilePath(uuid);
+    string tlContFilePath = getTlContFilePath(uuid, spid);
     LOG_I("delete Tlc: %s", tlContFilePath.c_str());
     if (0 != (e = remove(tlContFilePath.c_str()))) {
         LOG_E("remove Tlc failed! errno: %d", e);
@@ -584,7 +583,7 @@ mcResult_t mcRegistryCleanupSp(mcSpid_t spid)
     }
     for (i = 0; (i < MC_CONT_CHILDREN_COUNT) && (ret == MC_DRV_OK); i++) {
         if (0 != strncmp((const char *) & (data.cont.children[i]), (const char *)&MC_UUID_FREE, sizeof(mcUuid_t))) {
-            ret = mcRegistryCleanupTrustlet(&(data.cont.children[i]));
+            ret = mcRegistryCleanupTrustlet(&(data.cont.children[i]), spid);
         }
     }
     if (MC_DRV_OK != ret) {
@@ -654,7 +653,7 @@ mcResult_t mcRegistryCleanupRoot(void)
 }
 
 //------------------------------------------------------------------------------
-regObject_t *mcRegistryMemGetServiceBlob(void *trustlet, uint32_t tlSize)
+regObject_t *mcRegistryMemGetServiceBlob(mcSpid_t spid, void *trustlet, uint32_t tlSize)
 {
     regObject_t *regobj = NULL;
 
@@ -724,9 +723,7 @@ regObject_t *mcRegistryMemGetServiceBlob(void *trustlet, uint32_t tlSize)
         memcpy(p, trustlet, tlSize);
         p += tlSize;
 
-        // Goto end of allocated space and fill in tl container, sp container,
-        // and root container from back to front. Final registry object value
-        // looks like this:
+        // Final registry object value looks like this:
         //
         //    +---------------+---------------------------+-----------+---------+---------+
         //    | Blob Len Info | TL-Header TL-Code TL-Data | Root Cont | SP Cont | TL Cont |
@@ -737,33 +734,9 @@ regObject_t *mcRegistryMemGetServiceBlob(void *trustlet, uint32_t tlSize)
 
         // start at the end of the trustlet blob
         mcResult_t ret;
-        void *soTltCont = malloc(MAX_SO_CONT_SIZE);
         do {
             uint32_t soTltContSize = MAX_SO_CONT_SIZE;
             uint32_t len;
-            mcTltContCommon_t *tltCont;
-            // We don't know exactly where to place the Trustlet container because it can
-            // have variable size, so use a separate buffer and copy it to the main blob
-            // at the end
-            if (MC_DRV_OK != (ret = mcRegistryReadTrustletCon(&pHeader->uuid, soTltCont, &soTltContSize))) {
-                break;
-            }
-            lenInfo->tlContBlobSize = soTltContSize;
-            LOG_I("Trustlet container %u bytes loaded", soTltContSize);
-            // Depending on the trustlet container size we decide which structure to use
-            // Unfortunate design but it should have to do for now
-            if (soTltContSize == sizeof(mcSoTltCont_2_0_t)) {
-                LOG_I("Using 2.0 trustlet container");
-                tltCont = &(((mcSoTltCont_2_0_t*)soTltCont)->cont.common);
-            }
-            else if (soTltContSize == sizeof(mcSoTltCont_2_1_t)) {
-                LOG_I("Using 2.1 trustlet container");
-                tltCont = &(((mcSoTltCont_2_1_t*)soTltCont)->cont.common);
-            }
-            else {
-                LOG_E("Trustlet container has unknown size");
-                break;
-            }
             
             // Fill in root container.
             len = sizeof(mcSoRootCont_t);
@@ -774,7 +747,6 @@ regObject_t *mcRegistryMemGetServiceBlob(void *trustlet, uint32_t tlSize)
             p += len;
 
             // Fill in SP container.
-            mcSpid_t spid = tltCont->parent;
             len = sizeof(mcSoSpCont_t);
             if (MC_DRV_OK != (ret = mcRegistryReadSp(spid, p, &len))) {
                 break;
@@ -782,11 +754,28 @@ regObject_t *mcRegistryMemGetServiceBlob(void *trustlet, uint32_t tlSize)
             lenInfo->spContBlobSize = len;
             p += len;
             
-            // Fill in TL container.
-            memcpy(p, soTltCont, soTltContSize);
+            // Fill in TLT Container
+            // We know exactly how much space is left in the buffer
+            soTltContSize = regObjValueSize - tlSize + sizeof(mcBlobLenInfo_t)
+                - lenInfo->spContBlobSize - lenInfo->rootContBlobSize;
+            if (MC_DRV_OK != (ret = mcRegistryReadTrustletCon(&pHeader->uuid, spid, p, &soTltContSize))) {
+                break;
+            }
+            lenInfo->tlContBlobSize = soTltContSize;
+            LOG_I("Trustlet container %u bytes loaded", soTltContSize);
+            // Depending on the trustlet container size we decide which structure to use
+            // Unfortunate design but it should have to do for now
+            if (soTltContSize == sizeof(mcSoTltCont_2_0_t)) {
+                LOG_I("Using 2.0 trustlet container");
+            }
+            else if (soTltContSize == sizeof(mcSoTltCont_2_1_t)) {
+                LOG_I("Using 2.1 trustlet container");
+            }
+            else {
+                LOG_E("Trustlet container has unknown size");
+                break;
+            }
         } while (false);
-
-        free(soTltCont);
 
         if (MC_DRV_OK != ret) {
             LOG_E("mcRegistryGetServiceBlob() failed: Error code: %d", ret);
@@ -836,7 +825,7 @@ regObject_t *mcRegistryFileGetServiceBlob(const char* trustlet)
         goto error;
     }
 
-    regobj = mcRegistryMemGetServiceBlob(buffer, sb.st_size);
+    regobj = mcRegistryMemGetServiceBlob(0, buffer, sb.st_size);
 
     // We don't actually care if either of them fails but should still print warnings
     if (munmap(buffer, sb.st_size)) {

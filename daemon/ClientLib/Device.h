@@ -93,8 +93,9 @@ public:
      * Add a session to the device.
      * @param sessionId session ID
      * @param connection session connection
+     * @return Session object created
      */
-    void createNewSession(
+    Session *createNewSession(
         uint32_t    sessionId,
         Connection  *connection
     );
@@ -146,6 +147,19 @@ public:
      */
     CWsm_ptr findContiguousWsm(
         addr_t  virtAddr
+    );
+
+    /**
+     * Map a buffer from tlc VA to TL(Create L2 table for the buffer
+     * @param buf The virtual address of hte buffer
+     * @param len The length of the buffer
+     * @param blkBuf The buffer object created
+     * @return MC_DRV_OK if successful.
+     */
+    mcResult_t mapBulkBuf(
+        addr_t buf,
+        uint32_t len,
+        BulkBufferDescriptor **blkBuf
     );
 
 };

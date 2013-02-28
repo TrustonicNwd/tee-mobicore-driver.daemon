@@ -49,8 +49,11 @@ sub handler {
         } else {
             $r->log->notice("RootPATest.empty: HTTP command was not POST or PUT");
 	        if ( $r->method() eq "DELETE") { 
-			$r->log->notice("RootPATest.empty: but DELETE, how did we get here?");
-		}
+                $r->log->notice("RootPATest.empty: but DELETE, how did we get here?");
+            }else{
+                $r->log->notice("RootPATest.empty: but $r->method()");             
+            }
+            
         }
     }
     

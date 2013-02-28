@@ -69,11 +69,9 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 			<xsd:enumeration value=\"INTERNAL_ERROR\" /> \
 			<xsd:enumeration value=\"BUSY_ERROR\" /> \
 			<xsd:enumeration value=\"REGISTRY_ERROR\" /> \
+            <xsd:enumeration value=\"REGISTRY_OBJECT_NOT_AVAILABLE\" /> \
 			<xsd:enumeration value=\"MOBICORE_CONNECTION_ERROR\" /> \
 			<xsd:enumeration value=\"OUT_OF_MEMORY_ERROR\" /> \
-			<xsd:enumeration value=\"COMMAND_EXECUTION_ERROR\" /> \
-			<xsd:enumeration value=\"ILLEGAL_ARGUMENT_ERROR\" /> \
-			<xsd:enumeration value=\"NETWORK_ERROR\" /> \
 			<xsd:enumeration value=\"XML_ERROR\" /> \
         </xsd:restriction> \
 	</xsd:simpleType> \

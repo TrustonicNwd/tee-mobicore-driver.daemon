@@ -50,7 +50,7 @@ in emulators with mcStub and factory method that returns a list of all test
 cases to be executed.
 */
 public class CmpTest{
-    protected static final String TAG = "RootPA-Test";
+    protected static final String TAG = "RootPA-T";
 
     protected final static int RETCODE_LENGTH=4;
     protected final static int SHA256_LENGTH=32;
@@ -213,7 +213,43 @@ only once.
         return cases;
     }
 
+    public static final List<CmpTest> generateErrorCases(){
+        ArrayList<CmpTest> cases=new ArrayList<CmpTest>();
+        cases.add(new CmpUnknown());
+        cases.add(new CmpTooLong());
+        cases.add(new CmpTooShort());
+        return cases;
+    }
 
+    public static final List<CmpTest> generateNoContainerCases(){
+        ArrayList<CmpTest> cases=new ArrayList<CmpTest>();
+
+        cases.add(new CmpBeginSpAuthentication());
+        cases.add(new CmpAuthenticate());
+        cases.add(new CmpTltContLockBySpNoContainer());
+        cases.add(new CmpAuthenticateTerminate());
+
+        return cases;
+    }
+
+    public static final List<CmpTest> generateNoStoreContainerCases(){
+        ArrayList<CmpTest> cases=new ArrayList<CmpTest>();
+        
+        cases.add(new CmpGenerateAuthTokenNoStore());       
+
+        return cases;
+    }
+
+    public static final List<CmpTest> generateResponseErrorCases(){
+        ArrayList<CmpTest> cases=new ArrayList<CmpTest>();
+
+        cases.add(new CmpGenerateAuthTokenResponseIdWrong());
+        cases.add(new CmpGenerateAuthTokenOffsetPlusLengthOut());
+        cases.add(new CmpGenerateAuthTokenOffsetOut());
+
+        return cases;
+    }
+    
     public CmpCommand createCommand(){
         return new CmpCommand(id_);    
     }    
@@ -258,7 +294,7 @@ only once.
             
         int returnCode=response.returnCode();
         if (returnCode!=0){
-            Log.e(TAG,"****NOTE: Return code from "+id_+" is different from 0: "+returnCode);
+            Log.e(TAG,"****NOTE: Return code from "+id_+" is different from 0: 0x"+ Integer.toHexString(returnCode));
             result_=false;
         }
 

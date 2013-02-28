@@ -13,8 +13,8 @@
  *
  * @image html DoxyOverviewDrvApi500x.png
  * @image latex DoxyOverviewDrvApi500x.png "MobiCore Overview" width=12cm
- *
- * <!-- Copyright Trustonic 2013-2014 -->
+ */
+/* <!-- Copyright Trustonic 2013-2014 -->
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -54,6 +54,7 @@
 #include <stdbool.h>
 
 #include "mcUuid.h"
+#include "mcSpid.h"
 #include "mcVersionInfo.h"
 
 /*
@@ -244,6 +245,7 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenSession(
  * Waits till the MobiCore responses with the new session ID (stored in the MCP buffer).
  *
  * @param [in,out] session On success, the session data will be returned. Note that session.deviceId has to be the device id of an opened device.
+ * @param [in] spid Service Provider ID(for Service provider trustlets otherwise ignored)
  * @param [in] trustlet memory buffer containing the trustlet binary
  * @param [in] tlen length of the memory buffer containing the trustlet
  * @param [in] tci TCI buffer for communicating with the trustlet.
@@ -259,6 +261,7 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenSession(
  */
 __MC_CLIENT_LIB_API mcResult_t mcOpenTrustlet(
     mcSessionHandle_t  *session,
+    mcSpid_t           spid,
     uint8_t            *trustlet,
     uint32_t           tLen,
     uint8_t            *tci,

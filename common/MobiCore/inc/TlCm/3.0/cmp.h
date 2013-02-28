@@ -12,7 +12,7 @@
  * Various components need access to (sub-)structures defined and used by CMP;
  * these common definitions are made available through this header file.
  *
- * Copyright © Trustonic Limited 2013.
+ * Copyright Â© Trustonic Limited 2013.
  *
  * All rights reserved.
  * 

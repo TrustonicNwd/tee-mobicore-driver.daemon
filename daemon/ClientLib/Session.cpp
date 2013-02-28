@@ -142,6 +142,14 @@ mcResult_t Session::addBulkBuf(addr_t buf, uint32_t len, BulkBufferDescriptor **
 }
 
 //------------------------------------------------------------------------------
+void Session::addBulkBuf(BulkBufferDescriptor *blkBuf)
+{
+    if(blkBuf)
+        // Add to vector of descriptors
+        bulkBufferDescriptors.push_back(blkBuf);
+}
+
+//------------------------------------------------------------------------------
 uint32_t Session::getBufHandle(addr_t sVirtAddr)
 {
     LOG_V("getBufHandle(): Virtual Address = 0x%X", (unsigned int) virtAddr);

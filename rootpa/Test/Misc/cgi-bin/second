@@ -67,9 +67,9 @@ sub handler {
         $r->log->notice("RootPATest.second: HTTP command was not POST");
         if( $r->method() eq "DELETE" ) { 
         # handle DELETE requests     
-                $r->log->notice("RootPATest.second: but DELETE"); 
+            $r->log->notice("RootPATest.second: but DELETE"); 
         } else {
-
+            $r->log->notice("RootPATest.second: but $r->method()"); 
         }
     }
     

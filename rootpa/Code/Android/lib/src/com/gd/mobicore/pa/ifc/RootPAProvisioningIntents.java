@@ -35,6 +35,14 @@ package com.gd.mobicore.pa.ifc;
  * A list of intent actions that the root PA can broadcast.
  */
 public class RootPAProvisioningIntents {
+
+//    
+/** Intents for starting up and connecitng to services  */
+//
+
+    public static final String PROVISIONING_SERVICE="com.gd.mobicore.pa.service.PROVISIONING_SERVICE";
+    public static final String DEVELOPER_SERVICE="com.gd.mobicore.pa.service.DEVELOPER_SERVICE";
+    public static final String OEM_SERVICE="com.gd.mobicore.pa.service.OEM_SERVICE";
 	
 //    
 /** Execution status reporting Intents   */
@@ -47,7 +55,6 @@ public class RootPAProvisioningIntents {
 /** root provisioning has completed, root and SP containers are available for use */
     public static final String FINISHED_ROOT_PROVISIONING = "com.gd.mobicore.pa.service.PROVISIONING_FINISHED";
 
-// Execution status reporting Intents
     
 /** this intent contains developer trustlet in it's extra data. The trustlet has been signed by SE */
     public static final String INSTALL_TRUSTLET = "com.gd.mobicore.pa.service.INSTALL_TRUSTLET";
@@ -78,7 +85,6 @@ public class RootPAProvisioningIntents {
     public static final int FINISHED_PROVISIONING=1000;
 /** unregistering root container will be sent by SE after OemService.unregisterRootContainer is used */
     public static final int UNREGISTERING_ROOT_CONTAINER=3000;
-
 
 	private RootPAProvisioningIntents() { }
 }
