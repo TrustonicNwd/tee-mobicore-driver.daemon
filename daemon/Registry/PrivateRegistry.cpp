@@ -202,7 +202,7 @@ static string getTlBinFilePath(const mcUuid_t *uuid)
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryStoreAuthToken(void *so, uint32_t size)
 {
-    if (so == NULL) {
+    if (so == NULL || size > 3 * MAX_SO_CONT_SIZE) {
         LOG_E("mcRegistry store So.Soc failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
@@ -267,7 +267,7 @@ mcResult_t mcRegistryDeleteAuthToken(void)
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryStoreRoot(void *so, uint32_t size)
 {
-    if (so == NULL) {
+    if (so == NULL || size > 3 * MAX_SO_CONT_SIZE) {
         LOG_E("mcRegistry store So.Root failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
@@ -322,7 +322,7 @@ mcResult_t mcRegistryReadRoot(void *so, uint32_t *size)
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryStoreSp(mcSpid_t spid, void *so, uint32_t size)
 {
-    if ((spid == 0) || (so == NULL)) {
+    if ((spid == 0) || (so == NULL) || size > 3 * MAX_SO_CONT_SIZE) {
         LOG_E("mcRegistry store So.Sp(SpId) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
@@ -376,7 +376,7 @@ mcResult_t mcRegistryReadSp(mcSpid_t spid, void *so, uint32_t *size)
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, const mcSpid_t spid, void *so, uint32_t size)
 {
-    if ((uuid == NULL) || (so == NULL)) {
+    if ((uuid == NULL) || (so == NULL) || size > 3 * MAX_SO_CONT_SIZE) {
         LOG_E("mcRegistry store So.TrustletCont(uuid) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         return MC_DRV_ERR_INVALID_PARAMETER;
     }

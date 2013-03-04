@@ -101,16 +101,14 @@ rootpaerror_t getVersion(int* tag, mcVersionInfo_t* versionP)
         else
         {
             *tag=((cmpRspGetVersion_t*)(response.contentP))->tag;
-            if(CMP_VERSION_TAG1 == *tag)
-            {
-                *((uint32_t*)versionP->productId)=((cmpRspGetVersion_t*)(response.contentP))->data.versionData1.number;
-            }
-            else if (CMP_VERSION_TAG2 == *tag)
+
+            if (CMP_VERSION_TAG2 == *tag)
             {
                 memcpy(versionP, &((cmpRspGetVersion_t*)(response.contentP))->data.versionData2.versionInfo, sizeof(*versionP));
             }
             else
             {
+                LOGE("getVersion, unsupported version tag %d", *tag);
                 ret=ROOTPA_ERROR_INTERNAL;
             }
         }

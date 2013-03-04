@@ -153,29 +153,27 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_getVersion
         ret=jniHelp.setVersion((char*) VERSION_FIELD_TAG, tag);
         if(ROOTPA_OK == ret)
         {
-            if(1==tag)
+            ret=jniHelp.setProductId((char*) version.productId);
+            if(ret != ROOTPA_OK) return ret;
+            ret=jniHelp.setVersion((char*) VERSION_FIELD_MCI, version.versionMci);
+            if(ret != ROOTPA_OK) return ret;
+            ret=jniHelp.setVersion((char*) VERSION_FIELD_SO, version.versionSo);
+            if(ret != ROOTPA_OK) return ret;
+            ret=jniHelp.setVersion((char*) VERSION_FIELD_MCLF, version.versionMclf);
+            if(ret != ROOTPA_OK) return ret;
+            ret=jniHelp.setVersion((char*) VERSION_FIELD_CONT, version.versionContainer);
+            if(ret != ROOTPA_OK) return ret;
+            ret=jniHelp.setVersion((char*) VERSION_FIELD_MCCONF, version.versionMcConfig);
+            if(ret != ROOTPA_OK) return ret;
+            ret=jniHelp.setVersion((char*) VERSION_FIELD_TLAPI, version.versionTlApi);
+            if(ret != ROOTPA_OK) return ret;
+            ret=jniHelp.setVersion((char*) VERSION_FIELD_DRAPI, version.versionDrApi);
+            if(ret != ROOTPA_OK) return ret;
+            ret=jniHelp.setVersion((char*) VERSION_FIELD_CMP, version.versionCmp);
+            if(tag!=2)
             {
-                ret=jniHelp.setVersion((char*) VERSION_FIELD_TAG1ALL, *((uint32_t*)version.productId));
-            }        
-            else
-            {
-                ret=jniHelp.setProductId((char*) version.productId);
-                if(ret != ROOTPA_OK) return ret;
-                ret=jniHelp.setVersion((char*) VERSION_FIELD_MCI, version.versionMci);
-                if(ret != ROOTPA_OK) return ret;
-                ret=jniHelp.setVersion((char*) VERSION_FIELD_SO, version.versionSo);
-                if(ret != ROOTPA_OK) return ret;
-                ret=jniHelp.setVersion((char*) VERSION_FIELD_MCLF, version.versionMclf);
-                if(ret != ROOTPA_OK) return ret;
-                ret=jniHelp.setVersion((char*) VERSION_FIELD_CONT, version.versionContainer);
-                if(ret != ROOTPA_OK) return ret;
-                ret=jniHelp.setVersion((char*) VERSION_FIELD_MCCONF, version.versionMcConfig);
-                if(ret != ROOTPA_OK) return ret;
-                ret=jniHelp.setVersion((char*) VERSION_FIELD_TLAPI, version.versionTlApi);
-                if(ret != ROOTPA_OK) return ret;
-                ret=jniHelp.setVersion((char*) VERSION_FIELD_DRAPI, version.versionDrApi);
-                if(ret != ROOTPA_OK) return ret;
-                ret=jniHelp.setVersion((char*) VERSION_FIELD_CMP, version.versionCmp);
+                LOGE("Java_com_gd_mobicore_pa_jni_CommonPAWrapper_getVersion unknown tag %d, version information may be wrong\n", tag);
+                ret=ROOTPA_ERROR_INTERNAL;
             }
         }
     }
@@ -407,7 +405,7 @@ void setFilesPath(JNIEnv* envP, jobject obj)
     jobject jpath = envP->CallObjectMethod(obj, getFilesDirPath); 
     if(jpath!=NULL)
     {    
-        const char* pathP = envP->GetStringUTFChars((jstring)jpath, false);
+        const char* pathP = envP->GetStringUTFChars((jstring)jpath, NULL);
         setPaths(pathP, CERT_PATH);
         if(NULL == pathP)
         {
@@ -434,7 +432,7 @@ const int VERSION_INDEX=com_gd_mobicore_pa_jni_CommonPAWrapper_VERSION_INDEX;
 
 void copyElement(JNIEnv* envP, char** target, jstring source)
 {
-    const char* tmp=envP->GetStringUTFChars(source, false);
+    const char* tmp=envP->GetStringUTFChars(source, NULL);
     *target=(char*)malloc(strlen(tmp)+1);
     strcpy(*target, tmp);
     envP->ReleaseStringUTFChars(source, tmp);
@@ -576,4 +574,66 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_unregisterRoo
     LOGD("<<Java_com_gd_mobicore_pa_jni_CommonPAWrapper_unregisterRootContainer\n");
 
     return ret;
+}
+
+char* addTrailingZero(uint8_t* vP, uint32_t length)
+{
+    char* newVP = new char[length+1];
+    if(NULL!=newVP)
+    {
+        memcpy(newVP, vP, length);
+        newVP[length]=0;
+    }
+    delete [] vP;    
+    return newVP;
+}
+
+JNIEXPORT void JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_setEnvironmentVariable(JNIEnv* envP, jobject obj, jbyteArray variable_name, jbyteArray value)
+{
+    LOGD(">>Java_com_gd_mobicore_pa_jni_CommonPAWrapper_setEnvironmentVariable");
+    JniHelpers jniHelp(envP);
+    uint32_t length=0;    
+    char* envVarP=NULL;
+    char* envValP=NULL;
+    uint8_t*  vP=jniHelp.jByteArrayToCByteArray(variable_name, &length);
+    
+    if(NULL==vP)
+    {
+        LOGE("Java_com_gd_mobicore_pa_jni_CommonPAWrapper_setEnvironmentVariable, FAILURE: can not get variable\n");
+        return;
+    }
+
+    envVarP = addTrailingZero(vP, length);
+    if(value!=NULL)
+    {
+        vP=jniHelp.jByteArrayToCByteArray(value, &length);    
+        if(NULL!=vP)
+        {
+            envValP = addTrailingZero(vP, length);
+            if(envVarP && envValP)
+            {
+                LOGD("setting environment variable, %s %s", envVarP, envValP);
+                if(setenv(envVarP, envValP, 1)!=0)
+                {
+                    LOGE("Java_com_gd_mobicore_pa_jni_CommonPAWrapper_setEnvironmentVariable, setenv %s FAILURE\n", envVarP);
+                }
+            }
+        }
+        else
+        {
+            LOGE("Java_com_gd_mobicore_pa_jni_CommonPAWrapper_setEnvironmentVariable, FAILURE: can not get value\n");
+        }
+    }
+    else
+    {
+        LOGD("unsetting environment variable, %s", envVarP);        
+        if(unsetenv(envVarP)!=0)
+        {
+            LOGE("Java_com_gd_mobicore_pa_jni_CommonPAWrapper_setEnvironmentVariable, unsetenv %s FAILURE\n", envVarP);
+        }
+    }
+
+    delete[] envVarP;
+    delete[] envValP;
+    LOGD("<<Java_com_gd_mobicore_pa_jni_CommonPAWrapper_setEnvironmentVariable");
 }

@@ -195,24 +195,6 @@ The results of actual execution of the provisioining are returned in the callbac
 */
 rootpaerror_t installTrustlet(mcSpid_t spid, CallbackFunctionP callbackP, SystemInfoCallbackFunctionP systemInfoCallbackP, trustletInstallationData_t* dataP);
 
-/**
-This is helper function for the platform dependent part to inform the platform independent part 
-on the file storage location
-
-@param storageDirP NULL terminated char array containing the path to the storage location
-*/
-
-void setPaths(const char* storageDirP, const char* certDirP);
-
-/**
-This is helper function for setting SE address. 
-
-@param addrP pointer to the address, it can but does not need to be null terminated. The address needs 
-       to begin with "http(s)://" and end with "/".
-@param length length of the address
-@return ROOTPA_OK is setting succeeded, an error code otherwise
-*/
-rootpaerror_t setSeAddress(const char* addrP, uint32_t length);
 
 /**
 This is helper function for unregistering root container.
@@ -229,6 +211,27 @@ This is helper function for unregistering root container.
 @return ROOTPA_OK is unregistering root container succeeds, an error code otherwise
 */
 rootpaerror_t unregisterRootContainer(CallbackFunctionP callbackP, SystemInfoCallbackFunctionP systemInfoCallbackP);
+
+/**
+This is helper function for the platform dependent part to inform the platform independent part 
+on the file storage location
+
+@param storageDirP NULL terminated char array containing the path to the storage location
+@param certDirP NULL terminated char array containing the path to the location where ssl should look for ce certificates.
+  note that since the certificates are also hardcoded, it is possible that this path is not used, however it must be given anyway
+*/
+
+void setPaths(const char* storageDirP, const char* certDirP);
+
+/**
+This is helper function for setting SE address. 
+
+@param addrP pointer to the address, it can but does not need to be null terminated. The address needs 
+       to begin with "http(s)://" and end with "/".
+@param length length of the address
+@return ROOTPA_OK is setting succeeded, an error code otherwise
+*/
+rootpaerror_t setSeAddress(const char* addrP, uint32_t length);
 
 #ifdef __cplusplus
 } 

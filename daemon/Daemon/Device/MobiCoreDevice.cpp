@@ -260,12 +260,15 @@ mcResult_t MobiCoreDevice::openSession(
         uint32_t len;
 
         // Check if we have a cont WSM or normal one
-        if (findContiguousWsm(tciHandle, &tci, &len)) {
+        if (findContiguousWsm(tciHandle, deviceConnection->socketDescriptor, &tci, &len)) {
             mcpMessage->cmdOpen.wsmTypeTci = WSM_CONTIGUOUS;
             mcpMessage->cmdOpen.adrTciBuffer = (uint32_t)(tci);
             mcpMessage->cmdOpen.ofsTciBuffer = 0;
         }
-        else if((tci = findWsmL2(tciHandle))) {
+        else if((tci = findWsmL2(tciHandle, deviceConnection->socketDescriptor))) {
+            // We don't actually care about the len as the L2 table mapping is done
+            // and the TL will segfault if it's trying to access non-allocated memory
+            len = tciLen;
             mcpMessage->cmdOpen.wsmTypeTci = WSM_L2;
             mcpMessage->cmdOpen.adrTciBuffer = (uint32_t)(tci);
             mcpMessage->cmdOpen.ofsTciBuffer = tciOffset;

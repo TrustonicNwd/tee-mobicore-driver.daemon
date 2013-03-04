@@ -439,10 +439,14 @@ mcResult_t CMcKMod::unlockWsmL2(uint32_t handle)
 
 
 //------------------------------------------------------------------------------
-addr_t CMcKMod::findWsmL2(uint32_t handle)
+addr_t CMcKMod::findWsmL2(uint32_t handle, int fd)
 {
     int ret = 0;
-    uint32_t param = handle;
+    
+    struct mc_ioctl_resolv_wsm wsm;
+
+    wsm.handle = handle;
+    wsm.fd = fd;
 
     LOG_I(" Resolving the WSM l2 for handle=%u", handle);
 
@@ -451,22 +455,24 @@ addr_t CMcKMod::findWsmL2(uint32_t handle)
         return NULL;
     }
 
-    ret = ioctl(fdKMod, MC_IO_RESOLVE_WSM, &param);
-    if (ret != 0 || param == 0) {
+    ret = ioctl(fdKMod, MC_IO_RESOLVE_WSM, &wsm);
+    if (ret != 0) {
         LOG_ERRNO("ioctl MC_IO_RESOLVE_WSM");
-        LOG_E("param %u, ret = %d", param, ret);
+        LOG_E("ret = %d", ret);
+        return 0;
     }
 
-    return (addr_t)param;
+    return (addr_t)wsm.phys;
 }
 
 //------------------------------------------------------------------------------
-mcResult_t CMcKMod::findContiguousWsm(uint32_t handle, addr_t *phys, uint32_t *len)
+mcResult_t CMcKMod::findContiguousWsm(uint32_t handle, int fd, addr_t *phys, uint32_t *len)
 {
     mcResult_t ret = MC_DRV_OK;
     struct mc_ioctl_resolv_cont_wsm wsm;
 
     wsm.handle = handle;
+    wsm.fd = fd;
 
     LOG_I(" Resolving the contiguous WSM l2 for handle=%u", handle);
 

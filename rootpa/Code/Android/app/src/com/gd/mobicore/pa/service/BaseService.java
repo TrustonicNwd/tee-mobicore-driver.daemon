@@ -33,7 +33,18 @@ package com.gd.mobicore.pa.service;
 
 import android.app.Service;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.net.NetworkInfo;
+import android.net.ConnectivityManager;
 
+import java.net.URI;
+import java.net.Proxy;
+import java.net.Proxy.Type;
+import java.net.ProxySelector;
+
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -129,6 +140,80 @@ public abstract class BaseService extends Service {
         return new CommandResult(CommandResult.ROOTPA_ERROR_LOCK);
     }
 
+    /**
+        Since libcurl is able to read and use proxy settings from http_proxy environment variable, we set the proxy here.
+        This should be changed every time the connection changes so that there are always correct proxy settings available
+    */
+
+    BroadcastReceiver networkChangeReceiver_=null;
+    protected void setupProxy()
+    {   
+        byte[] proxyAddress=null;
+        ProxySelector defaultProxySelector = ProxySelector.getDefault();
+
+        if(defaultProxySelector != null){
+            URI uri=null;
+            List<Proxy> proxyList=null;
+            try{
+                if(se_==null){
+                    uri=new URI("https://se.cgbe.trustonic.com"); // the URI here does not matter a lot, as long as one exists. We try to use as real one as is easily possible
+                }else{
+                    uri=new URI(new String(se_));                
+                }
+                proxyList = defaultProxySelector.select(uri);
+                if (proxyList.size() > 0)
+                {
+                    Proxy proxy = proxyList.get(0);
+                    Log.d(TAG,"BaseService.setupProxy proxy "+proxy); // there should be only one element in the list in the current Android versions, it is for the current connection 
+                    if(proxy != Proxy.NO_PROXY){
+                        Log.d(TAG,"BaseService.setupProxy proxy.type "+proxy.type());           
+                        if(proxy.type()==Proxy.Type.HTTP){
+                            // TODO-future there is currently no way for the user to store proxy user name and password in Android,
+                            // so they need to be asked at connection time. There is not any kind of user/password support for proxies in RootPA.
+                            // If we were able to get username/password we would add them to http(s)_proxy here.
+                            // if(username && password) proxyAddress=username+":"+password; (and add the next line just remove +1 from indexOf)
+                            proxyAddress=proxy.toString().substring(proxy.toString().indexOf("@")+1).getBytes();
+                        }
+                    }
+                }
+                
+            }catch(Exception e){
+                Log.e(TAG,"BaseService.setupProxy FAILURE in getting the proxy: "+e.toString());
+            }
+        }
+
+        commonPAWrapper().setEnvironmentVariable("http_proxy".getBytes(), proxyAddress);
+        commonPAWrapper().setEnvironmentVariable("https_proxy".getBytes(), proxyAddress);        
+        Log.d(TAG,"BaseService.setupProxy just set the proxy to: "+(proxyAddress==null?proxyAddress:new String(proxyAddress)));
+
+        // start listening to intents on network changes if not doing it already
+        // this is important since the proxy settings are network specific
+        if(networkChangeReceiver_==null){
+            networkChangeReceiver_=new BroadcastReceiver(){
+                public void onReceive(Context ctx, Intent intent){
+                    Log.d(TAG, "BaseService: Network connection changed");
+                    try{
+                        NetworkInfo ni=((ConnectivityManager)ctx.getSystemService(Context.CONNECTIVITY_SERVICE)).getActiveNetworkInfo();
+                        if(ni!=null && ni.isConnectedOrConnecting()) {
+                            Log.d(TAG,"BaseService: Network "+ni.getTypeName()+" connected");
+                            setupProxy();
+                        }else{
+                            if(ni!=null){ 
+                                Log.d(TAG, "BaseService: network state "+ni.getState());
+                            }else{
+                                Log.d(TAG, "BaseService: no network info");
+                            }
+                        }
+                    }catch(Exception e){
+                        Log.e(TAG, "BaseService: Network connection change handling FAILURE "+e);
+                    }
+                }
+            };
+            IntentFilter filter=new IntentFilter("android.net.conn.CONNECTIVITY_CHANGE");
+            registerReceiver(networkChangeReceiver_, filter);
+        }
+    }                     
+    
     protected synchronized boolean locked(int uid){
         return(lock_.get() != uid && uid != LOCK_FREE);
     }
@@ -138,11 +223,11 @@ public abstract class BaseService extends Service {
     (trustlet connector/"sp.pa" for develope trustlet) that then can store it where desired.
     */
     public void trustletInstallCallback(byte[] trustlet){
-        Log.d(TAG,">>DeveloperService.trustletInstallCallback");
+        Log.d(TAG,">>BaseService.trustletInstallCallback");
         Intent intent=new Intent(RootPAProvisioningIntents.INSTALL_TRUSTLET);
         intent.putExtra(RootPAProvisioningIntents.TRUSTLET, trustlet);
         sendBroadcast(intent);
-        Log.d(TAG,"<<DeveloperService.trustletInstallCallback");        
+        Log.d(TAG,"<<BaseService.trustletInstallCallback");        
     }
     
     /**
@@ -199,7 +284,11 @@ public abstract class BaseService extends Service {
                 intent=null; // no intent sent in this case
                 }catch(Exception e){
                     Log.e(TAG,"provisioningStateCallback releasing lock failed: "+e);
-                }            
+                }
+                if(networkChangeReceiver_!=null){
+                    unregisterReceiver(networkChangeReceiver_);
+                    networkChangeReceiver_=null;
+                }
                 break;
             default:
                 Log.e(TAG,"unknown state: "+state);
@@ -211,5 +300,12 @@ public abstract class BaseService extends Service {
         }
 
         Log.d(TAG,"<<provisioningStateCallback ");
-    }    
+    }
+    
+    public void onDestroy(){
+        if(networkChangeReceiver_!=null){
+            unregisterReceiver(networkChangeReceiver_);
+            networkChangeReceiver_=null;
+        }
+    }
 }

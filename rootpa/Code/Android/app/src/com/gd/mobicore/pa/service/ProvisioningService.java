@@ -278,6 +278,7 @@ public class ProvisioningService extends BaseService {
             doProvisioningLockSuid_=tmpSuid;
             
             try{
+                setupProxy();
                 ret=commonPAWrapper().doProvisioning(uid, spid.spid(), se_);
             }catch(Exception e){
                 Log.d(TAG,"CommonPAWrapper()).doProvisioning failed "+e);
@@ -501,6 +502,7 @@ public class ProvisioningService extends BaseService {
     }
 
     public void onDestroy(){
+        super.onDestroy();        
         Log.d(TAG,"ProvisioningService being destroyed");
     }
     

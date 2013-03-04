@@ -204,9 +204,9 @@ public:
 
     virtual bool unlockWsmL2(uint32_t handle) = 0;
 
-    virtual addr_t findWsmL2(uint32_t handle) = 0;
+    virtual addr_t findWsmL2(uint32_t handle, int fd) = 0;
 
-    virtual bool findContiguousWsm(uint32_t handle, addr_t *phys, uint32_t *len) = 0;
+    virtual bool findContiguousWsm(uint32_t handle, int fd, addr_t *phys, uint32_t *len) = 0;
 
     /**
      * Cleanup all orphaned bulk buffers.

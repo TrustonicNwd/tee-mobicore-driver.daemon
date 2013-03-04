@@ -167,7 +167,7 @@ void MobiCoreDriverDaemon::run(
 //------------------------------------------------------------------------------
 bool MobiCoreDriverDaemon::checkPermission(Connection *connection)
 {
-#ifdef NDEBUG
+#ifdef REGISTRY_CHECK_PERMISSIONS
     struct ucred cred;
     if (!connection)
         return true;
@@ -186,7 +186,6 @@ bool MobiCoreDriverDaemon::checkPermission(Connection *connection)
     }
     return false;
 #else
-    // In debug mode we allow the registry access
     return true;
 #endif
 }
@@ -692,7 +691,7 @@ void MobiCoreDriverDaemon::processMapBulkBuf(Connection *connection)
     }
 
     uint32_t secureVirtualAdr = NULL;
-    uint32_t pAddrL2 = (uint32_t)device->findWsmL2(cmd.handle);
+    uint32_t pAddrL2 = (uint32_t)device->findWsmL2(cmd.handle, connection->socketDescriptor);
 
     if (pAddrL2 == 0) {
         LOG_E("Failed to resolve WSM with handle %u", cmd.handle);

@@ -119,7 +119,8 @@ public class RootPAClient extends Activity {
     void doBindService(){       
         
         
-        byte[] address="https://10.0.2.2:443/".getBytes(); // using local apache2 server
+        byte[] address="https://195.81.216.155:44378/service-enabler/enrollment/".getBytes(); // using local apache2 server
+//        byte[] address="https://10.0.2.2:443/".getBytes(); // using local apache2 server
         int loggingLevel=android.util.Log.DEBUG;
         try{
             Intent psintent=new Intent(RootPAProvisioningIntents.PROVISIONING_SERVICE);

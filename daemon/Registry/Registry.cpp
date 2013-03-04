@@ -52,7 +52,7 @@
 
 #include "Connection.h"
 
-#define DAEMON_TIMEOUT 30
+#define DAEMON_TIMEOUT 30000
 
 using namespace std;
 

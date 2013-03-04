@@ -185,7 +185,7 @@ bool checkResult(rootpaerror_t retCode, const char* testCase)
 int main(int argc, char* argv[] )
 {   
 //    printSizes();
-    setPaths("./");
+    setPaths("./", "./");
     checkResult(setSeAddress(SEADDRESS, sizeof(SEADDRESS)),"setSeAddress");
     
     checkResult(openSessionToCmtl(), "openSessionToCmtl");

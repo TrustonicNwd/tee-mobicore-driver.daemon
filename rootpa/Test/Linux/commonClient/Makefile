@@ -31,10 +31,10 @@
 
 
 # sudo apt-get install libxml2-devel
-# sudo apt-get install libcurl4-openssl-dev
-
-MOBICORE=/home/tersou01/mc/Common/MobiCore/trunk/00027125
-MOBICOREDRIVERLIB=/home/tersou01/mc/Common/MobiCoreDriverLib/trunk/00027038
+# sudo apt-get install libcurl4-openssl-d
+TLCM=/home/tersou01/mc/Common/TlCm/trunk/00028991
+TLSDK=/home/tersou01/mc/Common/TlSdk/trunk/00028826
+MOBICOREDRIVERLIB=/home/tersou01/mc/Common/MobiCoreDriverLib/trunk/00028995
 
 LIBXML2 = /usr/lib/x86_64-linux-gnu/libxml2.a
 LIBCURL = /usr/lib/x86_64-linux-gnu/libcurl.a
@@ -56,7 +56,7 @@ VALGRINDPARAMS=-v  --leak-check=full  --show-reachable=yes --track-origins=yes
 CFLAGS= -Wall -D_GNU_SOURCE   # -D_GNU_SOURCE is here for removing warnings and making sure strcasestr works properly
 
 LDFLAGS=rcs
-INCDIR=-I../../../Code/Common/include -I/usr/include/libxml2 -I/usr/include/curl -I$(MOBICORE)/Out/inc -I$(MOBICOREDRIVERLIB)/Out/Public
+INCDIR=-I../../../Code/Common/include -I/usr/include/libxml2 -I/usr/include/curl -I$(TLSDK)/Out/Public/MobiCore/inc -I$(TLCM)/Out/Public -I$(MOBICOREDRIVERLIB)/Out/Public
 _SOURCEDIR=../../../Code/Common
 SOURCES=$(_SOURCEDIR)/*.c
 OBJECTS=*.o

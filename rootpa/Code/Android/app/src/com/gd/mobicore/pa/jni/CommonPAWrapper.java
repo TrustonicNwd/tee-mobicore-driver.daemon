@@ -68,6 +68,7 @@ public class CommonPAWrapper {
     public native int doProvisioning(int uid, int spid, byte[] seAddress);
 	public native int installTrustlet(int dataType, byte[] tltOrKeyData, byte[] seAddress);
     public native int unregisterRootContainer(byte[] seAddress);
+    public native void setEnvironmentVariable(byte[] variable, byte[] value);    
 
     static{
         Log.d(TAG,"CommonPAWrapper.java: static");

@@ -125,9 +125,9 @@ public:
 
     mcResult_t cleanupWsmL2(void);
 
-    addr_t findWsmL2(uint32_t handle);
+    addr_t findWsmL2(uint32_t handle, int fd);
 
-    mcResult_t findContiguousWsm(uint32_t handle, addr_t *phys, uint32_t *len);
+    mcResult_t findContiguousWsm(uint32_t handle, int fd, addr_t *phys, uint32_t *len);
 
     mcResult_t setupLog(void);
 

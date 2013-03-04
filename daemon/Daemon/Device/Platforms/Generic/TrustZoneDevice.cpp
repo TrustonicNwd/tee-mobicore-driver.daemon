@@ -499,9 +499,9 @@ bool TrustZoneDevice::cleanupWsmL2(void)
 }
 
 //------------------------------------------------------------------------------
-addr_t TrustZoneDevice::findWsmL2(uint32_t handle)
+addr_t TrustZoneDevice::findWsmL2(uint32_t handle, int fd)
 {
-    addr_t ret = pMcKMod->findWsmL2(handle);
+    addr_t ret = pMcKMod->findWsmL2(handle, fd);
     if (ret == NULL) {
         LOG_E("pMcKMod->findWsmL2 failed");
         return NULL;
@@ -511,9 +511,9 @@ addr_t TrustZoneDevice::findWsmL2(uint32_t handle)
 }
 
 //------------------------------------------------------------------------------
-bool TrustZoneDevice::findContiguousWsm(uint32_t handle, addr_t *phys, uint32_t *len)
+bool TrustZoneDevice::findContiguousWsm(uint32_t handle, int fd, addr_t *phys, uint32_t *len)
 {
-    if (pMcKMod->findContiguousWsm(handle, phys, len)) {
+    if (pMcKMod->findContiguousWsm(handle, fd, phys, len)) {
         LOG_E("pMcKMod->findContiguousWsm failed");
         return false;
     }

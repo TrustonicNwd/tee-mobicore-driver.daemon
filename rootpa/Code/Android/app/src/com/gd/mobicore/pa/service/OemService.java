@@ -77,7 +77,7 @@ public class OemService extends BaseService {
             int ret=CommandResult.ROOTPA_OK;
 
             try{
-                   
+                setupProxy();
             	ret=commonPAWrapper().unregisterRootContainer(se_);
             }catch(Exception e){
                 Log.e(TAG,"CommonPAWrapper().unregisterRootContainer exception: ", e);
@@ -111,6 +111,7 @@ public class OemService extends BaseService {
     }
 
     public void onDestroy(){
+        super.onDestroy();        
         Log.d(TAG,"OemService being destroyed");
     }
     

@@ -80,8 +80,6 @@ public class DeveloperService extends BaseService {
             int err=0;
             byte[] data=null;
             int dataType;            
-            
-            
             try{
                 if(trustletBinary != null){
                     data=trustletBinary;
@@ -90,7 +88,7 @@ public class DeveloperService extends BaseService {
                     data=key;
                     dataType=REQUEST_DATA_KEY;
                 }
-                    
+                setupProxy();    
                 err=commonPAWrapper().installTrustlet(dataType, data, se_);
             }catch(Exception e){
                 Log.e(TAG,"CommonPAWrapper().installTrustlet exception: ", e);
@@ -116,6 +114,7 @@ public class DeveloperService extends BaseService {
     }
 
     public void onDestroy(){
+        super.onDestroy();
         Log.d(TAG,"DeveloperService being destroyed");
     }
     

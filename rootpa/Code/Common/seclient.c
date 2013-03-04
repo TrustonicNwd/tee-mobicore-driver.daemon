@@ -387,13 +387,16 @@ bool setBasicOpt(CURL* curl_handle, MemoryStruct* chunkP, HeaderStruct* headerCh
         return false;
     }
 
-// TODO-RELEASE, hopefully these are not needed but libcurl can use the environment variable settings.
-// if they are needed, the settings need to be obtained from the database
-//
-//    curl_easy_setopt(curl_handle,CURLOPT_PROXY, "http://proxyaddress");
-//    curl_easy_setopt(curl_handle,CURLOPT_PROXYUSERNAME, "username");
-//    curl_easy_setopt(curl_handle,CURLOPT_PROXYPASSWORD, "read_proxy_password");
+/** libcurl uses the http_proxy and https_proxy environment variables for proxy settings.
+    That variable is set in the OS specific wrapper. These are left here in order to make 
+    this comment earier to be found in searches.
 
+    curl_easy_setopt(curl_handle,CURLOPT_PROXY, "http://proxyaddress");
+    curl_easy_setopt(curl_handle,CURLOPT_PROXYPORT, "read_proxy_port");
+    curl_easy_setopt(curl_handle,CURLOPT_PROXYUSERNAME, "read_proxy_username");
+    curl_easy_setopt(curl_handle,CURLOPT_PROXYPASSWORD, "read_proxy_password");
+*/
+    
     return true;
 }
 
@@ -437,7 +440,7 @@ bool setPutOpt(CURL* curl_handle, ResponseStruct* responseChunk)
     return true;
 }
 
-bool setPostOpt(CURL* curl_handle, const char* inputP)
+bool setPostOpt(CURL* curl_handle, const char* inputP, struct curl_slist* disableChunkP)
 {
     if(inputP)
     {
@@ -468,7 +471,12 @@ bool setPostOpt(CURL* curl_handle, const char* inputP)
         LOGE("curl_easy_setopt CURLOPT_POSTFIELDS failed");
         return false;
     }
-    
+
+    if (curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, disableChunkP)!=CURLE_OK)
+    {
+        LOGE("curl_easy_setopt CURLOPT_HTTPHEADER failed");
+        return false;
+    }
     LOGD("<<setPostOpt");
     return true;
 }
@@ -522,7 +530,7 @@ rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, con
     long int curlRet=CURLE_COULDNT_CONNECT;
     long int http_code = 0;
     int attempts=0;
-
+    struct curl_slist* disableChunkP = NULL;
     
     LOGD(">>httpCommunicate");
     if(NULL==linkP || NULL==relP || NULL==commandP || NULL==*linkP)
@@ -567,7 +575,9 @@ rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, con
 	}
 	else if(method == httpMethod_POST)
 	{
-		if (setPostOpt(curl_handle_, inputP)==false)
+        /* disable Expect: 100-continue since it creates problems with some proxies */ 
+        disableChunkP = curl_slist_append(disableChunkP, "Expect:");
+		if (setPostOpt(curl_handle_, inputP, disableChunkP)==false)
 		{
 			LOGE("setPostOpt failed");
 			free(chunk.memoryP);
@@ -647,7 +657,8 @@ rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, con
     *commandP=chunk.memoryP;  // this needs to be freed by client
     *linkP=headerChunk.linkP; // this needs to be freed by client
     *relP=headerChunk.relP;   // this needs to be freed by client
- 
+    if (disableChunkP) curl_slist_free_all(disableChunkP); // since we disabled some headers    
+
     curl_easy_reset(curl_handle_);
     LOGD("%lu bytes retrieved\n", (long)chunk.size);
      

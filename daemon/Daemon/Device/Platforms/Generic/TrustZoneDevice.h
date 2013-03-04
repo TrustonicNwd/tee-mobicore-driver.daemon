@@ -115,9 +115,9 @@ public:
 
     bool unlockWsmL2(uint32_t handle);
 
-    addr_t findWsmL2(uint32_t handle);
+    addr_t findWsmL2(uint32_t handle, int fd);
 
-    bool findContiguousWsm(uint32_t handle, addr_t *phys, uint32_t *len);
+    bool findContiguousWsm(uint32_t handle, int fd, addr_t *phys, uint32_t *len);
 
     /**
      * Cleanup all orphaned bulk buffers.

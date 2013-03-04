@@ -44,8 +44,8 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-// static const char* const SE_URL="https://se.cgbe.trustonic.com:8443/"; // note that there has to be slash at the end since we are adding suid to it next
-static const char* const SE_URL="http://se.cgbe.trustonic.com:8080/"; // note that there has to be slash at the end since we are adding suid to it next
+static const char* const SE_URL="https://se.cgbe.trustonic.com:8443/"; // note that there has to be slash at the end since we are adding suid to it next
+//static const char* const SE_URL="http://se.cgbe.trustonic.com:8080/"; // note that there has to be slash at the end since we are adding suid to it next
 
 static const char* const RELATION_SELF  =      "relation/self";
 static const char* const RELATION_SYSTEMINFO = "relation/system_info";
@@ -153,8 +153,11 @@ void doProvisioningWithSe(
     if(empty(initialUrl_))
     {
         memset(initialUrl_, 0, INITIAL_URL_BUFFER_LENGTH);
-        memcpy(initialUrl_, &SE_URL, strlen(SE_URL));
+        strncpy(initialUrl_, SE_URL, strlen(SE_URL));
+        
     }
+    
+    
     size_t urlLength=strlen(initialUrl_) + (sizeof(mcSuid_t)*2) + (sizeof(mcSpid_t)*2)+1;
 
     char* tmplinkP=malloc(urlLength);
@@ -208,10 +211,10 @@ void doProvisioningWithSe(
     
     while(workToDo)
     {
-        LOGD("in loop link: %s\nrel: %s\nc: command: %s\nresponse: %s\n", (linkP==NULL)?"null":linkP, 
-                                                                             (relP==NULL)?"null":relP, 
-                                                                             (commandP==NULL)?"null":commandP, 
-                                                                             (responseP==NULL)?"null":responseP);
+        LOGD("in loop link: %s\nrel: %s\ncommand: %s\nresponse: %s\n", (linkP==NULL)?"null":linkP, 
+                                                                       (relP==NULL)?"null":relP, 
+                                                                       (commandP==NULL)?"null":commandP, 
+                                                                       (responseP==NULL)?"null":responseP);
     
         if(NULL==relP)
         {
