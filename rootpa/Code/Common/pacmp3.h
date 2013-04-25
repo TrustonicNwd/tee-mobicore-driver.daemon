@@ -40,6 +40,10 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 
 uint32_t sizeOfCmp();
 
+// recovery from factory reset  
+bool factoryResetAssumed();
+// recovery from factory reset  
+
 cmpCommandId_t getCmpCommandId(const uint8_t* commandP);
 
 rootpaerror_t prepareCommand(cmpCommandId_t commandId, CmpMessage* inCommandP,  CMTHANDLE handle, CmpMessage* inResponseP);

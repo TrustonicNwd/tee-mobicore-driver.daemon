@@ -49,6 +49,9 @@ static const mcSpid_t MC_SPID_RESERVED = 0;
 /** SPID for system applications. */
 static const mcSpid_t MC_SPID_SYSTEM = 0xFFFFFFFE;
 
+/** SPID reserved for tests only */
+static const mcSpid_t MC_SPID_RESERVED_TEST = 0xFFFFFFFD;
+
 #endif // MC_SPID_H_
 
 /** @} */

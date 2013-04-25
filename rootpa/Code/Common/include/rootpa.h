@@ -1,5 +1,5 @@
 /*
-Copyright  © Trustonic Limited 2013
+Copyright  Â© Trustonic Limited 2013
 
 All rights reserved.
 
@@ -41,13 +41,13 @@ extern "C" {
 
 #include "rootpaErrors.h"
 
-#define UUID_LENGTH 16 
+#define UUID_LENGTH 16
 
 typedef enum {
     CONNECTING_SERVICE_ENABLER=1,
     AUTHENTICATING_SOC=2,
-    AUTHENTICATING_ROOT=3,
-    CREATING_ROOT_CONTAINER=4,
+    CREATING_ROOT_CONTAINER=3,
+    AUTHENTICATING_ROOT=4,
     CREATING_SP_CONTAINER=5,
     FINISHED_PROVISIONING=6,
     ERROR=7,
@@ -190,6 +190,10 @@ typedef struct {
     tells whether dataP points to trustlet binary (REQUEST_DATA_TLT) or encryption key (REQUEST_DATA_KEY)
     */
     TltInstallationRequestDataType dataType;
+    /**
+    uuid of the trustlet
+    */
+    mcUuid_t uuid;
 }trustletInstallationData_t;
 
 #ifdef __cplusplus

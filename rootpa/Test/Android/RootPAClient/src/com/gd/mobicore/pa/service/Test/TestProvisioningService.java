@@ -33,8 +33,8 @@ package com.gd.mobicore.pa.service.Test;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.content.Intent;
 import android.os.IBinder;
+import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.ComponentName;
 import android.content.Context;
@@ -145,7 +145,7 @@ class TestProvisioningService extends AsyncTask<IBinder, Void, Void> {
 
         try{
             Log.d(TAG, "testDoProvisioning, errors from SE");
-            TEST_WRONG_SPID = new SPID(12); // not really wrong spid but a spid that
+            TEST_WRONG_SPID = new SPID(12); // not really wrong spid but a spid that causes errors to be returned
             res=testDoProvisioning(parent_.stringList_, TEST_WRONG_SPID);
         }catch(Throwable e){
             Log.e(TAG, "Executing testDoProvisioning, errors from SE, failed due to exception "+e);
@@ -190,7 +190,7 @@ class TestProvisioningService extends AsyncTask<IBinder, Void, Void> {
     }
 
     public void onServiceDisconnected(ComponentName className){
-        provisioningServiceIfc_=null; 
+        disconnect();
     }
 
     /**
@@ -538,7 +538,8 @@ class TestProvisioningService extends AsyncTask<IBinder, Void, Void> {
     }
     
     private boolean seErrorIntentsReceived(){
-        return (intentsReceived_[0] && intentsReceived_[1] && !intentsReceived_[2] && !intentsReceived_[3] && intentsReceived_[4] && !intentsReceived_[5] && !intentsReceived_[6]);
+        Log.d(TAG, "seErrorIntentsReceived "+intentsReceived_[0] +" "+intentsReceived_[1] +" "+ !intentsReceived_[2] +" "+ intentsReceived_[3] +" "+ !intentsReceived_[4] +" "+ !intentsReceived_[5] +" "+ intentsReceived_[6]);
+        return (intentsReceived_[0] && intentsReceived_[1] && !intentsReceived_[2] && intentsReceived_[3] && !intentsReceived_[4] && !intentsReceived_[5] && intentsReceived_[6]);
     }
     
     private synchronized void markIntentReceived(int i){
@@ -647,7 +648,6 @@ class TestProvisioningService extends AsyncTask<IBinder, Void, Void> {
         
 
         overallsuccess=!overallsuccess?overallsuccess:(ret.isOk());
-
         if(TEST_SPID!=null && spid==TEST_SPID){
             overallsuccess=!overallsuccess?overallsuccess:(intentError_.isOk());
             overallsuccess=!overallsuccess?overallsuccess:allIntentsReceived();            
@@ -674,7 +674,7 @@ class TestProvisioningService extends AsyncTask<IBinder, Void, Void> {
             logi = logi.concat(((intentError_.isOk())?"SUCCESS":"FAILURE")+": Testing doProvisioning, intentError "+((intentError_.isOk())?"\n":("returned: " +intentError_+" \n")));            
         }else{
             for(int i=0; i < 7; i++){ 
-                if(0 == i || 1 == i || 4 == i ){ // in the error case not all intents are received
+                if(0 == i || 1 == i || 3 == i ){ // in the error case not all intents are received
                     logi = logi.concat(((intentsReceived_[i]==true)?"SUCCESS":"FAILURE")+": Testing doProvisioning, receiving intent["+i+"]\n");
                 }
             }

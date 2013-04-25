@@ -117,8 +117,17 @@ public class OemService extends BaseService {
     
     @Override
     public IBinder onBind(Intent intent){
-        se_ = intent.getByteArrayExtra("SE");
-        Log.setLoggingLevel(intent.getIntExtra("LOG",0));
+        try{
+            se_ = intent.getByteArrayExtra("SE");
+        }catch(Exception e){
+            Log.i(TAG,"OemService something wrong in the given ip "+e );
+        }
+
+        try{        
+            Log.setLoggingLevel(intent.getIntExtra("LOG",0));
+        }catch(Exception e){
+            Log.i(TAG,"OemService something wrong in the given logging level "+e );
+        }
         Log.i(TAG,"OemService binding");
         if(se_!=null) Log.d(TAG,new String(se_));
         return mBinder;

@@ -303,15 +303,16 @@ only once.
     }
 
     protected String byteArrayToDisplayableString(byte[] bytes){
-        String s=new String();
+        if(bytes==null)return "null";
+        StringBuffer s=new StringBuffer(bytes.length*4);
         for(int i=0;i<bytes.length;i++)
         {
-            s+=bytes[i]>9?" 0x":" ";
-            s+=Integer.toHexString(bytes[i]&0xFF);
+            s.append(((bytes[i]&0xFF)>15)?" 0x":" 0x0");
+            s.append(Integer.toHexString(bytes[i]&0xFF));
         }
-        return s;
+        return s.toString();
     }
-
+    
     public static String byteArrayToDisplayable(byte[] bytes){
         return (new CmpTest(0).byteArrayToDisplayableString(bytes));
     }

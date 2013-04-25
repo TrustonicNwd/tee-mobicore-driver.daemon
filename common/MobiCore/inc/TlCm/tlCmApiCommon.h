@@ -1,10 +1,10 @@
-/** @addtogroup CMP
+/** @addtogroup CMP_COMMON
  * @{
  * @file
- * Common interface definitions to content management trustlet.
+ * Common interface definitions to content management trustlet (TlCm).
  *
- * The CMTL (Content Management Trustlet) is responsible for implementing
- * CMP commands and generating approriate CMP responses.
+ * The TlCm is responsible for implementing content management protocol (CMP)
+ * commands and generating approriate CMP responses.
  *
  * Copyright © Trustonic Limited 2013.
  *
@@ -39,9 +39,8 @@
 
 #include "tlCmError.h"
 
-/** TlCm command ids.
- * List of all commands supported by TlCm.
- * @note All command ids must be in range 0 to 0x7FFFFFFF.
+/** TlCm command ids supported.
+ * @note All command ids must be in range 0 to 0x1D.
  */
 //lint -esym(756, cmpCommands_t) cmpCommands_t type by itself not used.
 typedef enum cmpCommands_t {
@@ -77,9 +76,7 @@ typedef enum cmpCommands_t {
     MC_CMP_CMD_LAST_ = MC_CMP_CMD_AUTHENTICATE_TERMINATE,
 } cmpCommands_t;
 
-/**
- * TlCm exit code: TlCm exited with error.
- */
+/** TlCm exit code: TlCm exited with error. */
 #define EXIT_ERROR  ((uint32_t)(-1))
 
 #endif // TL_CM_API_COMMON_H_

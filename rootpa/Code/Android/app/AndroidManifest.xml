@@ -2,8 +2,8 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" 
           package="com.gd.mobicore.pa"
-          android:versionCode="1" 
-          android:versionName="1.0" 
+          android:versionCode="@integer/code" 
+          android:versionName="@string/name" 
           android:sharedUserId="android.uid.system" >
 
   <uses-sdk android:minSdkVersion="14"

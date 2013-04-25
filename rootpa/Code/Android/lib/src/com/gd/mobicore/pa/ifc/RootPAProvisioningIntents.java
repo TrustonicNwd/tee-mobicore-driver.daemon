@@ -37,7 +37,7 @@ package com.gd.mobicore.pa.ifc;
 public class RootPAProvisioningIntents {
 
 //    
-/** Intents for starting up and connecitng to services  */
+/** Intents for starting up and connecting to services  */
 //
 
     public static final String PROVISIONING_SERVICE="com.gd.mobicore.pa.service.PROVISIONING_SERVICE";

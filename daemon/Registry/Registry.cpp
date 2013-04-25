@@ -322,22 +322,7 @@ mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t *uuid, const mcSpid_t spid)
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryStoreData(void *so, uint32_t size)
 {
-    typedef struct {
-        uint32_t commandId;
-        uint32_t soSize;
-        uint8_t so;
-    } storeCmd;
-
-    mcResult_t ret;
-    storeCmd *cmd = (storeCmd*)malloc(sizeof(storeCmd) + size - 1);
-
-    cmd->commandId = MC_DRV_REG_WRITE_SO_DATA;
-    cmd->soSize = size;
-    memcpy(&cmd->so, so, size);
-
-    ret = writeBlobData(cmd, sizeof(storeCmd) + size - 1);
-    free(cmd);
-    return ret;
+    return MC_DRV_ERR_INVALID_PARAMETER;
 }
 
 

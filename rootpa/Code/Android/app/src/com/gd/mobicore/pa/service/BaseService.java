@@ -80,11 +80,12 @@ public abstract class BaseService extends Service {
     private static final int C_PROVISIONING_STATE_THREAD_EXITING=0xDEAD;
 
     protected final CommonPAWrapper commonPaWrapper_=new CommonPAWrapper(this);
-   
+    private boolean sessionOpened_=false;
+    
     protected CommonPAWrapper commonPAWrapper(){
         return commonPaWrapper_;
     }
-
+    
     protected synchronized CommandResult acquireLock(int uid, boolean openSession){
         Log.d(TAG,">>BaseService.acquireLock "+uid+" "+lock_.get()+" "+timer_);
         if(uid==LOCK_FREE){
@@ -93,8 +94,10 @@ public abstract class BaseService extends Service {
         boolean result=lock_.compareAndSet(LOCK_FREE, uid);
         if(result==true || lock_.get() == uid){
 
-            if(result==true && openSession==true){
+            if(result==true && openSession==true && sessionOpened_==false){
+                Log.d(TAG,"BaseService.acquireLock, openingSession");
                 commonPAWrapper().openSession();
+                sessionOpened_=true;
             }
 
             if(timer_!=null){
@@ -105,7 +108,13 @@ public abstract class BaseService extends Service {
             timer_=new Timer();
             timerTask_=new TimerTask(){
                 public void run(){
+                    Log.i(TAG,"Timer expired, releasing lock");
                     lock_.set(LOCK_FREE);
+                    if(sessionOpened_==true){
+                        Log.d(TAG,"BaseService.Timer.run, closingSession");                    
+                        commonPAWrapper().closeSession();
+                        sessionOpened_=false;
+                    }
                 }
             };
             timer_.schedule(timerTask_,LOCK_TIMEOUT_MS);
@@ -125,8 +134,10 @@ public abstract class BaseService extends Service {
 
         if((lock_.get()==LOCK_FREE) || (lock_.compareAndSet(uid, LOCK_FREE)==true)){
 
-            if(closeSession){
+            if(closeSession==true && sessionOpened_==true){
+                Log.d(TAG,"BaseService.releaseLock, closingSession");
                 commonPAWrapper().closeSession();
+                sessionOpened_=false;
             }
 
             if(timer_!=null){
@@ -242,9 +253,20 @@ public abstract class BaseService extends Service {
     */
     public void provisioningStateCallback(int state, int ret){
         Log.d(TAG,">>provisioningStateCallback "+state+" "+ret);       
-        
+
+        // since sommunication with SE may take consirderable amount of time, we refresh the Lock timer
+        // by calling acquireLock every time a state notification callback is called. This way the lock 
+        // will not timeout before the communication with SE is complete.
+        try{
+            CommandResult res=acquireLock(doProvisioningLockSuid_, false);
+            if(!res.isOk()){
+                Log.e(TAG,"provisioningStateCallback re-acquiring lock failed, res: "+res.result());                    
+            }
+        }catch(Exception e){
+            Log.e(TAG,"provisioningStateCallback re-acquiring lock failed: "+e);
+        }
+
         Intent intent=new Intent(RootPAProvisioningIntents.PROVISIONING_PROGRESS_UPDATE);
-                
         switch(state){
             case C_CONNECTING_SERVICE_ENABLER:
                 intent.putExtra(RootPAProvisioningIntents.STATE, RootPAProvisioningIntents.CONNECTING_SERVICE_ENABLER);
@@ -280,8 +302,8 @@ public abstract class BaseService extends Service {
                     if(!res.isOk()){
                         Log.e(TAG,"provisioningStateCallback releasing lock failed, res: "+res.result());                    
                     }
-                doProvisioningLockSuid_=0;                    
-                intent=null; // no intent sent in this case
+                    doProvisioningLockSuid_=0;                    
+                    intent=null; // no intent sent in this case
                 }catch(Exception e){
                     Log.e(TAG,"provisioningStateCallback releasing lock failed: "+e);
                 }
@@ -301,11 +323,61 @@ public abstract class BaseService extends Service {
 
         Log.d(TAG,"<<provisioningStateCallback ");
     }
+
+    public void onConfigurationChanged(android.content.res.Configuration newConfig){
+        super.onConfigurationChanged(newConfig);
+        Log.d(TAG,"BaseService.onConfigurationChanged");
+    }    
     
+    public void onCreate(){
+        super.onCreate();
+        Log.d(TAG,"BaseService.onCreate");
+    }
+
     public void onDestroy(){
         if(networkChangeReceiver_!=null){
             unregisterReceiver(networkChangeReceiver_);
             networkChangeReceiver_=null;
         }
+        Log.d(TAG,"BaseService.onDestroy");        
     }
+    
+    public void onLowMemory(){
+        super.onLowMemory();
+        Log.d(TAG,"BaseService.onLowMemory");
+    }
+    
+    public void onRebind(Intent intent){
+        super.onRebind(intent);
+        Log.d(TAG,"BaseService.onRebind");
+    }        
+    
+    public void onStart(Intent intent, int startId){
+        super.onStart(intent, startId);
+        Log.d(TAG,"BaseService.onStart");
+    }    
+
+    public int onStartCommand(Intent intent, int flags, int startId){
+        int res=super.onStartCommand(intent, flags, startId);
+        Log.d(TAG,"BaseService.onStartCommand");
+        return res;        
+    }        
+    
+    public void onTaskRemoved(Intent intent){
+        super.onTaskRemoved(intent);
+        Log.d(TAG,"BaseService.onTaskRemoved");
+    }    
+    
+    
+    public void onTrimMemory(int level){
+        super.onTrimMemory(level);
+        Log.d(TAG,"BaseService.onTrimMemory");
+    }
+    
+    public boolean onUnbind(Intent intent){
+        boolean res=super.onUnbind(intent);
+        Log.d(TAG,"BaseService.onUnbind");
+        return res;
+    }    
+    
 }

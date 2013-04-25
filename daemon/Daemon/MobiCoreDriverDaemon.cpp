@@ -62,6 +62,9 @@ MC_CHECK_VERSION(CONTAINER, 2, 0);
 
 static void checkMobiCoreVersion(MobiCoreDevice *mobiCoreDevice);
 
+#define LOG_I_RELEASE(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+
+
 //------------------------------------------------------------------------------
 MobiCoreDriverDaemon::MobiCoreDriverDaemon(
     bool enableScheduler,
@@ -104,14 +107,14 @@ void MobiCoreDriverDaemon::run(
     void
 )
 {
-    LOG_I("Daemon starting up...");
-    LOG_I("Socket interface version is %u.%u", DAEMON_VERSION_MAJOR, DAEMON_VERSION_MINOR);
+	LOG_I_RELEASE("Daemon starting up...");
+	LOG_I_RELEASE("Socket interface version is %u.%u", DAEMON_VERSION_MAJOR, DAEMON_VERSION_MINOR);
 #ifdef MOBICORE_COMPONENT_BUILD_TAG
-    LOG_I("%s", MOBICORE_COMPONENT_BUILD_TAG);
+	LOG_I_RELEASE("%s", MOBICORE_COMPONENT_BUILD_TAG);
 #else
 #warning "MOBICORE_COMPONENT_BUILD_TAG is not defined!"
 #endif
-    LOG_I("Build timestamp is %s %s", __DATE__, __TIME__);
+	LOG_I_RELEASE("Build timestamp is %s %s", __DATE__, __TIME__);
 
     int i;
 
@@ -127,7 +130,7 @@ void MobiCoreDriverDaemon::run(
     }
     mobiCoreDevice->start();
 
-    LOG_I("Checking version of MobiCore");
+    LOG_I_RELEASE("Checking version of MobiCore");
     checkMobiCoreVersion(mobiCoreDevice);
 
     if ( mobiCoreDevice->mobicoreAlreadyRunning() ) {
@@ -1069,12 +1072,18 @@ void printUsage(
     char *args[]
 )
 {
+#ifdef MOBICORE_COMPONENT_BUILD_TAG
+    fprintf(stderr, "MobiCore Driver Daemon %u.%u. \"%s\" %s %s\n", DAEMON_VERSION_MAJOR, DAEMON_VERSION_MINOR, MOBICORE_COMPONENT_BUILD_TAG, __DATE__, __TIME__);
+#else
+#warning "MOBICORE_COMPONENT_BUILD_TAG is not defined!"
+#endif
+
     fprintf(stderr, "usage: %s [-mdsbh]\n", args[0]);
     fprintf(stderr, "Start MobiCore Daemon\n\n");
     fprintf(stderr, "-h\t\tshow this help\n");
     fprintf(stderr, "-b\t\tfork to background\n");
     fprintf(stderr, "-s\t\tdisable daemon scheduler(default enabled)\n");
-    fprintf(stderr, "-r DRIVER\t\tMobiCore driver to load at start-up\n");
+    fprintf(stderr, "-r DRIVER\tMobiCore driver to load at start-up\n");
 }
 
 //------------------------------------------------------------------------------
@@ -1210,7 +1219,7 @@ static void checkMobiCoreVersion(
         LOG_E("Failed to obtain MobiCore version info. MCP return code: %u", mcResult);
         failed = true;
     } else {
-        LOG_I("Product ID is %s", versionPayload.versionInfo.productId);
+    	LOG_I_RELEASE("Product ID is %s", versionPayload.versionInfo.productId);
 
         // Check MobiCore version info.
         char *msg;
@@ -1218,22 +1227,22 @@ static void checkMobiCoreVersion(
             LOG_E("%s", msg);
             failed = true;
         }
-        LOG_I("%s", msg);
+        LOG_I_RELEASE("%s", msg);
         if (!checkVersionOkSO(versionPayload.versionInfo.versionSo, &msg)) {
             LOG_E("%s", msg);
             failed = true;
         }
-        LOG_I("%s", msg);
+        LOG_I_RELEASE("%s", msg);
         if (!checkVersionOkMCLF(versionPayload.versionInfo.versionMclf, &msg)) {
             LOG_E("%s", msg);
             failed = true;
         }
-        LOG_I("%s", msg);
+        LOG_I_RELEASE("%s", msg);
         if (!checkVersionOkCONTAINER(versionPayload.versionInfo.versionContainer, &msg)) {
             LOG_E("%s", msg);
             failed = true;
         }
-        LOG_I("%s", msg);
+        LOG_I_RELEASE("%s", msg);
     }
 
     if (failed) {

@@ -52,7 +52,7 @@ interface RootPADeveloperIfc{
 
     /**
      * This method can be used for installing "developer trustlet" that is not tied to any 
-     * service provider and/or servic e manager. It contacts Service Enabler and asks it to 
+     * service provider and/or service manager. It contacts Service Enabler and asks it to 
      * perform the tasks, so the device has to be connected to network in order for this to
      * succeed.
      *
@@ -64,6 +64,9 @@ interface RootPADeveloperIfc{
      *
      * There are constants related to the intents in @ref RootPAProvisioningIntents
      *
+     *
+     * @param spid service provider id
+     * @param uuid uuid of the trustlet in hex, without dashes. Needs to be correct length.
      * @param trustletBinary trustlet binary to be encrypted with and returned back. 
      *        If the binary is already encrypted, this array must be empty. The binary 
      *        has to be encrypted for transfer. Note that only either trustletBinary 
@@ -74,7 +77,7 @@ interface RootPADeveloperIfc{
      *        or key can be given.
      * @return indication of successful start of provisioning thread (ROOTPA_OK) or an error code
      */
-    CommandResult installTrustlet(in byte[] trustletBinary, in byte[] key);
+    CommandResult installTrustlet(in int spid, in byte[] uuid, in byte[] trustletBinary, in byte[] key);
 }
 
 /**@}*/

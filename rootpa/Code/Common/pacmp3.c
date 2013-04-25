@@ -51,6 +51,37 @@ void setCallbackP(CallbackFunctionP callbackP)
     callbackP_=callbackP;
 }
 
+// recovery from factory reset  
+bool factoryResetAssumed()
+{
+    uint32_t contSize=0;
+    void* containerP=NULL;
+    mcResult_t result1=MC_DRV_OK;
+    mcResult_t result2=MC_DRV_OK;
+
+    if((result1=regReadAuthToken((AUTHTOKENCONTAINERP*)&containerP, &contSize))==MC_DRV_OK)
+    {
+        free(containerP);
+        return false;
+    }
+
+    if((result2=regReadRoot((ROOTCONTAINERP*)&containerP, &contSize))==MC_DRV_OK)
+    {
+        free(containerP);
+        return false;
+    }
+
+    // if neither root container, nor auth token container exists, we assume that factory reset has been performed.    
+    if(MC_DRV_ERR_INVALID_DEVICE_FILE==result1 && MC_DRV_ERR_INVALID_DEVICE_FILE==result2)
+    {
+        LOGD("factoryResetAssumed returning true");
+        return true;
+    }
+
+    return false;
+}
+// recovery from factory reset  
+
 /*
 */
 uint32_t sizeOfCmp()
@@ -468,22 +499,21 @@ mcResult_t storeContainers(cmpCommandId_t commandId, CMTHANDLE handle, uint32_t 
 
         }
         case MC_CMP_CMD_SP_CONT_UNREGISTER:
-            mcRet=regCleanupSp(spid_);
-            if(MC_DRV_OK==mcRet)
+            mcRet=regCleanupSp(spid_);        
+            if(MC_DRV_OK!=mcRet)
             {
-                if(getRspElementInfo(&elementIndex, handle, &offset, &length))
-                {
-                    mcRet=regWriteRoot((ROOTCONTAINERP) (handle->mappedP+offset), length);
-                }
-                else    
-                {
-                    mcRet=-1;
-                }                
+                LOGE("pacmp3 storeContainers for %d regCleanupSp failed %d, , still attempting storing root", commandId, mcRet);                                
             }
-            else
+
+            if(getRspElementInfo(&elementIndex, handle, &offset, &length))
             {
-                LOGE("pacmp3 storeContainers for %d regCleanupSp failed %d", commandId, mcRet);                                
+                mcRet=regWriteRoot((ROOTCONTAINERP) (handle->mappedP+offset), length);
             }
+            else    
+            {
+                mcRet=-1;
+            }                
+
             break;
 
 
@@ -544,23 +574,26 @@ mcResult_t storeContainers(cmpCommandId_t commandId, CMTHANDLE handle, uint32_t 
 
         case MC_CMP_CMD_TLT_CONT_UNREGISTER:
             mcRet=regCleanupTlt(&tltUuid_, spid_);
-            if(MC_DRV_OK==mcRet)
+            if(MC_DRV_OK!=mcRet)
             {
-                if(getRspElementInfo(&elementIndex, handle, &offset, &length))
+                LOGE("pacmp3 storeContainers for %d regCleanupTlt failed %d, still attempting storing sp", commandId, mcRet);                                
+            }
+
+            if(getRspElementInfo(&elementIndex, handle, &offset, &length))
+            {
+                mcRet=regWriteSp(spid_, (SPCONTAINERP) (handle->mappedP+offset), length);
+                if(MC_DRV_OK!=mcRet)
                 {
-                    mcRet=regWriteSp(spid_, (SPCONTAINERP) (handle->mappedP+offset), length);
-                }
-                else    
-                {
-                    mcRet=-1;
-                }
+                    LOGE("pacmp3 storeContainers for %d regWriteSp failed %d", commandId, mcRet);                                
+                }   
+            }
+            else    
+            {
+                mcRet=-1;
+            }
                     
-                break;
-            }
-            else
-            {
-                LOGE("pacmp3 storeContainers for %d regCleanupTlt failed %d", commandId, mcRet);                                
-            }
+            break;
+
          default:  
             LOGD("pacmp3 storeContainers nothing to store");                                
             // nothing to do

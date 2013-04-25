@@ -85,7 +85,7 @@ class TestDeveloperService extends AsyncTask<IBinder, Void, Void> {
         parent_.printFinalResults();
         return null;
     }
-
+    private final static int TLT_INSTALL_TEST_SPID=10;
     private final byte[] TEST_TRUSTLET={
         1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
         1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -181,7 +181,7 @@ class TestDeveloperService extends AsyncTask<IBinder, Void, Void> {
     // installTrustlet, trustlet binary
         
         try{
-            tret=developerServiceIfc_.installTrustlet(TEST_TRUSTLET, null);
+            tret=developerServiceIfc_.installTrustlet(TLT_INSTALL_TEST_SPID, CmpTest.TLTUUID, TEST_TRUSTLET, null);
         }catch(Throwable e){
             logi = logi.concat("FAILURE: call to installTrustlet with trustlet failed: " + e + "\n");
             overallsuccess=false;
@@ -212,7 +212,7 @@ class TestDeveloperService extends AsyncTask<IBinder, Void, Void> {
         
         done_=false; // another call
         try{
-            kret=developerServiceIfc_.installTrustlet(null, TEST_KEY);
+            kret=developerServiceIfc_.installTrustlet(TLT_INSTALL_TEST_SPID, CmpTest.TLTUUID, null, TEST_KEY);
         }catch(Throwable e){
             logi = logi.concat("FAILURE: call to installTrustlet with key failed: " + e + "\n");
             overallsuccess=false;
@@ -254,7 +254,7 @@ class TestDeveloperService extends AsyncTask<IBinder, Void, Void> {
     // error cases
         CommandResult err1ret=new CommandResult(0x0FFF0000);
         try{
-            err1ret=developerServiceIfc_.installTrustlet(TEST_TRUSTLET, TEST_KEY);
+            err1ret=developerServiceIfc_.installTrustlet(TLT_INSTALL_TEST_SPID, CmpTest.TLTUUID, TEST_TRUSTLET, TEST_KEY);
         }catch(Throwable e){
             logi = logi.concat("FAILURE: call to installTrustlet with trustlet failed: " + e + "\n");
             overallsuccess=false;
@@ -263,7 +263,7 @@ class TestDeveloperService extends AsyncTask<IBinder, Void, Void> {
         CommandResult err2ret=new CommandResult(0x0FFF0000);
         
         try{
-            err2ret=developerServiceIfc_.installTrustlet(null, null);
+            err2ret=developerServiceIfc_.installTrustlet(TLT_INSTALL_TEST_SPID, CmpTest.TLTUUID, null, null);
         }catch(Throwable e){
             logi = logi.concat("FAILURE: call to installTrustlet with trustlet failed: " + e + "\n");
             overallsuccess=false;
@@ -278,7 +278,12 @@ class TestDeveloperService extends AsyncTask<IBinder, Void, Void> {
         
         logi = logi.concat("================= Results of testing installTrustlet: ").concat(((overallsuccess==true)?"SUCCESS":"FAILURE")+"\n");            
         logi = logi.concat(((tret.isOk())?"SUCCESS":"FAILURE")+": Testing installTrustlet, tlt "+((tret.isOk())?"\n":("returned: " +tret+" \n")));
-        logi = logi.concat(((trustlet_!=null && Arrays.equals(trustlet_,TEST_TRUSTLET))?"SUCCESS":"FAILURE")+": Testing installTrustlet, tlt content in the intent\n");
+        logi = logi.concat(((trustlet_!=null && Arrays.equals(trustlet_,TEST_TRUSTLET))?"SUCCESS":"FAILURE")+": Testing installTrustlet, tlt content in the intent");
+        
+        if(trustlet_==null) logi = logi.concat(", trustlet_ is null\n");
+        else if(!Arrays.equals(trustlet_,TEST_TRUSTLET)) logi = logi.concat(", received: \n"+CmpTest.byteArrayToDisplayable(trustlet_)+" \n");
+        else logi = logi.concat("\n");
+        
         logi = logi.concat(((kret.isOk())?"SUCCESS":"FAILURE")+": Testing installTrustlet, key "+((kret.isOk())?"\n":("returned: " +kret+" \n")));
         logi = logi.concat(((err1ret.result()==CommandResult.ROOTPA_ERROR_ILLEGAL_ARGUMENT)?"SUCCESS":"FAILURE")+": Testing installTrustlet, both arguments given"+((err1ret.result()==CommandResult.ROOTPA_ERROR_ILLEGAL_ARGUMENT)?"\n":(", returned: " +err1ret+" \n")));
         logi = logi.concat(((err2ret.result()==CommandResult.ROOTPA_ERROR_ILLEGAL_ARGUMENT)?"SUCCESS":"FAILURE")+": Testing installTrustlet, null arguments given"+((err2ret.result()==CommandResult.ROOTPA_ERROR_ILLEGAL_ARGUMENT)?"\n":(", returned: " +err2ret+" \n")));

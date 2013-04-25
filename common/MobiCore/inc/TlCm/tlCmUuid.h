@@ -1,7 +1,7 @@
-/** @addtogroup CMP
+/** @addtogroup CMP_COMMON
  * @{
  * @file
- * Content management trustlet UUID definition.
+ * Content management trustlet (TlCm) Uuid definition.
  *
  * Copyright © Trustonic Limited 2013.
  *
@@ -34,7 +34,7 @@
 #ifndef TL_CM_UUID_H
 #define TL_CM_UUID_H
 
-/** UUID of content management trustlet. */
+/** Uuid of TlCm. */
 #define TL_CM_UUID { { 7, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } }
 
 #endif // TL_CM_UUID_H

@@ -414,6 +414,7 @@ rootpaerror_t provision(mcSpid_t spid, CallbackFunctionP callbackP, SystemInfoCa
 
         paramsP->tltInstallationDataP->dataLength = tltDataP->dataLength;
         paramsP->tltInstallationDataP->dataType = tltDataP->dataType;
+        memcpy(&paramsP->tltInstallationDataP->uuid, &tltDataP->uuid, UUID_LENGTH);
     }
     else
     {
@@ -494,8 +495,6 @@ rootpaerror_t unregisterRootContainer(CallbackFunctionP callbackP, SystemInfoCal
 	mcSpid_t spid;
 	memset(&spid, 0x0, sizeof(mcSpid_t));
 	return provision(spid, callbackP, systemInfoCallbackP, NULL, initialRel_DELETE);
-
-
 }
 
 

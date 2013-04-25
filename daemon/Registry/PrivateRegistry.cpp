@@ -535,10 +535,10 @@ mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t *uuid, const mcSpid_t spid)
                 LOG_I("delete DT: %s", dname.c_str());
                 if (0 != (e = remove(dname.c_str()))) {
                     LOG_E("remove UUID-data %s failed! error: %d", dname.c_str(), e);
-                    return MC_DRV_ERR_UNKNOWN;
                 }
             }
         }
+        closedir(dp);
         LOG_I("delete dir: %s", pathname.c_str());
         if (0 != (e = rmdir(pathname.c_str()))) {
             LOG_E("remove UUID-dir failed! errno: %d", e);
@@ -599,10 +599,10 @@ mcResult_t mcRegistryCleanupSp(mcSpid_t spid)
                 LOG_I("delete DT: %s", dname.c_str());
                 if (0 != (e = remove(dname.c_str()))) {
                     LOG_E("remove SPID-data %s failed! error: %d", dname.c_str(), e);
-                    return MC_DRV_ERR_UNKNOWN;
                 }
             }
         }
+        closedir(dp);
         LOG_I("delete dir: %s", pathname.c_str());
         if (0 != (e = rmdir(pathname.c_str()))) {
             LOG_E("remove SPID-dir failed! error: %d", e);

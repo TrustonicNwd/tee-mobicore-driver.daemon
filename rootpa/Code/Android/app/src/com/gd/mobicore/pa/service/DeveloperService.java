@@ -49,7 +49,7 @@ public class DeveloperService extends BaseService {
 
     private final RootPADeveloperIfc.Stub mBinder = new ServiceIfc();
     private static final int DEVELOPER_UID_FOR_LOCK=0x22220000;
-    
+    private static final int UUID_LENGTH=16;
     private class ServiceIfc extends RootPADeveloperIfc.Stub {
         public ServiceIfc(){
             super();
@@ -63,11 +63,20 @@ public class DeveloperService extends BaseService {
         private CommonPAWrapper commonPAWrapper(){
             return DeveloperService.this.commonPAWrapper();
         }
+
+        private boolean uuidOk(byte[] uuid){
+            if(uuid==null || uuid.length != UUID_LENGTH){
+                Log.e(TAG,"DeveloperService.Stub.uuidOk NOK");
+                return false;
+            }
+            Log.d(TAG,"DeveloperService.Stub.uuidOk OK");
+            return true;
+        }
         
-        public CommandResult installTrustlet(byte[] trustletBinary, byte[] key){
+        public CommandResult installTrustlet(int spid, byte[] uuid, byte[] trustletBinary, byte[] key){
             Log.d(TAG,">>DeveloperService.Stub.installTrustlet"); 
 
-            if((trustletBinary == null && key == null) || (trustletBinary != null && key != null)){
+            if((trustletBinary == null && key == null) || (trustletBinary != null && key != null) || 0==spid || !uuidOk(uuid)){
                 return new CommandResult(CommandResult.ROOTPA_ERROR_ILLEGAL_ARGUMENT);
             }
 
@@ -89,7 +98,7 @@ public class DeveloperService extends BaseService {
                     dataType=REQUEST_DATA_KEY;
                 }
                 setupProxy();    
-                err=commonPAWrapper().installTrustlet(dataType, data, se_);
+                err=commonPAWrapper().installTrustlet(spid, uuid, dataType, data, se_);
             }catch(Exception e){
                 Log.e(TAG,"CommonPAWrapper().installTrustlet exception: ", e);
                 err=CommandResult.ROOTPA_ERROR_INTERNAL;
@@ -120,8 +129,17 @@ public class DeveloperService extends BaseService {
     
     @Override
     public IBinder onBind(Intent intent){
-        se_ = intent.getByteArrayExtra("SE");
-        Log.setLoggingLevel(intent.getIntExtra("LOG",0));
+        try{
+            se_ = intent.getByteArrayExtra("SE");
+        }catch(Exception e){
+            Log.i(TAG,"DeveloperService something wrong in the given ip "+e );
+        }
+
+        try{        
+            Log.setLoggingLevel(intent.getIntExtra("LOG",0));
+        }catch(Exception e){
+            Log.i(TAG,"DeveloperService something wrong in the given logging level "+e );
+        }
         Log.i(TAG,"DeveloperService binding");
         if(se_!=null) Log.d(TAG,new String(se_));
         return mBinder;

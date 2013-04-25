@@ -140,7 +140,7 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_doProvisionin
  * Signature: (I[B[B)I
  */
 JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_installTrustlet
-  (JNIEnv *, jobject, jint, jbyteArray, jbyteArray);
+  (JNIEnv *, jobject, jint, jbyteArray, jint, jbyteArray, jbyteArray);
 
 /*
  * Class:     com_gd_mobicore_pa_jni_CommonPAWrapper

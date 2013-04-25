@@ -58,6 +58,7 @@
 #define MC_FC_L2X0_SETUP2           ((uint32_t)(-23))  /**< Setup L2X0 register - part 2 */
 #define MC_FC_L2X0_INVALL           ((uint32_t)(-24))  /**< Invalidate all L2 cache */
 #define MC_FC_L2X0_DEBUG            ((uint32_t)(-25))  /**< Write L2X0 debug register */
+#define MC_FC_SW_RESET              ((uint32_t)(-26))  /**< SW Reset if DDR has leftover content */
 // --- MEM traces ---
 #define MC_FC_MEM_TRACE             ((uint32_t)(-31))  /**< Enable SWd tracing via memory */
 // --- write access to CP15 regs ---

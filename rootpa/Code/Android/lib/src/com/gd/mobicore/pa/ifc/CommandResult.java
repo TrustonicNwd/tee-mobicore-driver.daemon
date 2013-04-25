@@ -104,6 +104,16 @@ public class CommandResult implements Parcelable{
     public static final int ROOTPA_ERROR_REGISTRY_OBJECT_NOT_AVAILABLE=0x0000000B;
 
     /** 
+    CMP version of the device is not supported by SE
+    */
+    public static final int ROOTPA_ERROR_SE_CMP_VERSION=0x0000000C;
+
+    /** 
+    Precoditions for SP container installation are not met in SE
+    */
+    public static final int ROOTPA_ERROR_SE_PRECONDITION_NOT_MET=0x0000000D;
+
+    /** 
     requested container does not exist. This is not always considered an error 
     but is used as an informative return code
     */
@@ -195,6 +205,12 @@ public class CommandResult implements Parcelable{
                 break;         
             case ROOTPA_ERROR_REGISTRY_OBJECT_NOT_AVAILABLE:
                 ret+=": ROOTPA_ERROR_REGISTRY_OBJECT_NOT_AVAILABLE";
+                break;
+            case ROOTPA_ERROR_SE_CMP_VERSION:
+                ret+=": ROOTPA_ERROR_SE_CMP_VERSION";
+                break;
+            case ROOTPA_ERROR_SE_PRECONDITION_NOT_MET:
+                ret+=": ROOTPA_ERROR_SE_PRECONDITION_NOT_MET";
                 break;
             default:
                 break;

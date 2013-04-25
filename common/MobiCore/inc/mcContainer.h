@@ -31,7 +31,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */ 
- 
+
 #ifndef MC_CONTAINER_H_
 #define MC_CONTAINER_H_
 
@@ -43,16 +43,15 @@
 #include "mcSo.h"
 #include "mcSuid.h"
 
-#define CONTAINER_FORMAT_SO21 1
 /** Support for trustlet container 2.1 */
 #define CONTAINER_FORMAT_TL21 1
 
 #define CONTAINER_VERSION_MAJOR   2
 /** Support for the old format */
 #ifdef CONTAINER_FORMAT_TL21
-    #define CONTAINER_VERSION_MINOR   1
+#define CONTAINER_VERSION_MINOR   1
 #else
-    #define CONTAINER_VERSION_MINOR   0
+#define CONTAINER_VERSION_MINOR   0
 #endif
 
 #define MC_CONT_SYMMETRIC_KEY_SIZE      32 
@@ -83,27 +82,25 @@ typedef mcSpid_t spChild_t[MC_CONT_CHILDREN_COUNT];
 
 typedef mcUuid_t mcUuidChild_t[MC_CONT_CHILDREN_COUNT];
 
-/** Content management container states.
- */
+/** Content management container states. */
 typedef enum {
-     /** Container state unregistered. */
-     MC_CONT_STATE_UNREGISTERED = 0,
-     /** Container is registered. */
-     MC_CONT_STATE_REGISTERED = 1,
-     /** Container  is activated. */
-     MC_CONT_STATE_ACTIVATED = 2,
-     /** Container is locked by root. */
-     MC_CONT_STATE_ROOT_LOCKED = 3,
-     /** Container is locked by service provider. */
-     MC_CONT_STATE_SP_LOCKED = 4,
-     /** Container is locked by root and service provider. */
-     MC_CONT_STATE_ROOT_SP_LOCKED = 5,
-     /** Dummy: ensure that enum is 32 bits wide. */
-     MC_CONT_ATTRIB_SPACER = MC_ENUM_32BIT_SPACER
+    /** Container state unregistered. */
+    MC_CONT_STATE_UNREGISTERED = 0,
+    /** Container is registered. */
+    MC_CONT_STATE_REGISTERED = 1,
+    /** Container  is activated. */
+    MC_CONT_STATE_ACTIVATED = 2,
+    /** Container is locked by root. */
+    MC_CONT_STATE_ROOT_LOCKED = 3,
+    /** Container is locked by service provider. */
+    MC_CONT_STATE_SP_LOCKED = 4,
+    /** Container is locked by root and service provider. */
+    MC_CONT_STATE_ROOT_SP_LOCKED = 5,
+    /** Dummy: ensure that enum is 32 bits wide. */
+    MC_CONT_ATTRIB_SPACER = MC_ENUM_32BIT_SPACER
 } mcContainerState_t;
 
-/** Content management container attributes.
- */
+/** Content management container attributes. */
 typedef struct {
     mcContainerState_t state;
 } mcContainerAttribs_t;
@@ -238,6 +235,9 @@ typedef struct {
 
 /** @} */
 
+/** Helper for finding maximum value */
+#define MC_MAX(x, y) (((x)<(y))?(y):(x))
+
 /** Calculates the total size of the secure object hash and padding for a given
  * container.
  * @param contTotalSize Total size of the container (sum of plain and encrypted
@@ -246,17 +246,11 @@ typedef struct {
  * object").
  * @return Total size of hash and padding for given container.
  */
-#if CONTAINER_FORMAT_SO21
-    #define SO_CONT_HASH_AND_PAD_SIZE(contTotalSize, contCoSize) ( \
-            MC_SO_SIZE_F21((contTotalSize) - (contCoSize), (contCoSize)) \
-            - sizeof(mcSoHeader_t) \
-            - (contTotalSize) )
-#else
-    #define SO_CONT_HASH_AND_PAD_SIZE(contTotalSize, contCoSize) ( \
-            MC_SO_SIZE((contTotalSize) - (contCoSize), (contCoSize)) \
-            - sizeof(mcSoHeader_t) \
-            - (contTotalSize) )
-#endif
+#define SO_CONT_HASH_AND_PAD_SIZE(contTotalSize, contCoSize) \
+        MC_MAX( MC_SO_SIZE_F21((contTotalSize) - (contCoSize), (contCoSize)) \
+           - sizeof(mcSoHeader_t) - (contTotalSize), \
+                MC_SO_SIZE((contTotalSize) - (contCoSize), (contCoSize)) \
+           - sizeof(mcSoHeader_t) - (contTotalSize) )
 
 /** @defgroup MC_CONTAINER_SECURE_OBJECTS Containers in secure objects.
  * Secure objects wrapping different containers.
@@ -296,25 +290,17 @@ typedef struct {
     uint8_t hashAndPad[SO_CONT_HASH_AND_PAD_SIZE(sizeof(mcTltCont_2_1_t), sizeof(mcCoTltCont_t))];
 } mcSoTltCont_2_1_t;
 
-
 #ifdef CONTAINER_FORMAT_TL21
-    typedef mcSoTltCont_2_0_t mcSoTltCont_t;
-
-/*typedef union {
-    mcSoTltCont_2_0_t soTlt_2_0_t;
-    mcSoTltCont_2_1_t soTlt_2_1_t;
-} mcSoTltCont_t;*/
-
+typedef mcSoTltCont_2_0_t mcSoTltCont_t;
 #else
-    typedef mcTltContCommon_t mcTltCont_t;
+typedef mcTltContCommon_t mcTltCont_t;
 
-    typedef struct {
-        mcSoHeader_t soHeader;
-        mcTltCont_t cont;
-        uint8_t hashAndPad[SO_CONT_HASH_AND_PAD_SIZE(sizeof(mcTltCont_t), sizeof(mcCoTltCont_t))];
-    } mcSoTltCont_t ;
+typedef struct {
+    mcSoHeader_t soHeader;
+    mcTltCont_t cont;
+    uint8_t hashAndPad[SO_CONT_HASH_AND_PAD_SIZE(sizeof(mcTltCont_t), sizeof(mcCoTltCont_t))];
+} mcSoTltCont_t ;
 #endif
-
 
 /** */
 typedef struct {
@@ -322,13 +308,6 @@ typedef struct {
     mcDataCont_t cont;
     uint8_t hashAndPad[SO_CONT_HASH_AND_PAD_SIZE(sizeof(mcDataCont_t), sizeof(mcCoDataCont_t))];
 } mcSoDataCont_t; 
-
-/** */
-typedef struct {
-    mcSoRootCont_t soRoot;
-    mcSoSpCont_t soSp;
-    mcSoTltCont_t soTlt;
-} mcSoContainerPath_t;
 
 /** Trustlet Blob length info */
 typedef struct {

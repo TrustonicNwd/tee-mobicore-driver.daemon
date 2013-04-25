@@ -1,4 +1,7 @@
-/** @addtogroup CMP
+/** @addtogroup CMP_COMMON
+ * @{
+ * @file
+ * Content management trustlet (TlCm) version definition.
  *
  * Copyright © Trustonic Limited 2013.
  *
@@ -31,8 +34,11 @@
 #ifndef CMP_VERSION_H_
 #define CMP_VERSION_H_
 
+/** Latest supported CMP major version number. */
 #define CMP_VERSION_MAJOR   3
+/** Latest supported CMP minor version number. */
 #define CMP_VERSION_MINOR   0
 
 #endif // CMP_VERSION_H_
 
+/** @} */

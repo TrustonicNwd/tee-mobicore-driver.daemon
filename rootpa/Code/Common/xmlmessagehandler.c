@@ -151,7 +151,7 @@ bool addCommandResultData(xmlNodePtr resultListNode, int id,  char* commandResul
     bool retValue=true;    
     char intBuffer[11];
 
-    sprintf(intBuffer,"%d",id);
+    sprintf(intBuffer,"%u",(uint32_t) id);
     if(xmlNewProp(commandResultNode, BAD_CAST "id", BAD_CAST intBuffer)==NULL) return false;
 
     if(commandResultP==NULL)
@@ -165,7 +165,7 @@ bool addCommandResultData(xmlNodePtr resultListNode, int id,  char* commandResul
         } 
         else if(errorDetail!=0)
         {
-            sprintf(intBuffer,"%d",errorDetail);
+            sprintf(intBuffer,"%u",errorDetail);
             if(xmlNewProp(errorNode, BAD_CAST "errorDetail", BAD_CAST intBuffer)==NULL)
             { 
                 retValue=false;
@@ -348,6 +348,7 @@ rootpaerror_t handleCmpResponses(uint32_t maxNumberOfCmpResponses, CmpMessage* c
     LOGD(">>handleCmpResponses %d", maxNumberOfCmpResponses);
     rootpaerror_t ret=ROOTPA_OK;
     uint32_t i;
+
     for(i=0; (i<maxNumberOfCmpResponses) && (ROOTPA_OK==ret); i++)
     {
         char* encodedResponseP=NULL;
@@ -521,7 +522,7 @@ rootpaerror_t handleCommandAndFillResponse(xmlDocPtr xmlCommandP, xmlDocPtr xmlR
             // intentional fallthrough
             case TLT_UPLOAD:
                 numberOfUploadCommands=handleUploadCommand(commandType, &uploadCommandsP, numberOfUploadCommands, id, commandValueP, ignoreError);
-                if(0==numberOfCmpCommands)
+                if(0==numberOfUploadCommands)
                 {
                     ret=ROOTPA_ERROR_OUT_OF_MEMORY;
                 }                    
@@ -764,8 +765,8 @@ rootpaerror_t handleXmlMessage(const char* messageP, const char** responseP)
     {
         ret=ROOTPA_ERROR_XML;
     }
-
-    if(ROOTPA_OK==ret)
+    
+    if(xmlResponseP && xmlResponseP->children) // if there is something to return to SE, return it.
     { 
         *responseP = (char*)validateDumpAndFree(xmlResponseP);
     }
@@ -842,28 +843,28 @@ rootpaerror_t fillMcVersion(xmlNodePtr mcVersionNode, int mcVersionTag, const mc
     
     if(xmlNewProp(mcVersionNode, BAD_CAST "productId", BAD_CAST mcVersionP->productId)==NULL) return ROOTPA_ERROR_XML;
 
-    sprintf(intBuffer,"%d",mcVersionP->versionMci);
+    sprintf(intBuffer,"%u",mcVersionP->versionMci);
     if(xmlNewProp(mcVersionNode, BAD_CAST "versionMci", BAD_CAST intBuffer)==NULL) return ROOTPA_ERROR_XML;
 
-    sprintf(intBuffer,"%d",mcVersionP->versionSo);
+    sprintf(intBuffer,"%u",mcVersionP->versionSo);
     if(xmlNewProp(mcVersionNode, BAD_CAST "versionSo", BAD_CAST intBuffer)==NULL) return ROOTPA_ERROR_XML;    
 
-    sprintf(intBuffer,"%d",mcVersionP->versionMclf);
+    sprintf(intBuffer,"%u",mcVersionP->versionMclf);
     if(xmlNewProp(mcVersionNode, BAD_CAST "versionMclf", BAD_CAST intBuffer)==NULL) return ROOTPA_ERROR_XML;    
 
-    sprintf(intBuffer,"%d",mcVersionP->versionContainer);
+    sprintf(intBuffer,"%u",mcVersionP->versionContainer);
     if(xmlNewProp(mcVersionNode, BAD_CAST "versionContainer", BAD_CAST intBuffer)==NULL) return ROOTPA_ERROR_XML;    
 
-    sprintf(intBuffer,"%d",mcVersionP->versionMcConfig);
+    sprintf(intBuffer,"%u",mcVersionP->versionMcConfig);
     if(xmlNewProp(mcVersionNode, BAD_CAST "versionMcConfig", BAD_CAST intBuffer)==NULL) return ROOTPA_ERROR_XML;            
 
-    sprintf(intBuffer,"%d",mcVersionP->versionTlApi);
+    sprintf(intBuffer,"%u",mcVersionP->versionTlApi);
     if(xmlNewProp(mcVersionNode, BAD_CAST "versionTlApi", BAD_CAST intBuffer)==NULL) return ROOTPA_ERROR_XML;    
 
-    sprintf(intBuffer,"%d",mcVersionP->versionDrApi);
+    sprintf(intBuffer,"%u",mcVersionP->versionDrApi);
     if(xmlNewProp(mcVersionNode, BAD_CAST "versionDrApi", BAD_CAST intBuffer)==NULL) return ROOTPA_ERROR_XML;        
 
-    sprintf(intBuffer,"%d",mcVersionP->versionCmp);
+    sprintf(intBuffer,"%u",mcVersionP->versionCmp);
     if(xmlNewProp(mcVersionNode, BAD_CAST "versionCmp", BAD_CAST intBuffer)==NULL) return ROOTPA_ERROR_XML;    
 
     LOGD("<<fillMcVersion");

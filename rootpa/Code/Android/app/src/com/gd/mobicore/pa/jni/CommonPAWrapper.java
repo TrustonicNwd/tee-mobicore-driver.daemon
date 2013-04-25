@@ -66,7 +66,7 @@ public class CommonPAWrapper {
     public native int getSPContainerState(int spid, int[] state);
     public native int getSPContainerStructure(int spid, int[] ints, byte[][] uuidArray, int[] trustletStates);
     public native int doProvisioning(int uid, int spid, byte[] seAddress);
-	public native int installTrustlet(int dataType, byte[] tltOrKeyData, byte[] seAddress);
+	public native int installTrustlet(int spid, byte[] uuid, int dataType, byte[] tltOrKeyData, byte[] seAddress);
     public native int unregisterRootContainer(byte[] seAddress);
     public native void setEnvironmentVariable(byte[] variable, byte[] value);    
 

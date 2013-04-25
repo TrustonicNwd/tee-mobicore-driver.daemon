@@ -51,6 +51,7 @@ static const char* const RELATION_SELF  =      "relation/self";
 static const char* const RELATION_SYSTEMINFO = "relation/system_info";
 static const char* const RELATION_RESULT   =   "relation/command_result";
 static const char* const RELATION_NEXT    =    "relation/next";
+static const uint8_t* const SLASH="/";
 
 static const char* const RELATION_INITIAL_POST="initial_post"; // this will make us to send HTTP GET, which
                                       // is the right thing to do since we do not 
@@ -61,7 +62,16 @@ static const char* const RELATION_INITIAL_DELETE="initial_delete"; // this will 
 
 static char initialUrl_[INITIAL_URL_BUFFER_LENGTH];
 static CallbackFunctionP callbackP_=NULL;
-void addBytesToUri(char* uriP, uint8_t* bytes, uint32_t length )
+
+void addSlashToUri(char* uriP)
+{
+    LOGD(">>addSlashToUri");
+    int uriidx=strlen(uriP);
+    uriP[uriidx]='/';
+    LOGD("<<addSlashToUri %s", uriP);    
+}
+
+void addBytesToUri(char* uriP, uint8_t* bytes, uint32_t length, bool uuid )
 {
     LOGD(">>add bytes to URI %d", length);
     int uriidx=strlen(uriP);
@@ -75,6 +85,10 @@ void addBytesToUri(char* uriP, uint8_t* bytes, uint32_t length )
         singleNumber=(bytes[i]&0x0F);
         singleNumber=((singleNumber<0xA)?(singleNumber+0x30):(singleNumber+0x57));
         uriP[uriidx++]=singleNumber;
+        if(true==uuid && (3 == i || 5 == i || 7 == i || 9 == i))
+        {
+            uriP[uriidx++]='-';
+        }
     }
     LOGD("<<add bytes to URI %s %d", uriP, uriidx);
 }
@@ -83,6 +97,7 @@ void addIntToUri(char* uriP, uint32_t addThis)
 {
     char intInString[10];
     memset(intInString, 0, 10);
+    // using signed integer since this is how SE wants it
     sprintf(intInString, "/%d", addThis);
     strcpy((uriP+strlen(uriP)), intInString);
     LOGD("add int to URI %s %d", uriP, addThis);   
@@ -131,6 +146,19 @@ bool empty(const char* zeroTerminatedArray)
     return(strlen(zeroTerminatedArray)==0);
 }
 
+char* createBasicLink(mcSuid_t suid)
+{
+    char* tmpLinkP=NULL;
+    size_t urlLength=0;
+    
+    urlLength=strlen(initialUrl_) + (sizeof(mcSuid_t)*2) + (sizeof(mcSpid_t)*2) + (sizeof(mcUuid_t)*2)+6; //possible slash and end zero and four dashes
+    tmpLinkP=malloc(urlLength);
+    memset(tmpLinkP,0,urlLength);
+    strcpy(tmpLinkP, initialUrl_);
+    addBytesToUri(tmpLinkP, (uint8_t*) &suid, sizeof(suid), false);
+    return tmpLinkP;
+}
+
 void doProvisioningWithSe(
     mcSpid_t spid, 
     mcSuid_t suid, 
@@ -141,10 +169,22 @@ void doProvisioningWithSe(
     trustletInstallationData_t* tltDataP)
 {
     LOGD(">>doProvisioningWithSe");
-    callbackP_=callbackP;
+
     rootpaerror_t ret=ROOTPA_OK;
     rootpaerror_t tmpRet=ROOTPA_OK;
-    
+    bool workToDo = true;
+    const char* linkP=NULL;
+    const char* relP=NULL;
+    const char* pendingLinkP=NULL;
+    const char* pendingRelP=NULL;
+    const char* commandP=NULL;  // "command" received from SE
+    const char* responseP=NULL; // "response" to be sent to SE
+
+    const char* usedLinkP=NULL;
+    const char* usedRelP=NULL;
+    const char* usedCommandP=NULL;
+
+    callbackP_=callbackP;    
     if(NULL==callbackP)
     {
         LOGE("No callbackP, can not respond to caller, this should not happen!");
@@ -153,29 +193,11 @@ void doProvisioningWithSe(
     if(empty(initialUrl_))
     {
         memset(initialUrl_, 0, INITIAL_URL_BUFFER_LENGTH);
-        strncpy(initialUrl_, SE_URL, strlen(SE_URL));
-        
+        strncpy(initialUrl_, SE_URL, strlen(SE_URL));        
     }
+
+    linkP=createBasicLink(suid);
     
-    
-    size_t urlLength=strlen(initialUrl_) + (sizeof(mcSuid_t)*2) + (sizeof(mcSpid_t)*2)+1;
-
-    char* tmplinkP=malloc(urlLength);
-    memset(tmplinkP,0,urlLength);
-    strcpy(tmplinkP, initialUrl_);
-        
-    addBytesToUri(tmplinkP, (uint8_t*) &suid, sizeof(suid));
-
-    const char* linkP=tmplinkP;
-    tmplinkP=NULL;
-    const char* relP=NULL;
-    const char* commandP=NULL;
-    const char* responseP=NULL;
-
-    const char* usedLinkP=NULL;
-    const char* usedRelP=NULL;
-    const char* usedCommandP=NULL;
-
     if (initialRel == initialRel_DELETE)
     {
     	relP = RELATION_INITIAL_DELETE;
@@ -183,14 +205,15 @@ void doProvisioningWithSe(
     else
     {
     	relP = RELATION_INITIAL_POST;
-        addIntToUri((char*)linkP, (uint32_t) spid);
+        if(spid!=0) // SPID 0 is not legal. We use it for requesting root container creation only (no sp)
+        {
+            addIntToUri((char*)linkP, (uint32_t) spid);
+        }
     }
-
 
     LOGD("calling first callback %ld", (long int) callbackP);
     callbackP(CONNECTING_SERVICE_ENABLER, ROOTPA_OK, NULL);
 
-    bool workToDo = true;
     ret=openSeClientAndInit();
     if(ROOTPA_OK!=ret)
     {
@@ -207,7 +230,22 @@ void doProvisioningWithSe(
             callbackP(ERROR, ret, NULL);
             workToDo=false;
         }
+        else
+        {
+            addSlashToUri((char*) linkP);
+            addBytesToUri((char*) linkP, (uint8_t*) tltDataP->uuid.value, UUID_LENGTH, true);
+        }
     }
+
+// recovery from factory reset    
+    if(factoryResetAssumed() && relP != RELATION_INITIAL_DELETE)
+    {
+        pendingLinkP=linkP;
+        pendingRelP=relP;
+        relP=RELATION_INITIAL_DELETE;
+        linkP=createBasicLink(suid);
+    }
+// recovery from factory reset    
     
     while(workToDo)
     {
@@ -218,6 +256,20 @@ void doProvisioningWithSe(
     
         if(NULL==relP)
         {
+// recovery from factory reset                
+            if(pendingLinkP!=NULL && pendingRelP!=NULL)
+            {
+                free((char*)linkP);
+                linkP=pendingLinkP;
+                relP=pendingRelP;
+                pendingLinkP=NULL;
+                pendingRelP=NULL;
+                workToDo=true;
+                continue;
+            }
+// recovery from factory reset                
+            
+            
             callbackP(FINISHED_PROVISIONING, ROOTPA_OK, NULL); // this is the only place where we can be sure 
                                                          // SE does not want to send any more data to us
                                                          // the other option would be to keep track on the 
@@ -271,12 +323,11 @@ void doProvisioningWithSe(
                 {
                     LOGE("getSysInfoP, getVersionP or buildXmlSystemInfo or httpPutAndReceiveCommand returned an error %d", ret);
                     callbackP(ERROR, ret, NULL);
-                    workToDo=false;
+                    if(tmpRet!=ROOTPA_OK) workToDo=false; // if sending response succeeded, we rely on "relP" to tell whether we should continue or not
                 }
             }
             else if(strstr(relP, RELATION_INITIAL_DELETE))
             {
-                // response may be NULL or trustlet installation request
                 ret=httpDeleteAndReceiveCommand(&linkP, &relP, &commandP);
                 
                 if(ret!=ROOTPA_OK)
@@ -307,19 +358,24 @@ void doProvisioningWithSe(
                 if(NULL==responseP)
                 {
                     if(ROOTPA_OK==ret) ret=ROOTPA_ERROR_XML;  
+                    // have to set these to NULL since we are not even trying to get them from SE now
+                    linkP=NULL;
+                    relP=NULL;
+                    commandP=NULL;
                     LOGE("no responseP");
                 }
                 else
                 {
+                    // attempting to return response to SE even if there was something wrong in handleXmlMessage 
                     tmpRet=httpPostAndReceiveCommand(responseP, &linkP, &relP, &commandP);
                     if(tmpRet!=ROOTPA_OK) ret=tmpRet;
                 }
                 
-                if(ret!=ROOTPA_OK)
-                {
-                    LOGE("httpPostAndReceiveCommand or handleXmlMessage returned an error %d", ret);
+                if(ret!=ROOTPA_OK && ret!=ROOTPA_ERROR_REGISTRY_OBJECT_NOT_AVAILABLE) // if container is not found, not sending error intent to SP.PA since it is possible that SE can recover. 
+                {                                                                     // If it can not, it will return an error code anyway.
+                    LOGE("httpPostAndReceiveCommand or handleXmlMessage returned an error %d %d", ret, tmpRet);
                     callbackP(ERROR, ret, NULL);
-                    workToDo=false;
+                    if(tmpRet!=ROOTPA_OK) workToDo=false; // if sending response succeeded, we rely on "relP" to tell whether we should continue or not
                 }
             
             }
@@ -341,7 +397,7 @@ void doProvisioningWithSe(
                 workToDo=false;
             }
 
-            LOGD("end of provisioning loop work to do: %d, response %s", workToDo, (responseP==NULL)?"null":responseP);
+            LOGD("end of provisioning loop work to do: %d, responseP %ld", workToDo, responseP);
         } 
 
         // last round cleaning in order to make sure both original and user pointers are released, but only once

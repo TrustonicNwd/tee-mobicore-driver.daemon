@@ -1,10 +1,11 @@
-/** @addtogroup CMP
+/** @addtogroup CMP_2_0
  * @{
  * @file
- * Interface to content management trustlet definitions.
+ * Interface to content management trustlet (TlCm) definitions.
  *
- * The CMTL (Content Management Trustlet) is responsible for implementing
- * CMP 2.0 commands and generating approriate CMP 2.0 responses.
+ * The TlCm is responsible for implementing content management protocol (CMP)
+ * 2.0 commands and generating approriate CMP 2.0 responses in the trustlet
+ * control interface (TCI).
  *
  * Copyright © Trustonic Limited 2013.
  *
@@ -40,100 +41,130 @@
 #include "TlCm/tlCmApiCommon.h"
 #include "TlCm/2.0/cmp.h"
 
-/**
- * CMP Content Manager message data.
- */
+/** TCI CMP 2.0 messages. */
 typedef union {
+    /** Command header. */
     cmpCommandHeader_t commandHeader;
+    /** Response header. */
     cmpResponseHeader_t responseHeader;
 
+    /** System command GetVersion. */
     cmpCmdGetVersion_t cmpCmdGetVersion;
+    /** System response GetVersion. */
     cmpRspGetVersion_t cmpRspGetVersion;
-
-    cmpCmdBeginSocAuthentication_t cmpCmdBeginSocAuthentication;
-    cmpRspBeginSocAuthentication_t cmpRspBeginSocAuthentication;
-
-    cmpCmdBeginRootAuthentication_t cmpCmdBeginRootAuthentication;
-    cmpRspBeginRootAuthentication_t cmpRspBeginRootAuthentication;
-
-    cmpCmdBeginSpAuthentication_t cmpCmdBeginSpAuthentication;
-    cmpRspBeginSpAuthentication_t cmpRspBeginSpAuthentication;
-
-    cmpCmdAuthenticate_t cmpCmdAuthenticate;
-    cmpRspAuthenticate_t cmpRspAuthenticate;
-
+    /** System command GetSuid. */
+    cmpCmdGetSuid_t cmpCmdGetSuid;
+    /** System response GetSuid. */
+    cmpRspGetSuid_t cmpRspGetSuid;
+    /** System command GenAuthToken. */
     cmpCmdGenAuthToken_t cmpCmdGenAuthToken;
+    /** System response GenAuthToken. */
     cmpRspGenAuthToken_t cmpRspGenAuthToken;
 
-    cmpCmdRootContRegisterActivate_t cmpCmdRootContRegisterActivate;
-    cmpRspRootContRegisterActivate_t cmpRspRootContRegisterActivate;
-
-    cmpCmdRootContUnregister_t cmpCmdRootContUnregister;
-    cmpRspRootContUnregister_t cmpRspRootContUnregister;
-
-    cmpCmdRootContLockByRoot_t cmpCmdRootContLockByRoot;
-    cmpRspRootContLockByRoot_t cmpRspRootContLockByRoot;
-
-    cmpCmdRootContUnlockByRoot_t cmpCmdRootContUnlockByRoot;
-    cmpRspRootContUnlockByRoot_t cmpRspRootContUnlockByRoot;
-
-    cmpCmdSpContRegisterActivate_t cmpCmdSpContRegisterActivate;
-    cmpRspSpContRegisterActivate_t cmpRspSpContRegisterActivate;
-
-    cmpCmdSpContUnregister_t cmpCmdSpContUnregister;
-    cmpRspSpContUnregister_t cmpRspSpContUnregister;
-
-    cmpCmdSpContLockByRoot_t cmpCmdSpContLockByRoot;
-    cmpRspSpContLockByRoot_t cmpRspSpContLockByRoot;
-
-    cmpCmdSpContUnlockByRoot_t cmpCmdSpContUnlockByRoot;
-    cmpRspSpContUnlockByRoot_t cmpRspSpContUnlockByRoot;
-
-    cmpCmdSpContLockBySp_t cmpCmdSpContLockBySp;
-    cmpRspSpContLockBySp_t cmpRspSpContLockBySp;
-
-    cmpCmdSpContUnlockBySp_t cmpCmdSpContUnlockBySp;
-    cmpRspSpContUnlockBySp_t cmpRspSpContUnlockBySp;
-
-    cmpCmdTltContRegister_t cmpCmdTltContRegister;
-    cmpRspTltContRegister_t cmpRspTltContRegister;
-
-    cmpCmdTltContActivate_t cmpCmdTltContActivate;
-    cmpRspTltContActivate_t cmpRspTltContActivate;
-
-    cmpCmdTltContRegisterActivate_t cmpCmdTltContRegisterActivate;
-    cmpRspTltContRegisterActivate_t cmpRspTltContRegisterActivate;
-
-    cmpCmdTltContLockBySp_t cmpCmdTltContLockBySp;
-    cmpRspTltContLockBySp_t cmpRspTltContLockBySp;
-
-    cmpCmdTltContUnlockBySp_t cmpCmdTltContUnlockBySp;
-    cmpRspTltContUnlockBySp_t cmpRspTltContUnlockBySp;
-
-    cmpCmdTltContUnregister_t cmpCmdTltContUnregister;
-    cmpRspTltContUnregister_t cmpRspTltContUnregister;
-
-    cmpCmdGetSuid_t cmpCmdGetSuid;
-    cmpRspGetSuid_t cmpRspGetSuid;
-
+    /** Authentication command BeginSocAuthentication. */
+    cmpCmdBeginSocAuthentication_t cmpCmdBeginSocAuthentication;
+    /** Authentication response BeginSocAuthentication. */
+    cmpRspBeginSocAuthentication_t cmpRspBeginSocAuthentication;
+    /** Authentication command BeginRootAuthentication. */
+    cmpCmdBeginRootAuthentication_t cmpCmdBeginRootAuthentication;
+    /** Authentication response BeginRootAuthentication. */
+    cmpRspBeginRootAuthentication_t cmpRspBeginRootAuthentication;
+    /** Authentication command BeginSpAuthentication. */
+    cmpCmdBeginSpAuthentication_t cmpCmdBeginSpAuthentication;
+    /** Authentication response BeginSpAuthentication. */
+    cmpRspBeginSpAuthentication_t cmpRspBeginSpAuthentication;
+    /** Authentication command Authenticate. */
+    cmpCmdAuthenticate_t cmpCmdAuthenticate;
+    /** Authentication response Authenticate. */
+    cmpRspAuthenticate_t cmpRspAuthenticate;
+    /** Authentication command AuthenticateTerminate. */
     cmpCmdAuthenticateTerminate_t cmpCmdAuthenticateTerminate;
+    /** Authentication response AuthenticateTerminate. */
     cmpRspAuthenticateTerminate_t cmpRspAuthenticateTerminate;
 
-    cmpCmdTltContPersonalize_t cmpCmdTltContPersonalize;
-    cmpRspTltContPersonalize_t cmpRspTltContPersonalize;
+    /** SoC administrative command RootContRegisterActivate. */
+    cmpCmdRootContRegisterActivate_t cmpCmdRootContRegisterActivate;
+    /** SoC administrative response RootContRegisterActivate. */
+    cmpRspRootContRegisterActivate_t cmpRspRootContRegisterActivate;
 
+    /** Root administrative command RootContUnregister. */
+    cmpCmdRootContUnregister_t cmpCmdRootContUnregister;
+    /** Root administrative response RootContUnregister. */
+    cmpRspRootContUnregister_t cmpRspRootContUnregister;
+    /** Root administrative command RootContLockByRoot. */
+    cmpCmdRootContLockByRoot_t cmpCmdRootContLockByRoot;
+    /** Root administrative response RootContLockByRoot. */
+    cmpRspRootContLockByRoot_t cmpRspRootContLockByRoot;
+    /** Root administrative command RootContUnlockByRoot. */
+    cmpCmdRootContUnlockByRoot_t cmpCmdRootContUnlockByRoot;
+    /** Root administrative command RootContUnlockByRoot. */
+    cmpRspRootContUnlockByRoot_t cmpRspRootContUnlockByRoot;
+    /** Root administrative command SpContRegisterActivate. */
+    cmpCmdSpContRegisterActivate_t cmpCmdSpContRegisterActivate;
+    /** Root administrative response SpContRegisterActivate. */
+    cmpRspSpContRegisterActivate_t cmpRspSpContRegisterActivate;
+    /** Root administrative command SpContUnregister. */
+    cmpCmdSpContUnregister_t cmpCmdSpContUnregister;
+    /** Root administrative response SpContUnregister. */
+    cmpRspSpContUnregister_t cmpRspSpContUnregister;
+    /** Root administrative command SpContRegister. */
     cmpCmdSpContRegister_t cmpCmdSpContRegister;
+    /** Root administrative response SpContRegister. */
     cmpRspSpContRegister_t cmpRspSpContRegister;
+    /** Root administrative command SpContLockByRoot. */
+    cmpCmdSpContLockByRoot_t cmpCmdSpContLockByRoot;
+    /** Root administrative response SpContLockByRoot. */
+    cmpRspSpContLockByRoot_t cmpRspSpContLockByRoot;
+    /** Root administrative command SpContUnlockByRoot. */
+    cmpCmdSpContUnlockByRoot_t cmpCmdSpContUnlockByRoot;
+    /** Root administrative response SpContUnlockByRoot. */
+    cmpRspSpContUnlockByRoot_t cmpRspSpContUnlockByRoot;
 
+    /** Sp administrative command SpContActivate. */
     cmpCmdSpContActivate_t cmpCmdSpContActivate;
+    /** Sp administrative response SpContActivate. */
     cmpRspSpContActivate_t cmpRspSpContActivate;
+    /** Sp administrative command SpContLockBySp. */
+    cmpCmdSpContLockBySp_t cmpCmdSpContLockBySp;
+    /** Sp administrative response SpContLockBySp. */
+    cmpRspSpContLockBySp_t cmpRspSpContLockBySp;
+    /** Sp administrative command SpContUnlockBySp. */
+    cmpCmdSpContUnlockBySp_t cmpCmdSpContUnlockBySp;
+    /** Sp administrative command SpContUnlockBySp. */
+    cmpRspSpContUnlockBySp_t cmpRspSpContUnlockBySp;
+    /** Sp administrative command TltContRegisterActivate. */
+    cmpCmdTltContRegisterActivate_t cmpCmdTltContRegisterActivate;
+    /** Sp administrative response TltContRegisterActivate. */
+    cmpRspTltContRegisterActivate_t cmpRspTltContRegisterActivate;
+    /** Sp administrative command TltContUnregister. */
+    cmpCmdTltContUnregister_t cmpCmdTltContUnregister;
+    /** Sp administrative response TltContUnregister. */
+    cmpRspTltContUnregister_t cmpRspTltContUnregister;
+    /** Sp administrative command TltContRegister. */
+    cmpCmdTltContRegister_t cmpCmdTltContRegister;
+    /** Sp administrative response TltContRegister. */
+    cmpRspTltContRegister_t cmpRspTltContRegister;
+    /** Sp administrative command TltContActivate. */
+    cmpCmdTltContActivate_t cmpCmdTltContActivate;
+    /** Sp administrative response TltContActivate. */
+    cmpRspTltContActivate_t cmpRspTltContActivate;
+    /** Sp administrative command TltContLockBySp. */
+    cmpCmdTltContLockBySp_t cmpCmdTltContLockBySp;
+    /** Sp administrative response TltContLockBySp. */
+    cmpRspTltContLockBySp_t cmpRspTltContLockBySp;
+    /** Sp administrative command TltContUnlockBySp. */
+    cmpCmdTltContUnlockBySp_t cmpCmdTltContUnlockBySp;
+    /** Sp administrative response TltContUnlockBySp. */
+    cmpRspTltContUnlockBySp_t cmpRspTltContUnlockBySp;
+    /** Sp administrative command TltContPersonalize. */
+    cmpCmdTltContPersonalize_t cmpCmdTltContPersonalize;
+    /** Sp administrative response TltContPersonalize. */
+    cmpRspTltContPersonalize_t cmpRspTltContPersonalize;
 } cmpMessage_t;
 
-/**
- * Overall CMP structure.
- */
+/** TCI CMP 2.0. */
 typedef struct {
-    /** CMP message. */
+    /** TCI CMP 2.0 messages. */
     cmpMessage_t msg;
 } cmp_t;
 

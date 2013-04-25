@@ -43,10 +43,20 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define HTTP_CODE_MOVED                 301
 #define HTTP_CODE_BAD_REQUEST           400
-#define HTTP_CODE_INTERNAL_ERROR        405
+#define HTTP_CODE_NOT_FOUND             404
+#define HTTP_CODE_METHOD_NOT_ALLOWED    405
 #define HTTP_CODE_NOT_ACCEPTABLE        406
 #define HTTP_CODE_REQUEST_TIMEOUT       408
 #define HTTP_CODE_CONFLICT              409
+#define HTTP_CODE_LENGTH_REQUIRED       411
+#define HTTP_CODE_TOO_LONG              414
+#define HTTP_CODE_UNSUPPORTED_MEDIA     415
+#define HTTP_CODE_INVALID_DATA          422
+#define HTTP_CODE_FAILED_DEPENDENCY     424
+#define HTTP_CODE_INTERNAL_ERROR        500
+#define HTTP_CODE_CMP_VERSION           501
+#define HTTP_CODE_SERVICE_UNAVAILABLE   503
+#define HTTP_CODE_HTTP_VERSION          505
 
 #ifdef __DEBUG
 #define NONEXISTENT_TEST_URL "http://10.255.255.8:9/"
@@ -303,7 +313,7 @@ void saveCertFile(char* filePath, char* fileContent)
     LOGD("<<saveCertFile");
 }
 
-bool setBasicOpt(CURL* curl_handle, MemoryStruct* chunkP, HeaderStruct* headerChunkP, const char* linkP)
+bool setBasicOpt(CURL* curl_handle, MemoryStruct* chunkP, HeaderStruct* headerChunkP, const char* linkP,  struct curl_slist* headerListP)
 {
     if(curl_easy_setopt(curl_handle, CURLOPT_URL, linkP)!=CURLE_OK)
     {
@@ -336,7 +346,13 @@ bool setBasicOpt(CURL* curl_handle, MemoryStruct* chunkP, HeaderStruct* headerCh
         return false;
     }
 
-     
+
+    if(curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, headerListP)!=CURLE_OK)
+    {
+        LOGE("curl_easy_setopt CURLOPT_HTTPHEADER failed");
+        return false;
+    }
+    
     /* some servers don't like requests that are made without a user-agent
        field, so we provide one */ 
     if(curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "rpa/1.0")!=CURLE_OK)
@@ -440,16 +456,9 @@ bool setPutOpt(CURL* curl_handle, ResponseStruct* responseChunk)
     return true;
 }
 
-bool setPostOpt(CURL* curl_handle, const char* inputP, struct curl_slist* disableChunkP)
+bool setPostOpt(CURL* curl_handle, const char* inputP)
 {
-    if(inputP)
-    {
-        LOGD(">>setPostOpt %d %s", (int) strlen(inputP), inputP);
-    }
-    else
-    {
-        LOGD(">>setPostOpt");
-    }
+    LOGD(">>setPostOpt %ld %d", inputP, inputP?strlen(inputP):0);
     
     if (curl_easy_setopt(curl_handle, CURLOPT_POST, 1L)!=CURLE_OK)
     {
@@ -472,11 +481,6 @@ bool setPostOpt(CURL* curl_handle, const char* inputP, struct curl_slist* disabl
         return false;
     }
 
-    if (curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, disableChunkP)!=CURLE_OK)
-    {
-        LOGE("curl_easy_setopt CURLOPT_HTTPHEADER failed");
-        return false;
-    }
     LOGD("<<setPostOpt");
     return true;
 }
@@ -530,7 +534,7 @@ rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, con
     long int curlRet=CURLE_COULDNT_CONNECT;
     long int http_code = 0;
     int attempts=0;
-    struct curl_slist* disableChunkP = NULL;
+    struct curl_slist* httpHeaderP = NULL;
     
     LOGD(">>httpCommunicate");
     if(NULL==linkP || NULL==relP || NULL==commandP || NULL==*linkP)
@@ -575,9 +579,7 @@ rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, con
 	}
 	else if(method == httpMethod_POST)
 	{
-        /* disable Expect: 100-continue since it creates problems with some proxies */ 
-        disableChunkP = curl_slist_append(disableChunkP, "Expect:");
-		if (setPostOpt(curl_handle_, inputP, disableChunkP)==false)
+		if (setPostOpt(curl_handle_, inputP)==false)
 		{
 			LOGE("setPostOpt failed");
 			free(chunk.memoryP);
@@ -604,7 +606,11 @@ rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, con
 		}
 	}
 
-    if(setBasicOpt(curl_handle_, &chunk, &headerChunk, *linkP)==false)
+    /* disable Expect: 100-continue since it creates problems with some proxies, it is only related to post but we do it here for simplicity */ 
+    httpHeaderP = curl_slist_append(httpHeaderP, "Expect:");
+    httpHeaderP = curl_slist_append(httpHeaderP, "Content-Type: application/vnd.mcorecm+xml;v=1.0");
+    httpHeaderP = curl_slist_append(httpHeaderP, "Accept: application/vnd.mcorecm+xml;v=1.0");    
+    if(setBasicOpt(curl_handle_, &chunk, &headerChunk, *linkP, httpHeaderP)==false)
     {
         LOGE("setBasicOpt failed");
         free(chunk.memoryP);
@@ -629,22 +635,45 @@ rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, con
         curl_easy_reset(curl_handle_);        
         return ROOTPA_ERROR_NETWORK;
     }
-
+    
     LOGD("http return code from SE %ld", (long int) http_code);    
-    if ((200 <= http_code &&  http_code < 300) ||  HTTP_CODE_MOVED == http_code) 
+    if ((200 <= http_code &&  http_code < 300)) 
     {
         ret=ROOTPA_OK; 
     }
     else if (HTTP_CODE_BAD_REQUEST == http_code || 
-             HTTP_CODE_INTERNAL_ERROR == http_code || 
+             HTTP_CODE_METHOD_NOT_ALLOWED == http_code || 
              HTTP_CODE_NOT_ACCEPTABLE == http_code || 
-             HTTP_CODE_CONFLICT == http_code )
+             HTTP_CODE_CONFLICT == http_code ||    
+             HTTP_CODE_LENGTH_REQUIRED == http_code ||
+             HTTP_CODE_TOO_LONG == http_code ||
+             HTTP_CODE_UNSUPPORTED_MEDIA == http_code ||
+             HTTP_CODE_INVALID_DATA == http_code ||
+             HTTP_CODE_INTERNAL_ERROR == http_code || 
+             HTTP_CODE_HTTP_VERSION == http_code)
     {
         ret=ROOTPA_ERROR_INTERNAL;
     }
-    else if(HTTP_CODE_REQUEST_TIMEOUT == http_code  || (411 <= http_code && http_code <= 505))
+    else if(HTTP_CODE_MOVED == http_code ||  // new URL would be in Location: header but RootPA does not support in currently (unless libcurl supports it transparently)
+            HTTP_CODE_REQUEST_TIMEOUT == http_code  || 
+            HTTP_CODE_SERVICE_UNAVAILABLE == http_code)
     {
         ret=ROOTPA_ERROR_NETWORK;
+    }
+    else if (HTTP_CODE_CMP_VERSION == http_code)
+    {
+
+        ret=ROOTPA_ERROR_SE_CMP_VERSION;
+    }    
+    else if (HTTP_CODE_FAILED_DEPENDENCY == http_code)
+    {
+        ret=ROOTPA_ERROR_SE_PRECONDITION_NOT_MET;
+    }
+    else if (HTTP_CODE_NOT_FOUND == http_code)
+    {
+        ret=ROOTPA_ERROR_ILLEGAL_ARGUMENT; // since the arguments (spid, in some cases uuid) for the URL are received from the client, 
+                                           // this can be returned. It is also possible that suid is wrong (corrupted in device or info 
+                                           // from device binding missing from SE, but we can not detect that easily.
     }
     else
     {
@@ -657,7 +686,7 @@ rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, con
     *commandP=chunk.memoryP;  // this needs to be freed by client
     *linkP=headerChunk.linkP; // this needs to be freed by client
     *relP=headerChunk.relP;   // this needs to be freed by client
-    if (disableChunkP) curl_slist_free_all(disableChunkP); // since we disabled some headers    
+    if (httpHeaderP) curl_slist_free_all(httpHeaderP); // since we disabled some headers    
 
     curl_easy_reset(curl_handle_);
     LOGD("%lu bytes retrieved\n", (long)chunk.size);

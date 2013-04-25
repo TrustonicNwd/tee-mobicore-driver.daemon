@@ -129,15 +129,15 @@ bool TrustZoneDevice::initDevice(
         // Wipe memory before first usage
         bzero(mciBuffer, MCI_BUFFER_SIZE);
 
-        // Here we are safe to setup the MobiCore logs
-        setupLog();
-
         // Init MC with NQ and MCP buffer addresses
         int ret = pMcKMod->fcInit(0, NQ_BUFFER_SIZE, NQ_BUFFER_SIZE, MCP_BUFFER_SIZE);
         if (ret != 0) {
             LOG_E("pMcKMod->fcInit() failed");
             return false;
         }
+
+        // Here we are safe to setup the MobiCore logs
+        setupLog();
 
         // First empty N-SIQ which results in set up of the MCI structure
         if (!nsiq()) {
