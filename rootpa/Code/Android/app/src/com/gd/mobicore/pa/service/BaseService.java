@@ -285,7 +285,6 @@ public abstract class BaseService extends Service {
                 break;
             case C_FINISHED_PROVISIONING:
                 intent.putExtra(RootPAProvisioningIntents.STATE, RootPAProvisioningIntents.FINISHED_PROVISIONING);
-                sendBroadcast(new Intent(RootPAProvisioningIntents.FINISHED_ROOT_PROVISIONING));
                 break;
             case C_UNREGISTERING_ROOT_CONTAINER:
                 intent.putExtra(RootPAProvisioningIntents.STATE, RootPAProvisioningIntents.UNREGISTERING_ROOT_CONTAINER);
@@ -311,6 +310,7 @@ public abstract class BaseService extends Service {
                     unregisterReceiver(networkChangeReceiver_);
                     networkChangeReceiver_=null;
                 }
+                sendBroadcast(new Intent(RootPAProvisioningIntents.FINISHED_ROOT_PROVISIONING));                
                 break;
             default:
                 Log.e(TAG,"unknown state: "+state);

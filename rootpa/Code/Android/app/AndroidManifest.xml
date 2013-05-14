@@ -3,8 +3,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" 
           package="com.gd.mobicore.pa"
           android:versionCode="@integer/code" 
-          android:versionName="@string/name" 
-          android:sharedUserId="android.uid.system" >
+          android:versionName="@string/name" >
 
   <uses-sdk android:minSdkVersion="14"
            android:targetSdkVersion="17" />

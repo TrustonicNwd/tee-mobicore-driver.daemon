@@ -65,7 +65,9 @@
 
 using namespace std;
 
-static const string MC_REGISTRY_DEFAULT_PATH = "/data/app/mcRegistry";
+static const string MC_REGISTRY_CONTAINER_PATH = "/data/app/mcRegistry";
+static const string MC_REGISTRY_DEFAULT_PATH = "/system/app/mcRegistry";
+static const string MC_REGISTRY_FALLBACK_PATH = "/data/app/mcRegistry";
 static const string AUTH_TOKEN_FILE_NAME = "00000000.authtokcont";
 static const string ROOT_FILE_NAME = "00000000.rootcont";
 static const string SP_CONT_FILE_EXT = ".spcont";
@@ -73,8 +75,6 @@ static const string TL_CONT_FILE_EXT = ".tlcont";
 static const string TL_BIN_FILE_EXT = ".tlbin";
 static const string DATA_CONT_FILE_EXT = ".datacont";
 
-static const string ENV_MC_REGISTRY_PATH = "MC_REGISTRY_PATH";
-static const string ENV_MC_REGISTRY_FALLBACK_PATH = "MC_REGISTRY_FALLBACK_PATH";
 static const string ENV_MC_AUTH_TOKEN_PATH = "MC_AUTH_TOKEN_PATH";
 
 //------------------------------------------------------------------------------
@@ -109,26 +109,36 @@ static bool doesDirExist(const char *path)
 //------------------------------------------------------------------------------
 static string getRegistryPath()
 {
-    const char *path;
+    string registryPath;
+
+    // use the default registry path.
+    registryPath = MC_REGISTRY_CONTAINER_PATH;
+    LOG_I(" Using default registry path %s", registryPath.c_str());
+
+    assert(registryPath.length() != 0);
+
+    return registryPath;
+}
+
+
+//------------------------------------------------------------------------------
+static string getTlRegistryPath()
+{
     string registryPath;
 
     // First, attempt to use regular registry environment variable.
-    path = getenv(ENV_MC_REGISTRY_PATH.c_str());
-    if (doesDirExist(path)) {
-        LOG_I("getRegistryPath(): Using MC_REGISTRY_PATH %s", path);
-        registryPath = path;
-    } else {
+    if (doesDirExist(MC_REGISTRY_DEFAULT_PATH.c_str())) {
+        registryPath = MC_REGISTRY_DEFAULT_PATH;
+        LOG_I("getTlRegistryPath(): Using MC_REGISTRY_PATH %s", registryPath.c_str());
+    } else if (doesDirExist(MC_REGISTRY_FALLBACK_PATH.c_str())) {
         // Second, attempt to use fallback registry environment variable.
-        path = getenv(ENV_MC_REGISTRY_FALLBACK_PATH.c_str());
-        if (doesDirExist(path)) {
-            LOG_I("getRegistryPath(): Using MC_REGISTRY_FALLBACK_PATH %s", path);
-            registryPath = path;
-        }
+        registryPath = MC_REGISTRY_FALLBACK_PATH;
+        LOG_I("getTlRegistryPath(): Using MC_REGISTRY_FALLBACK_PATH %s", registryPath.c_str());
     }
 
     // As a last resort, use the default registry path.
     if (registryPath.length() == 0) {
-        registryPath = MC_REGISTRY_DEFAULT_PATH;
+        registryPath = MC_REGISTRY_CONTAINER_PATH;
         LOG_I(" Using default registry path %s", registryPath.c_str());
     }
 
@@ -196,7 +206,7 @@ static string getTlDataFilePath(const mcUuid_t *uuid, mcPid_t pid)
 //------------------------------------------------------------------------------
 static string getTlBinFilePath(const mcUuid_t *uuid)
 {
-    return getRegistryPath() + "/" + byteArrayToString(uuid, sizeof(*uuid)) + TL_BIN_FILE_EXT;
+    return getTlRegistryPath() + "/" + byteArrayToString(uuid, sizeof(*uuid)) + TL_BIN_FILE_EXT;
 }
 
 //------------------------------------------------------------------------------

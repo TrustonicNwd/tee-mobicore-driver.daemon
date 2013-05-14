@@ -40,6 +40,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "provisioningagent.h"
 
 #define CERT_PATH "/system/etc/security/cacerts"
+#define HARDCODED_STORAGEPATH "/data/data/com.gd.mobicore.pa"
 
 JavaVM* jvmP_ = NULL;
 const jint VERSION=JNI_VERSION_1_2;
@@ -397,9 +398,11 @@ void setFilesPath(JNIEnv* envP, jobject obj)
     jmethodID getFilesDirPath = envP->GetMethodID(cls, "getFilesDirPath","()Ljava/lang/String;");
     if(NULL==getFilesDirPath)
     {
-        LOGE("setFilesPath getFilesDirPath==NULL");
+        setPaths(HARDCODED_STORAGEPATH, CERT_PATH);        
+        LOGE("<<setFilesPath getFilesDirPath==NULL, used hardcoded paths");
         return;
-    }    
+    }
+    
     
     jobject jpath = envP->CallObjectMethod(obj, getFilesDirPath); 
     if(jpath!=NULL)
@@ -408,7 +411,7 @@ void setFilesPath(JNIEnv* envP, jobject obj)
         setPaths(pathP, CERT_PATH);
         if(NULL == pathP)
         {
-            LOGE("setFilesPath pathP==NULL");    
+            LOGE("setFilesPath pathP==NULL");
         }
 
 //        LOGD("path: %s\n", pathP);
@@ -416,8 +419,10 @@ void setFilesPath(JNIEnv* envP, jobject obj)
     }
     else
     {
-        LOGE("setFilesPath jpath==NULL");
-    }
+        LOGE("setFilesPath jpath==NULL, using hardcoded paths");
+        setPaths(HARDCODED_STORAGEPATH, CERT_PATH);        
+    }    
+
     LOGD("<<setFilesPath\n");
 }
 
