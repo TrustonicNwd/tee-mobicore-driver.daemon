@@ -58,6 +58,11 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define UNKNOWN_ID 0xFFFFFFFF
 
+#define EXTERNAL_MEMORY 2
+#define DEFAULT_MEMORY_TYPE EXTERNAL_MEMORY
+#define DEFAULT_NUMBER_OF_INSTANCES 1
+#define DEFAULT_FLAGS 0
+
 typedef enum
 {
     CMP,
@@ -452,7 +457,7 @@ rootpaerror_t handleUploadResponses(uint32_t numberOfUploadResponses, CommonMess
 {
     LOGD(">>handleUploadResponses %d", numberOfUploadResponses);
     rootpaerror_t ret=ROOTPA_OK;
-
+    char zero=0;
     uint32_t i;
     for(i=0; (i < numberOfUploadResponses) && (ROOTPA_OK==ret); i++)
     {
@@ -460,8 +465,8 @@ rootpaerror_t handleUploadResponses(uint32_t numberOfUploadResponses, CommonMess
         if(ROOTPA_OK == uploadResponsesP[i].ret)
         {
             // in success case TLT_UPLOAD and SO_UPLOAD return "0" (encoded) in the resultValue 
-            // field (discussed and agreed with Dimi Jan 10, 2013 */
-            encodedResponseP=base64EncodeAddEndZero("0", 1);
+            // field (discussed and agreed with Dimi Jan 10, 2013)
+            encodedResponseP=base64EncodeAddEndZero(&zero, 1);
         }
         
         if( addCommandResultData(rspResultElementP, uploadResponsesP[i].id, encodedResponseP,  uploadResponsesP[i].ret, uploadResponsesP[i].intRet )==false)
@@ -873,6 +878,7 @@ rootpaerror_t fillMcVersion(xmlNodePtr mcVersionNode, int mcVersionTag, const mc
 
 rootpaerror_t buildXmlTrustletInstallationRequest(const char** responseP, trustletInstallationData_t data )
 {
+    char intBuffer[11];
     LOGD(">>buildXmlTrustletInstallationRequest %ld (%ld %d %d)", (long int) responseP, (long int) data.dataP, data.dataLength, data.dataType);
     rootpaerror_t ret=ROOTPA_OK;
     if(NULL ==  responseP) return ROOTPA_ERROR_ILLEGAL_ARGUMENT; // data content checked earlier in commandhandler.c
@@ -888,18 +894,65 @@ rootpaerror_t buildXmlTrustletInstallationRequest(const char** responseP, trustl
     char* encodedDataP=base64EncodeAddEndZero((char*) data.dataP, data.dataLength);
     if(NULL==encodedDataP)
     {
-        LOGE("buildXmlTrustletInstallationRequest: base64 encoding failed");
+        LOGE("buildXmlTrustletInstallationRequest: base64 encoding of data failed");
         return ROOTPA_ERROR_INTERNAL;
     }
     
     if(data.dataType == REQUEST_DATA_TLT)
     {
-        mcDataNode = xmlNewChild(systemInfoNode, nameSpace_, BAD_CAST "tltBinary", BAD_CAST encodedDataP);
+        mcDataNode = xmlNewChild(systemInfoNode, nameSpace_, BAD_CAST "trustletAxf", BAD_CAST encodedDataP);
+        if(data.memoryType != DEFAULT_MEMORY_TYPE)
+        {
+            sprintf(intBuffer,"%d",data.memoryType);
+            if(xmlNewProp(mcDataNode, BAD_CAST "memoryType", BAD_CAST intBuffer)==NULL)
+            {
+                free(encodedDataP);
+                return ROOTPA_ERROR_XML;
+            }
+        }
+
+        if(data.numberOfInstances != DEFAULT_NUMBER_OF_INSTANCES)
+        {
+            sprintf(intBuffer,"%d",data.numberOfInstances);
+            if(xmlNewProp(mcDataNode, BAD_CAST "numberOfInstances", BAD_CAST intBuffer)==NULL)
+            {
+                free(encodedDataP);
+                return ROOTPA_ERROR_XML;
+            }
+        }
+
+        if(data.flags != DEFAULT_FLAGS)
+        {
+            sprintf(intBuffer,"%d",data.flags);                        
+            if(xmlNewProp(mcDataNode, BAD_CAST "flags", BAD_CAST intBuffer)==NULL)
+            {
+                free(encodedDataP);
+                return ROOTPA_ERROR_XML;
+            }
+        }
     }
     else
     {
-        mcDataNode = xmlNewChild(systemInfoNode, nameSpace_, BAD_CAST "tltEncryptionKey", BAD_CAST encodedDataP);        
+        mcDataNode = xmlNewChild(systemInfoNode, nameSpace_, BAD_CAST "trustletEncryptionKey", BAD_CAST encodedDataP);        
     }
+    
+    sprintf(intBuffer,"%d",data.minTltVersion);
+    if(xmlNewProp(mcDataNode, BAD_CAST "minTltVersion", BAD_CAST intBuffer)==NULL)
+    {
+        free(encodedDataP);
+        return ROOTPA_ERROR_XML;
+    }
+    
+    char* pukHashStringP=base64EncodeAddEndZero((char*) data.tltPukHashP, data.tltPukHashLength);
+    if(NULL==pukHashStringP)
+    {
+        LOGE("buildXmlTrustletInstallationRequest: base64 encoding of PukHash failed");
+        free(encodedDataP);        
+        return ROOTPA_ERROR_INTERNAL;
+    }
+    if(xmlNewProp(mcDataNode, BAD_CAST "tltPukHash", BAD_CAST pukHashStringP)==NULL) return ROOTPA_ERROR_XML;
+
+    free(pukHashStringP);
     free(encodedDataP);
     if(NULL==mcDataNode) return ROOTPA_ERROR_XML;
     

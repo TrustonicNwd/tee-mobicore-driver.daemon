@@ -530,7 +530,17 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_doProvisionin
 
 
 JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_installTrustlet
-  (JNIEnv* envP, jobject obj, jint spid, jbyteArray uuid, jint requestDataType, jbyteArray tltOrKeyData, jbyteArray seAddress)
+(JNIEnv* envP, jobject obj, 
+jint spid, 
+jbyteArray uuid, 
+jint requestDataType, 
+jbyteArray tltOrKeyData, 
+jint minTltVersion,
+jbyteArray tltPukHash,
+jint memoryType, 
+jint numberOfInstances, 
+jint flags, 
+jbyteArray seAddress)
 {
     LOGD(">>Java_com_gd_mobicore_pa_jni_CommonPAWrapper_installTrustlet %ld %ld\n", (long int) stateUpdateCallback, (long int) getSystemInfoCallback);
     setFilesPath(envP, obj);
@@ -552,6 +562,12 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_installTrustl
         trustletInstallationData_t tltData;        
         tltData.dataP=(uint8_t*) jniHelp.jByteArrayToCByteArray(tltOrKeyData, &tltData.dataLength);
         tltData.dataType=(TltInstallationRequestDataType) requestDataType;
+        tltData.minTltVersion=minTltVersion;
+        tltData.tltPukHashP=(uint8_t*) jniHelp.jByteArrayToCByteArray(tltPukHash, &tltData.tltPukHashLength);
+        tltData.memoryType=memoryType;
+        tltData.numberOfInstances=numberOfInstances;
+        tltData.flags=flags;
+        
         uint32_t uuidLength=0;
         uint8_t* uuidP=(uint8_t*) jniHelp.jByteArrayToCByteArray(uuid, &uuidLength);
         if(UUID_LENGTH != uuidLength){

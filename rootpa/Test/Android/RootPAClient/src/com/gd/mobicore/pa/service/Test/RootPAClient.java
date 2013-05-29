@@ -128,13 +128,14 @@ public class RootPAClient extends Activity {
             psintent.putExtra("LOG", loggingLevel);        
             bindService(psintent, provisioningServiceConnection_, Context.BIND_AUTO_CREATE);
             provisioningServiceIsBound_=true;
+            callCounter_++;            
         
             Intent dsintent=new Intent(RootPAProvisioningIntents.DEVELOPER_SERVICE);
             dsintent.putExtra("SE", address);
             dsintent.putExtra("LOG", loggingLevel);
             bindService(dsintent, developerServiceConnection_, Context.BIND_AUTO_CREATE);       
             developerServiceIsBound_=true;
-            callCounter_++;            
+            callCounter_++;
 
             Intent osintent=new Intent(RootPAProvisioningIntents.OEM_SERVICE);
             osintent.putExtra("SE", address);

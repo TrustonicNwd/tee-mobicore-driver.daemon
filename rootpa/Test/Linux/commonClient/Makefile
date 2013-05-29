@@ -53,7 +53,8 @@ LINT=splint
 VALGRIND=valgrind
 VALGRINDPARAMS=-v  --leak-check=full  --show-reachable=yes --track-origins=yes
 
-CFLAGS= -Wall -D_GNU_SOURCE   # -D_GNU_SOURCE is here for removing warnings and making sure strcasestr works properly
+CFLAGS= -Wall -D_GNU_SOURCE # -D_GNU_SOURCE is here for removing warnings and making sure strcasestr works properly
+CFLAGS+= -Wall -D__DEBUG 
 
 LDFLAGS=rcs
 INCDIR=-I../../../Code/Common/include -I/usr/include/libxml2 -I/usr/include/curl -I$(TLSDK)/Out/Public/MobiCore/inc -I$(TLCM)/Out/Public -I$(MOBICOREDRIVERLIB)/Out/Public

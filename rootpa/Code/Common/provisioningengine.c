@@ -44,14 +44,14 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-static const char* const SE_URL="https://se.cgbe.trustonic.com:8443/"; // note that there has to be slash at the end since we are adding suid to it next
-//static const char* const SE_URL="http://se.cgbe.trustonic.com:8080/"; // note that there has to be slash at the end since we are adding suid to it next
+static const char* const SE_URL="https://se.cgbe.trustonic.com:8443/service-enabler/enrollment/"; // note that there has to be slash at the end since we are adding suid to it next
+
 
 static const char* const RELATION_SELF  =      "relation/self";
 static const char* const RELATION_SYSTEMINFO = "relation/system_info";
 static const char* const RELATION_RESULT   =   "relation/command_result";
 static const char* const RELATION_NEXT    =    "relation/next";
-static const uint8_t* const SLASH="/";
+static const uint8_t* const SLASH= (uint8_t*)"/";
 
 static const char* const RELATION_INITIAL_POST="initial_post"; // this will make us to send HTTP GET, which
                                       // is the right thing to do since we do not 
@@ -73,7 +73,7 @@ void addSlashToUri(char* uriP)
 
 void addBytesToUri(char* uriP, uint8_t* bytes, uint32_t length, bool uuid )
 {
-    LOGD(">>add bytes to URI %d", length);
+    LOGD(">>addBytesToUri %d", length);
     int uriidx=strlen(uriP);
     int i;
     uint8_t singleNumber=0;
@@ -85,12 +85,13 @@ void addBytesToUri(char* uriP, uint8_t* bytes, uint32_t length, bool uuid )
         singleNumber=(bytes[i]&0x0F);
         singleNumber=((singleNumber<0xA)?(singleNumber+0x30):(singleNumber+0x57));
         uriP[uriidx++]=singleNumber;
+
         if(true==uuid && (3 == i || 5 == i || 7 == i || 9 == i))
         {
             uriP[uriidx++]='-';
         }
     }
-    LOGD("<<add bytes to URI %s %d", uriP, uriidx);
+    LOGD("<<addBytesToUri %s %d", uriP, uriidx);
 }
 
 void addIntToUri(char* uriP, uint32_t addThis)
@@ -397,7 +398,7 @@ void doProvisioningWithSe(
                 workToDo=false;
             }
 
-            LOGD("end of provisioning loop work to do: %d, responseP %ld", workToDo, responseP);
+            LOGD("end of provisioning loop work to do: %d, responseP %ld", workToDo, (long int) responseP);
         } 
 
         // last round cleaning in order to make sure both original and user pointers are released, but only once

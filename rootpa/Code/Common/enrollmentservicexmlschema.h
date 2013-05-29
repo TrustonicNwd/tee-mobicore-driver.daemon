@@ -92,6 +92,58 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 		<xsd:attribute name=\"id\" type=\"xsd:int\" use=\"required\" /> \
 	</xsd:complexType> \
  \
+  	<xsd:complexType name=\"TrustletEncryptionKey\"> \
+		<xsd:simpleContent> \
+			<xsd:extension base=\"xsd:base64Binary\"> \
+				<xsd:attribute name=\"minTltVersion\" type=\"mcpt:Version\" use=\"required\" /> \
+				<xsd:attribute name=\"tltPukHash\" type=\"xsd:base64Binary\" use=\"required\" /> \
+			</xsd:extension> \
+		</xsd:simpleContent> \
+	</xsd:complexType> \
+\
+	<xsd:simpleType name=\"TrustletMemoryType\"> \
+		<xsd:restriction base=\"xsd:int\"> \
+			<xsd:enumeration value=\"0\"> \
+				<xsd:annotation> \
+					<xsd:documentation> \
+	If enough space is available in the internal \
+	memory the trustlet will be loaded into the internal memory, else into the external \
+					</xsd:documentation> \
+				</xsd:annotation> \
+			</xsd:enumeration> \
+			<xsd:enumeration value=\"1\"> \
+				<xsd:annotation> \
+					<xsd:documentation> \
+						Use internal memory only. \
+					</xsd:documentation> \
+				</xsd:annotation> \
+			</xsd:enumeration> \
+			<xsd:enumeration value=\"2\"> \
+				<xsd:annotation> \
+					<xsd:documentation> \
+						Use external memory only. \
+					</xsd:documentation> \
+				</xsd:annotation> \
+			</xsd:enumeration> \
+		</xsd:restriction> \
+	</xsd:simpleType> \
+ \
+	<xsd:complexType name=\"TrustletAXF\"> \
+		<xsd:simpleContent> \
+			<xsd:extension base=\"xsd:base64Binary\"> \
+				<xsd:attribute name=\"minTltVersion\" type=\"mcpt:Version\" \
+					use=\"required\" /> \
+				<xsd:attribute name=\"tltPukHash\" type=\"xsd:base64Binary\" \
+					use=\"required\" /> \
+				<xsd:attribute name=\"memoryType\" type=\"mces:TrustletMemoryType\" \
+					default=\"2\" /> \
+				<xsd:attribute name=\"numberOfInstances\" type=\"xsd:int\" \
+					default=\"1\" /> \
+				<xsd:attribute name=\"flags\" type=\"xsd:int\" default=\"0\" /> \
+			</xsd:extension> \
+		</xsd:simpleContent> \
+	</xsd:complexType> \
+\
 	<xsd:complexType name=\"TrustletInstallationRequest\"> \
 		<xsd:annotation> \
 			<xsd:documentation> \
@@ -123,12 +175,12 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 		</xsd:annotation> \
 		<xsd:sequence> \
 			<xsd:choice> \
-				<xsd:element name=\"tltBinary\" type=\"xsd:base64Binary\" /> \
-				<xsd:element name=\"tltEncryptionKey\" type=\"xsd:base64Binary\" /> \
+				<xsd:element name=\"trustletAxf\" type=\"mces:TrustletAXF\" /> \
+				<xsd:element name=\"tltEncryptionKey\" type=\"mces:TrustletEncryptionKey\" /> \
 			</xsd:choice> \
 		</xsd:sequence> \
 	</xsd:complexType> \
-	 \
+\
 	<xsd:complexType name=\"CommandResultList\"> \
 		<xsd:sequence> \
 			<xsd:element name=\"commandResult\" type=\"mces:CommandResult\" maxOccurs=\"unbounded\" /> \
@@ -185,7 +237,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 	xmlns:mcpt=\"http://www.mcore.gi-de.com/2012/02/schema/MCPlatformTypes\" \
 	targetNamespace=\"http://www.mcore.gi-de.com/2012/02/schema/MCPlatformTypes\" \
 	elementFormDefault=\"qualified\"> \
-	 \
+\
 	<xsd:simpleType name=\"Version\"> \
 		<xsd:annotation> \
 			<xsd:documentation> \
@@ -194,7 +246,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 		</xsd:annotation> \
 		<xsd:restriction base=\"xsd:int\" /> \
 	</xsd:simpleType> \
-		 \
+\
 	<xsd:complexType name=\"McVersion\"> \
 		<xsd:annotation> \
 			<xsd:documentation> \
@@ -231,6 +283,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 		<xsd:attribute name=\"manufacturer\" type=\"xsd:string\" use=\"optional\" /> \
 		<xsd:attribute name=\"hardware\" type=\"xsd:string\" use=\"optional\" /> \
 		<xsd:attribute name=\"model\" type=\"xsd:string\" use=\"optional\" /> \
+        <xsd:attribute name=\"sip\" type=\"xsd:string\" use=\"optional\" /> \
 		<xsd:attribute name=\"version\" type=\"xsd:string\" use=\"optional\" /> \
 	</xsd:complexType> \
 </xsd:schema>"

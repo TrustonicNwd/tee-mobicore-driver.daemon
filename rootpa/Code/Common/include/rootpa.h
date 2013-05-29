@@ -194,6 +194,40 @@ typedef struct {
     uuid of the trustlet
     */
     mcUuid_t uuid;
+    
+    /**
+    minimum version of the trustlet
+    */
+    uint32_t minTltVersion;
+
+    /**
+    pointer to tltPukHash
+    */
+    const uint8_t* tltPukHashP;
+
+    /**
+    length of data pointed by tltPukHashP
+    */
+    uint32_t tltPukHashLength;
+
+    /**
+    memory where the trustlet is to be loaded and executed: 
+    0 - if enough space is available, load the Trustlet into the internal memory, otherwise into the external memory, 
+    1 - internal memory, 
+    2 - external memory
+    */
+    uint32_t memoryType;
+
+    /**
+    indicates how many instances of a trustlet can be installed (run) in parallel
+    */
+    uint32_t numberOfInstances;
+    
+    /**
+    current flags are: 1 - permanent, 2 - service has no WSW control interface, 4 - debuggable
+    */
+    uint32_t flags;
+    
 }trustletInstallationData_t;
 
 #ifdef __cplusplus

@@ -50,6 +50,13 @@ public class DeveloperService extends BaseService {
     private final RootPADeveloperIfc.Stub mBinder = new ServiceIfc();
     private static final int DEVELOPER_UID_FOR_LOCK=0x22220000;
     private static final int UUID_LENGTH=16;
+    private static final int EXTERNAL_MEMORY=2;
+    private static final int DEFAULT_MEMORY_TYPE=EXTERNAL_MEMORY;
+    private static final int DEFAULT_NUMBER_OF_INSTANCES=1;
+    private static final int DEFAULT_FLAGS=0;    
+    private static final byte[] DEFAULT_PUKHASH={0,0,0,0,0,0,0,0,0,0,
+                                                 0,0,0,0,0,0,0,0,0,0,
+                                                 0,0,0,0,0,0,0,0,0,0,0,0};
     private class ServiceIfc extends RootPADeveloperIfc.Stub {
         public ServiceIfc(){
             super();
@@ -73,10 +80,13 @@ public class DeveloperService extends BaseService {
             return true;
         }
         
-        public CommandResult installTrustlet(int spid, byte[] uuid, byte[] trustletBinary, byte[] key){
-            Log.d(TAG,">>DeveloperService.Stub.installTrustlet"); 
-
-            if((trustletBinary == null && key == null) || (trustletBinary != null && key != null) || 0==spid || !uuidOk(uuid)){
+        public CommandResult installTrustletOrKey(int spid, byte[] uuid, byte[] trustletBinary, byte[] key, int minTltVersion, byte[] tltPukHash){
+            Log.d(TAG,">>DeveloperService.Stub.installTrustletOrKey"); 
+            if(tltPukHash==null){
+                tltPukHash=DEFAULT_PUKHASH;
+            }
+            
+            if((trustletBinary == null && key == null) || (trustletBinary != null && key != null) || 0==spid || !uuidOk(uuid) ){
                 return new CommandResult(CommandResult.ROOTPA_ERROR_ILLEGAL_ARGUMENT);
             }
 
@@ -98,7 +108,62 @@ public class DeveloperService extends BaseService {
                     dataType=REQUEST_DATA_KEY;
                 }
                 setupProxy();    
-                err=commonPAWrapper().installTrustlet(spid, uuid, dataType, data, se_);
+                err=commonPAWrapper().installTrustlet(spid, 
+                                                      uuid, 
+                                                      dataType, 
+                                                      data,  
+                                                      minTltVersion, 
+                                                      tltPukHash, 
+                                                      DEFAULT_MEMORY_TYPE, 
+                                                      DEFAULT_NUMBER_OF_INSTANCES, 
+                                                      DEFAULT_FLAGS, 
+                                                      se_);
+            }catch(Exception e){
+                Log.e(TAG,"CommonPAWrapper().installTrustletOrKey exception: ", e);
+                err=CommandResult.ROOTPA_ERROR_INTERNAL;
+            }
+
+            Log.d(TAG,"<<DeveloperService.Stub.installTrustletOrKey");
+            return new CommandResult(err);
+        }
+        
+        public CommandResult installTrustlet(int spid, 
+                                             byte[] uuid, 
+                                             byte[] trustletBinary, 
+                                             int minTltVersion, 
+                                             byte[] tltPukHash, 
+                                             int memoryType, 
+                                             int numberOfInstances, 
+                                             int flags){
+            Log.d(TAG,">>DeveloperService.Stub.installTrustlet"); 
+            if(tltPukHash==null){
+                tltPukHash=DEFAULT_PUKHASH;
+            }
+
+                                                 
+            if(trustletBinary == null || 0==spid || !uuidOk(uuid) || memoryType > EXTERNAL_MEMORY){
+                return new CommandResult(CommandResult.ROOTPA_ERROR_ILLEGAL_ARGUMENT);
+            }
+
+            int tmpSuid=DEVELOPER_UID_FOR_LOCK+new Random().nextInt(); 
+
+            if(!DeveloperService.this.acquireLock(tmpSuid, false).isOk()){
+                return new CommandResult(CommandResult.ROOTPA_ERROR_LOCK);
+            }
+            doProvisioningLockSuid_=tmpSuid;
+            int err=0;
+            try{
+                setupProxy();    
+                err=commonPAWrapper().installTrustlet(spid, 
+                                                      uuid, 
+                                                      REQUEST_DATA_TLT, 
+                                                      trustletBinary, 
+                                                      minTltVersion, 
+                                                      tltPukHash,
+                                                      memoryType, 
+                                                      numberOfInstances, 
+                                                      flags, 
+                                                      se_);
             }catch(Exception e){
                 Log.e(TAG,"CommonPAWrapper().installTrustlet exception: ", e);
                 err=CommandResult.ROOTPA_ERROR_INTERNAL;
@@ -106,8 +171,7 @@ public class DeveloperService extends BaseService {
 
             Log.d(TAG,"<<DeveloperService.Stub.installTrustlet");
             return new CommandResult(err);
-        }
-        
+        }        
     }
     
     @Override

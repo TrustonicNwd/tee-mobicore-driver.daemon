@@ -57,6 +57,7 @@ class TestDeveloperService extends AsyncTask<IBinder, Void, Void> {
     RootPADeveloperIfc developerServiceIfc_=null;
     private static final String TESTTAG = "RootPA-Test";
     private static final String TAG = "RootPA-T";
+    private byte[] pukHash_={1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2};
     
     RootPAClient parent_=null;
     TestDeveloperService(RootPAClient parent){
@@ -181,7 +182,7 @@ class TestDeveloperService extends AsyncTask<IBinder, Void, Void> {
     // installTrustlet, trustlet binary
         
         try{
-            tret=developerServiceIfc_.installTrustlet(TLT_INSTALL_TEST_SPID, CmpTest.TLTUUID, TEST_TRUSTLET, null);
+            tret=developerServiceIfc_.installTrustlet(TLT_INSTALL_TEST_SPID, CmpTest.TLTUUID, TEST_TRUSTLET, 1, pukHash_, 1, 3, 4);
         }catch(Throwable e){
             logi = logi.concat("FAILURE: call to installTrustlet with trustlet failed: " + e + "\n");
             overallsuccess=false;
@@ -212,7 +213,7 @@ class TestDeveloperService extends AsyncTask<IBinder, Void, Void> {
         
         done_=false; // another call
         try{
-            kret=developerServiceIfc_.installTrustlet(TLT_INSTALL_TEST_SPID, CmpTest.TLTUUID, null, TEST_KEY);
+            kret=developerServiceIfc_.installTrustletOrKey(TLT_INSTALL_TEST_SPID, CmpTest.TLTUUID, null, TEST_KEY, 1, pukHash_);
         }catch(Throwable e){
             logi = logi.concat("FAILURE: call to installTrustlet with key failed: " + e + "\n");
             overallsuccess=false;
@@ -254,7 +255,7 @@ class TestDeveloperService extends AsyncTask<IBinder, Void, Void> {
     // error cases
         CommandResult err1ret=new CommandResult(0x0FFF0000);
         try{
-            err1ret=developerServiceIfc_.installTrustlet(TLT_INSTALL_TEST_SPID, CmpTest.TLTUUID, TEST_TRUSTLET, TEST_KEY);
+            err1ret=developerServiceIfc_.installTrustletOrKey(TLT_INSTALL_TEST_SPID, CmpTest.TLTUUID, TEST_TRUSTLET, TEST_KEY, 1, pukHash_);
         }catch(Throwable e){
             logi = logi.concat("FAILURE: call to installTrustlet with trustlet failed: " + e + "\n");
             overallsuccess=false;
@@ -263,7 +264,7 @@ class TestDeveloperService extends AsyncTask<IBinder, Void, Void> {
         CommandResult err2ret=new CommandResult(0x0FFF0000);
         
         try{
-            err2ret=developerServiceIfc_.installTrustlet(TLT_INSTALL_TEST_SPID, CmpTest.TLTUUID, null, null);
+            err2ret=developerServiceIfc_.installTrustletOrKey(TLT_INSTALL_TEST_SPID, CmpTest.TLTUUID, null, null, 1, pukHash_);
         }catch(Throwable e){
             logi = logi.concat("FAILURE: call to installTrustlet with trustlet failed: " + e + "\n");
             overallsuccess=false;

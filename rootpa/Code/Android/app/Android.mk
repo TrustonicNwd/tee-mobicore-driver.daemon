@@ -13,6 +13,8 @@ LOCAL_PACKAGE_NAME := RootPA
 LOCAL_MODULE_TAGS := optional
 LOCAL_CERTIFICATE := platform
 
+LOCAL_PROGUARD_FLAGS := -include $(LOCAL_PATH)/proguard-project.txt
+
 include $(BUILD_PACKAGE)
 
 include $(CLEAR_VARS)

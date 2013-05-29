@@ -54,7 +54,7 @@ interface RootPADeveloperIfc{
      * This method can be used for installing "developer trustlet" that is not tied to any 
      * service provider and/or service manager. It contacts Service Enabler and asks it to 
      * perform the tasks, so the device has to be connected to network in order for this to
-     * succeed.
+     * succeed.   
      *
      * The service progress is informed with the same Intents as is progress of the 
      * @ref RootPAServiceIfc#doProvisioning, however there is an additional 
@@ -64,20 +64,71 @@ interface RootPADeveloperIfc{
      *
      * There are constants related to the intents in @ref RootPAProvisioningIntents
      *
+     * @param spid service provider id
+     * @param uuid uuid of the trustlet in hex, without dashes. Needs to be correct length.
+     * @param trustletBinary trustlet binary to be encrypted with and returned back. 
+     *        If the binary is already encrypted, this array must be empty. The binary 
+     *        has to be encrypted for transfer. Note that only either trustletBinary 
+     *        or key can be given. There are sperate instructions on how the binary is to 
+     *        be encrypted and packaged. Key and trustletBinary are exclusive, only one of 
+     *        them can be given. This methods uses default values for memoryType (2), 
+     *        numberOfInstances (1) and flags (0) when trustlet binary is installed.
+     * @param key a key that has been used to encrypt the trustlet binary in case when 
+     *        the trustlet binary is not given as a parameter. This key has to be 
+     *        encrypted for transfer. There are sperate instructions on how the key is to 
+     *        be encrypted and packaged. Key and trustletBinary are exclusive, only one of 
+     *        them can be given.
+     * @param minTltVersion minimum version of the trustlet
+     * @param tltPukHash this field is not used at the moment, null is fine here.
+     *
+     * @return indication of successful start of provisioning thread (ROOTPA_OK) or an error code
+     */
+    CommandResult installTrustletOrKey(in int spid, 
+                                       in byte[] uuid, 
+                                       in byte[] trustletBinary, 
+                                       in byte[] key,                                   
+                                       in int minTltVersion, 
+                                       in byte[] tltPukHash);
+    
+    /**
+     * This method can be used for installing "developer trustlet" that is not tied to any 
+     * service provider and/or service manager. It contacts Service Enabler and asks it to 
+     * perform the tasks, so the device has to be connected to network in order for this to
+     * succeed.
+     *
+     * The service progress is informed with the same Intents as is progress of the 
+     * @ref RootPAServiceIfc#doProvisioning, however there is an additional 
+     * Intent com.gd.mobicore.pa.service.INSTALL_TRUSTLET for returning the encrypted 
+     * trustlet binary.
+     *
+     * There are constants related to the intents in @ref RootPAProvisioningIntents
      *
      * @param spid service provider id
      * @param uuid uuid of the trustlet in hex, without dashes. Needs to be correct length.
      * @param trustletBinary trustlet binary to be encrypted with and returned back. 
      *        If the binary is already encrypted, this array must be empty. The binary 
      *        has to be encrypted for transfer. Note that only either trustletBinary 
-     *        or key can be given.
-     * @param key a key that has been used to encrypt the trustlet binary in case when 
-     *        the trustlet binary is not given as a parameter. This The key has to be 
-     *        encrypted for transfer.  Note that only either trustletBinary 
-     *        or key can be given.
+     *        or key can be given. There are sperate instructions on how the binary is to 
+     *        be encrypted and packaged.
+     * @param minTltVersion minimum version of the trustlet
+     * @param tltPukHash this field is not used at the moment, null is fine here.
+     * @param memoryType memory where the trustlet is to be loaded and executed: 0 - if enough space is available, 
+              load the Trustlet into the internal memory, otherwise into the external memory, 1 - internal memory, 
+              2 - external memory
+     * @param numberOfInstances indicates how many instances of a trustlet can be installed (run) in parallel
+     * @param flags current flags are: 1 - permanent, 2 - service has no WSW control interface,  4 - debuggable
+     *
      * @return indication of successful start of provisioning thread (ROOTPA_OK) or an error code
      */
-    CommandResult installTrustlet(in int spid, in byte[] uuid, in byte[] trustletBinary, in byte[] key);
+    CommandResult installTrustlet(in int spid, 
+                                  in byte[] uuid, 
+                                  in byte[] trustletBinary, 
+                                  in int minTltVersion, 
+                                  in byte[] tltPukHash, 
+                                  in int memoryType, 
+                                  in int numberOfInstances, 
+                                  in int flags);
+
 }
 
 /**@}*/

@@ -66,7 +66,7 @@ static const uint32_t EXPECTED_CMP = 8;
 static const int EXPECTED_SP_CONT_STATE =  MC_CONT_STATE_SP_LOCKED;  // 4
 static const int EXPECTED_TLT_CONT_STATE =  MC_CONT_STATE_SP_LOCKED;  // 4
 static const mcUuid_t EXPECTED_TLT_ID={{0x03, 0x03, 0x03, 0x03, 0x04, 0x04, 0x04, 0x04, 0x05, 0x05, 0x05, 0x05, 0x06, 0x06, 0x06, 0x06}};
-
+static const int WAIT_TIMEOUT=15;
 static bool testStatus_=true;
 
 #define STATES_DONE_IDX 0
@@ -168,7 +168,7 @@ bool checkResult(bool result, const char* testCase)
     if(false==result)
     {
         cout << "==== FAILURE: "<< testCase << "\n";
-        testStatus_ = false;        
+        testStatus_ = false;
     }
     else
     {
@@ -185,7 +185,7 @@ bool checkResult(rootpaerror_t retCode, const char* testCase)
 int main(int argc, char* argv[] )
 {   
 //    printSizes();
-    setPaths("./", "./");
+    setPaths(".", ".");
     checkResult(setSeAddress(SEADDRESS, sizeof(SEADDRESS)),"setSeAddress");
     
     checkResult(openSessionToCmtl(), "openSessionToCmtl");
@@ -247,34 +247,56 @@ int main(int argc, char* argv[] )
     memset(states_,0,NUMBER_OF_STATES);
     if(checkResult(doProvisioning(spid, stateCallback, sysInfoCallback),"doProvisioning"))
     {
-        checkResult(waitUntilDone(4), "doProvisioning, waitUntilDone");
-        statesOkProvisioning();
+        checkResult(waitUntilDone(WAIT_TIMEOUT), "doProvisioning, waitUntilDone");
+        if(!statesOkProvisioning())
+        {
+            testStatus_=false;
+        }
     }
 
     memset(states_,0,NUMBER_OF_STATES);
     if(checkResult(unregisterRootContainer(stateCallback, sysInfoCallback),"unregisterRootContainer"))
     {
-        checkResult(waitUntilDone(4), "unregisterRootContainer, waitUntilDone");
-        statesOkDelete();
+        checkResult(waitUntilDone(WAIT_TIMEOUT), "unregisterRootContainer, waitUntilDone");
+        if(!statesOkDelete())
+        {
+            testStatus_=false;
+        }
     }
 
     trustletInstallationData_t tltData;
+    memset(&tltData, 0, sizeof(tltData));
     tltData.dataP=(uint8_t*)"AAAAAAAAAABBBBBBBBBBCCCCCCCCCC";
     tltData.dataLength=30;
     tltData.dataType=REQUEST_DATA_TLT;
+    memcpy(&tltData.uuid, &EXPECTED_TLT_ID,sizeof(EXPECTED_TLT_ID));    
+    tltData.minTltVersion=1;
+    tltData.tltPukHashP=(uint8_t*)"DDDDDDDDDDEEEEEEEEEEFFFFFFFFFF00";
+    tltData.tltPukHashLength=32;
+    tltData.memoryType=2;
+    tltData.numberOfInstances=1;
+    tltData.flags=0;
+
+    
     memset(states_,0,NUMBER_OF_STATES);
     if(checkResult(installTrustlet(spid, stateCallback, sysInfoCallback, &tltData),"installTrustlet tlt"))
     {
-        checkResult(waitUntilDone(4), "installTrustlet tlt, waitUntilDone");
-        statesOkInstall();
+        checkResult(waitUntilDone(WAIT_TIMEOUT), "installTrustlet tlt, waitUntilDone");
+        if(!statesOkInstall())
+        {
+            testStatus_=false;
+        }            
     }
 
     tltData.dataType=REQUEST_DATA_KEY; // since we are not dealing with real data we use the same for both
     memset(states_,0,NUMBER_OF_STATES);
     if(checkResult(installTrustlet(spid, stateCallback, sysInfoCallback, &tltData),"installTrustlet key"))
     {
-        checkResult(waitUntilDone(4), "installTrustlet key, waitUntilDone");
-        statesOkProvisioning(); // not checking install state since the tlt will not be sent back
+        checkResult(waitUntilDone(WAIT_TIMEOUT), "installTrustlet key, waitUntilDone");
+        if(!statesOkProvisioning()) // not checking install state since the tlt will not be sent back
+        {
+            testStatus_=false;
+        }            
     }
 
     CmpMessage* commandsP=NULL;
@@ -284,7 +306,10 @@ int main(int argc, char* argv[] )
     if(checkResult( executeCmpCommands(numberOfCommands, commandsP, responsesP, &internalError),"executeCmpCommands" ))
     {
         checkResult( 0==internalError,"executeCmpCommands, internalError");
-        testStatus_=checkCmpResults(numberOfCommands, responsesP);
+        if(checkCmpResults(numberOfCommands, responsesP)==false)
+        {
+            testStatus_=false;
+        }            
     }
     cleanup(numberOfCommands, commandsP, responsesP);
     

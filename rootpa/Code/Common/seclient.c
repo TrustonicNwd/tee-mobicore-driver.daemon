@@ -185,7 +185,7 @@ int debug_function (CURL * curl_handle, curl_infotype info, char* debugMessageP,
     }
     else
     {
-        LOGD("curl: no debug msg %d %d", info, debugMessageSize);
+        LOGD("curl: no debug msg %d %d", info, (int) debugMessageSize);
     }
     return 0;
 }
@@ -458,7 +458,7 @@ bool setPutOpt(CURL* curl_handle, ResponseStruct* responseChunk)
 
 bool setPostOpt(CURL* curl_handle, const char* inputP)
 {
-    LOGD(">>setPostOpt %ld %d", inputP, inputP?strlen(inputP):0);
+    LOGD(">>setPostOpt %ld %d", (long int) inputP, inputP?(int)strlen(inputP):0);
     
     if (curl_easy_setopt(curl_handle, CURLOPT_POST, 1L)!=CURLE_OK)
     {
