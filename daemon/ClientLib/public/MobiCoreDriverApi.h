@@ -228,6 +228,7 @@ __MC_CLIENT_LIB_API mcResult_t mcCloseDevice(
  * @return MC_DRV_ERR_UNKNOWN_DEVICE when device id is invalid.
  * @return MC_DRV_ERR_DAEMON_UNREACHABLE when problems with daemon socket occur.
  * @return MC_DRV_ERR_UNKNOWN_DEVICE when daemon returns an error.
+ * @return MC_DRV_ERR_TRUSTLET_NOT_FOUND when trustlet or driver cannot be loaded.
  *
  * Uses a Mutex.
  */
@@ -256,6 +257,7 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenSession(
  * @return MC_DRV_ERR_UNKNOWN_DEVICE when device id is invalid.
  * @return MC_DRV_ERR_DAEMON_UNREACHABLE when problems with daemon socket occur.
  * @return MC_DRV_ERR_UNKNOWN_DEVICE when daemon returns an error.
+ * @return MC_DRV_ERR_TRUSTLET_NOT_FOUND when trustlet cannot be loaded.
  *
  * Uses a Mutex.
  */

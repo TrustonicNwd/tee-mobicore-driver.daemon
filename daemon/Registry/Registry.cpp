@@ -312,6 +312,10 @@ mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t *uuid, const mcSpid_t spid)
         mcSpid_t spid;
     } cmd;
 
+    if(uuid == NULL) {
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
+
     cmd.commandId = MC_DRV_REG_DELETE_TL_CONT;
     cmd.spid = spid;
     memcpy(&cmd.uuid, uuid, sizeof(mcUuid_t));

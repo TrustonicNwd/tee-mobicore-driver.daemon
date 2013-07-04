@@ -24,8 +24,8 @@ apt-get install ca-certificates
 
 apache2-ssl-certificate
 
-# This should be taken care of when ssl module is take into use. If problems, you may need to check and add to /etc/apache2/ports.conf
-# Listen 443
+# This should be taken care of when ssl module is take into use. If problems,
+# you may need to check and add to /etc/apache2/ports.conf "Listen 443"
 
 # always after adding modules, configuring or even changing script you need to restart 
 # apache for example with command

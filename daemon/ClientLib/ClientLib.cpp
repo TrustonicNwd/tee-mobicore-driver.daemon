@@ -63,12 +63,12 @@ typedef struct {
 
 using namespace std;
 
-list<Device *> devices;
+static list<Device *> devices;
 
 // Forward declarations.
 uint32_t getDaemonVersion(Connection *devCon, uint32_t *version);
 
-CMutex devMutex;
+static CMutex devMutex;
 //------------------------------------------------------------------------------
 Device *resolveDeviceId(uint32_t deviceId)
 {

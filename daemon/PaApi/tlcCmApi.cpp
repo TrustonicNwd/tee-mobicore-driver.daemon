@@ -38,8 +38,6 @@
 #include <assert.h>
 #include <stdlib.h>
 
-
-static const uint32_t DEVICE_ID = MC_DEVICE_ID_DEFAULT;
 static mcSessionHandle_t m_sessionHandle = { 0, 0 };
 
 mcResult_t cmOpen(cmp_t **cmp)
@@ -52,12 +50,12 @@ mcResult_t cmOpen(cmp_t **cmp)
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
 
-    result = mcOpenDevice(DEVICE_ID);
+    result = mcOpenDevice(MC_DEVICE_ID_DEFAULT);
     if (MC_DRV_OK != result) {
         LOG_E("Error opening device: %d", result);
         return result;
     }
-    result = mcMallocWsm(DEVICE_ID, 0, sizeof(cmp_t), (uint8_t **)cmp, 0);
+    result = mcMallocWsm(MC_DEVICE_ID_DEFAULT, 0, sizeof(cmp_t), (uint8_t **)cmp, 0);
     if (MC_DRV_OK != result) {
         LOG_E("Allocation of CMP WSM failed: %d", result);
         return result;
@@ -82,7 +80,7 @@ mcResult_t cmClose(void)
     if (MC_DRV_OK != result) {
         LOG_E("Closing session failed: %d", result);
     }
-    result = mcCloseDevice(DEVICE_ID);
+    result = mcCloseDevice(MC_DEVICE_ID_DEFAULT);
     if (MC_DRV_OK != result) {
         LOG_E("Closing MobiCore device failed: %d", result);
     }

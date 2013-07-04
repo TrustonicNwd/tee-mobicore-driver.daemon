@@ -108,7 +108,7 @@ bool TrustletSession::removeBulkBuff(uint32_t handle)
     return true;
 }
 
-
+//------------------------------------------------------------------------------
 CWsm_ptr TrustletSession::popBulkBuff()
 {
     if (buffers.empty()) {

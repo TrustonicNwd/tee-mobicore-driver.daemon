@@ -31,7 +31,7 @@
  */
 
 #include "DeviceIrqHandler.h"
-
+#include "log.h"
 
 //------------------------------------------------------------------------------
 void DeviceIrqHandler::run(

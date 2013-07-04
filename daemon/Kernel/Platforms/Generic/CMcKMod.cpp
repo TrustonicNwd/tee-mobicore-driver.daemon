@@ -66,9 +66,7 @@ mcResult_t CMcKMod::mapWsm(
     }
 
     // mapping response data is in the buffer
-struct mc_ioctl_map mapParams = { len:
-        len
-    };
+    struct mc_ioctl_map mapParams = { len : len };
 
     ret = ioctl(fdKMod, MC_IO_MAP_WSM, &mapParams);
     if (ret != 0) {
@@ -112,9 +110,7 @@ mcResult_t CMcKMod::mapMCI(
 {
     LOG_I("Mapping MCI: len=%d", len);
     // mapping response data is in the buffer
-struct mc_ioctl_map mapParams = { len:
-        len
-    };
+    struct mc_ioctl_map mapParams = { len : len };
 
     if (!isOpen()) {
         LOG_E("no connection to kmod");
@@ -245,9 +241,7 @@ int CMcKMod::fcInfo(uint32_t extInfoId, uint32_t *pState, uint32_t *pExtInfo)
     }
 
     // Init MC with NQ and MCP buffer addresses
-struct mc_ioctl_info fcInfoParams = {ext_info_id :
-        extInfoId
-    };
+    struct mc_ioctl_info fcInfoParams = { ext_info_id : extInfoId };
     ret = ioctl(fdKMod, MC_IO_INFO, &fcInfoParams);
     if (ret != 0) {
         LOG_ERRNO("ioctl MC_IO_INFO");
@@ -358,7 +352,7 @@ pid :
 
     int ret = ioctl(fdKMod, MC_IO_REG_WSM, &params);
     if (ret != 0) {
-        LOG_ERRNO("ioctl MC_IO_UNREG_WSM");
+        LOG_ERRNO("ioctl MC_IO_REG_WSM");
         return MAKE_MC_DRV_KMOD_WITH_ERRNO(errno);
     }
 
@@ -409,7 +403,7 @@ mcResult_t CMcKMod::lockWsmL2(uint32_t handle)
 
     ret = ioctl(fdKMod, MC_IO_LOCK_WSM, handle);
     if (ret != 0) {
-        LOG_ERRNO("ioctl MC_IO_UNREG_WSM");
+        LOG_ERRNO("ioctl MC_IO_LOCK_WSM");
         LOG_E("ret = %d", ret);
     }
 
@@ -447,6 +441,7 @@ addr_t CMcKMod::findWsmL2(uint32_t handle, int fd)
 
     wsm.handle = handle;
     wsm.fd = fd;
+    wsm.phys = 0;
 
     LOG_I(" Resolving the WSM l2 for handle=%u", handle);
 
@@ -472,13 +467,15 @@ mcResult_t CMcKMod::findContiguousWsm(uint32_t handle, int fd, addr_t *phys, uin
     struct mc_ioctl_resolv_cont_wsm wsm;
 
     wsm.handle = handle;
+    wsm.phys = 0;
+    wsm.length = 0;
     wsm.fd = fd;
 
     LOG_I(" Resolving the contiguous WSM l2 for handle=%u", handle);
 
     if (!isOpen()) {
         LOG_E("no connection to kmod");
-        return NULL;
+        return MC_DRV_ERR_KMOD_NOT_OPEN;
     }
 
     ret = ioctl(fdKMod, MC_IO_RESOLVE_CONT_WSM, &wsm);
@@ -506,7 +503,7 @@ mcResult_t CMcKMod::cleanupWsmL2(void)
 
     ret = ioctl(fdKMod, MC_IO_CLEAN_WSM, 0);
     if (ret != 0) {
-        LOG_ERRNO("ioctl MC_IO_UNREG_WSM");
+        LOG_ERRNO("ioctl MC_IO_CLEAN_WSM");
         LOG_E("ret = %d", ret);
     }
 
@@ -527,7 +524,7 @@ mcResult_t CMcKMod::setupLog(void)
 
     ret = ioctl(fdKMod, MC_IO_LOG_SETUP, 0);
     if (ret != 0) {
-        LOG_ERRNO("ioctl MC_IO_UNREG_WSM");
+        LOG_ERRNO("ioctl MC_IO_LOG_SETUP");
         LOG_E("ret = %d", ret);
     }
 

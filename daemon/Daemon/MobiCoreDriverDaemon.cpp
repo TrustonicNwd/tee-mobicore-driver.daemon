@@ -37,23 +37,20 @@
 #include <fcntl.h>
 #include <stdio.h>
 
-#include "MobiCoreDriverApi.h"
-#include "MobiCoreDriverCmd.h"
 #include "mcVersion.h"
 #include "mcVersionHelper.h"
 #include "mc_linux.h"
+#include "log.h"
+#include "Mci/mci.h"
 
+#include "MobiCoreDriverApi.h"
+#include "MobiCoreDriverCmd.h"
 #include "MobiCoreDriverDaemon.h"
 #include "PrivateRegistry.h"
 #include "MobiCoreDevice.h"
-
 #include "NetlinkServer.h"
 
-#include "log.h"
-
 #define DRIVER_TCI_LEN 4096
-
-#include "Mci/mci.h"
 
 MC_CHECK_VERSION(MCI, 0, 2);
 MC_CHECK_VERSION(SO, 2, 0);
@@ -63,7 +60,6 @@ MC_CHECK_VERSION(CONTAINER, 2, 0);
 static void checkMobiCoreVersion(MobiCoreDevice *mobiCoreDevice);
 
 #define LOG_I_RELEASE(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
-
 
 //------------------------------------------------------------------------------
 MobiCoreDriverDaemon::MobiCoreDriverDaemon(

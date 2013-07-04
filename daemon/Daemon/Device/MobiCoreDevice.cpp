@@ -53,14 +53,22 @@
 //------------------------------------------------------------------------------
 MobiCoreDevice::MobiCoreDevice()
 {
+    nq = NULL;
+    mcFlags = NULL;
+    mcVersionInfo = NULL;
     mcFault = false;
+    mciReused = false;
 }
 
 //------------------------------------------------------------------------------
 MobiCoreDevice::~MobiCoreDevice()
 {
+    mciReused = false;
+    mcFault = false;
     delete mcVersionInfo;
     mcVersionInfo = NULL;
+    mcFlags = NULL;
+    nq = NULL;
 }
 
 //------------------------------------------------------------------------------
@@ -84,6 +92,7 @@ void MobiCoreDevice::cleanSessionBuffers(TrustletSession *session)
 
     while (pWsm) {
         unlockWsmL2(pWsm->handle);
+        delete pWsm;
         pWsm = session->popBulkBuff();
     }
     LOG_I("Finished unlocking session buffers!");

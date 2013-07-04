@@ -1,4 +1,4 @@
-/** Build tag created during build by ./Out/_build/_src/Scripts/trunk/00036056/Out/setBuildTag.sh.
+/** Build tag created during build by ./Out/_build/_src/Scripts/tags/t-base-202_V001/Out/setBuildTag.sh.
  * <-- Copyright Trustonic Limited 2013 -->
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,4 +26,4 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #define MOBICORE_COMPONENT_BUILD_TAG \
-		"*** GC_MSM8960_Release_V019 ###"
+		"*** t-base-202_V001 ###"

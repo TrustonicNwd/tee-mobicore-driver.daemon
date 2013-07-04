@@ -63,19 +63,18 @@
 // Asserts expression at compile-time (to be used within a function body).
 #define ASSERT_STATIC(e) do { enum { assert_static__ = 1 / (e) }; } while (0)
 
+#define MC_REGISTRY_CONTAINER_PATH "/data/app/mcRegistry"
+#define MC_REGISTRY_DEFAULT_PATH "/system/app/mcRegistry"
+#define MC_REGISTRY_FALLBACK_PATH "/data/app/mcRegistry"
+#define AUTH_TOKEN_FILE_NAME "00000000.authtokcont"
+#define ENV_MC_AUTH_TOKEN_PATH "MC_AUTH_TOKEN_PATH"
+#define ROOT_FILE_NAME "00000000.rootcont"
+#define SP_CONT_FILE_EXT ".spcont"
+#define TL_CONT_FILE_EXT ".tlcont"
+#define DATA_CONT_FILE_EXT ".datacont"
+#define TL_BIN_FILE_EXT ".tlbin"
+
 using namespace std;
-
-static const string MC_REGISTRY_CONTAINER_PATH = "/data/app/mcRegistry";
-static const string MC_REGISTRY_DEFAULT_PATH = "/system/app/mcRegistry";
-static const string MC_REGISTRY_FALLBACK_PATH = "/data/app/mcRegistry";
-static const string AUTH_TOKEN_FILE_NAME = "00000000.authtokcont";
-static const string ROOT_FILE_NAME = "00000000.rootcont";
-static const string SP_CONT_FILE_EXT = ".spcont";
-static const string TL_CONT_FILE_EXT = ".tlcont";
-static const string TL_BIN_FILE_EXT = ".tlbin";
-static const string DATA_CONT_FILE_EXT = ".datacont";
-
-static const string ENV_MC_AUTH_TOKEN_PATH = "MC_AUTH_TOKEN_PATH";
 
 //------------------------------------------------------------------------------
 static string byteArrayToString(const void *bytes, size_t elems)
@@ -87,6 +86,7 @@ static string byteArrayToString(const void *bytes, size_t elems)
     }
     return string(hx);
 }
+
 //------------------------------------------------------------------------------
 static string uint32ToString(uint32_t value)
 {
@@ -120,17 +120,16 @@ static string getRegistryPath()
     return registryPath;
 }
 
-
 //------------------------------------------------------------------------------
 static string getTlRegistryPath()
 {
     string registryPath;
 
     // First, attempt to use regular registry environment variable.
-    if (doesDirExist(MC_REGISTRY_DEFAULT_PATH.c_str())) {
+    if (doesDirExist(MC_REGISTRY_DEFAULT_PATH)) {
         registryPath = MC_REGISTRY_DEFAULT_PATH;
         LOG_I("getTlRegistryPath(): Using MC_REGISTRY_PATH %s", registryPath.c_str());
-    } else if (doesDirExist(MC_REGISTRY_FALLBACK_PATH.c_str())) {
+    } else if (doesDirExist(MC_REGISTRY_FALLBACK_PATH)) {
         // Second, attempt to use fallback registry environment variable.
         registryPath = MC_REGISTRY_FALLBACK_PATH;
         LOG_I("getTlRegistryPath(): Using MC_REGISTRY_FALLBACK_PATH %s", registryPath.c_str());
@@ -154,7 +153,7 @@ static string getAuthTokenFilePath()
     string authTokenPath;
 
     // First, attempt to use regular auth token path environment variable.
-    path = getenv(ENV_MC_AUTH_TOKEN_PATH.c_str());
+    path = getenv(ENV_MC_AUTH_TOKEN_PATH);
     if (doesDirExist(path)) {
         LOG_I("getAuthTokenFilePath(): Using MC_AUTH_TOKEN_PATH %s", path);
         authTokenPath = path;
@@ -548,7 +547,9 @@ mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t *uuid, const mcSpid_t spid)
                 }
             }
         }
-        closedir(dp);
+        if (dp) {
+            closedir(dp);
+        }
         LOG_I("delete dir: %s", pathname.c_str());
         if (0 != (e = rmdir(pathname.c_str()))) {
             LOG_E("remove UUID-dir failed! errno: %d", e);
@@ -612,7 +613,9 @@ mcResult_t mcRegistryCleanupSp(mcSpid_t spid)
                 }
             }
         }
-        closedir(dp);
+        if (dp) {
+            closedir(dp);
+        }
         LOG_I("delete dir: %s", pathname.c_str());
         if (0 != (e = rmdir(pathname.c_str()))) {
             LOG_E("remove SPID-dir failed! error: %d", e);
@@ -675,14 +678,14 @@ regObject_t *mcRegistryMemGetServiceBlob(mcSpid_t spid, void *trustlet, uint32_t
 
     // Check service blob size.
     if (tlSize > MAX_TL_SIZE ) {
-        LOG_E("mcRegistryGetServiceBlob() failed: service blob too big: %d", tlSize);
+        LOG_E("mcRegistryMemGetServiceBlob() failed: service blob too big: %d", tlSize);
         return NULL;
     }
 
     mclfIntro_t *pIntro = (mclfIntro_t *)trustlet;
     // Check TL magic value.
     if (pIntro->magic != MC_SERVICE_HEADER_MAGIC_BE) {
-        LOG_E("mcRegistryGetServiceBlob() failed: wrong header magic value: %d", pIntro->magic);
+        LOG_E("mcRegistryMemGetServiceBlob() failed: wrong header magic value: %d", pIntro->magic);
         return NULL;
     }
 
@@ -704,7 +707,7 @@ regObject_t *mcRegistryMemGetServiceBlob(mcSpid_t spid, void *trustlet, uint32_t
     if (pHeader->serviceType == SERVICE_TYPE_DRIVER  || pHeader->serviceType == SERVICE_TYPE_SYSTEM_TRUSTLET) {
         // Take trustlet blob 'as is'.
         if (NULL == (regobj = (regObject_t *) (malloc(sizeof(regObject_t) + tlSize)))) {
-            LOG_E("mcRegistryGetServiceBlob() failed: Out of memory");
+            LOG_E("mcRegistryMemGetServiceBlob() failed: Out of memory");
             return NULL;
         }
         regobj->len = tlSize;
@@ -718,7 +721,7 @@ regObject_t *mcRegistryMemGetServiceBlob(mcSpid_t spid, void *trustlet, uint32_t
 
         // Prepare registry object.
         if (NULL == (regobj = (regObject_t *) malloc(sizeof(regObject_t) + regObjValueSize))) {
-            LOG_E("mcRegistryGetServiceBlob() failed: Out of memory");
+            LOG_E("mcRegistryMemGetServiceBlob() failed: Out of memory");
             return NULL;
         }
         regobj->len = regObjValueSize;
@@ -788,7 +791,7 @@ regObject_t *mcRegistryMemGetServiceBlob(mcSpid_t spid, void *trustlet, uint32_t
         } while (false);
 
         if (MC_DRV_OK != ret) {
-            LOG_E("mcRegistryGetServiceBlob() failed: Error code: %d", ret);
+            LOG_E("mcRegistryMemGetServiceBlob() failed: Error code: %d", ret);
             free(regobj);
             return NULL;
         }
@@ -799,7 +802,7 @@ regObject_t *mcRegistryMemGetServiceBlob(mcSpid_t spid, void *trustlet, uint32_t
                         lenInfo->tlContBlobSize;
         // Any other service type.
     } else {
-        LOG_E("mcRegistryGetServiceBlob() failed: Unsupported service type %u", pHeader->serviceType);
+        LOG_E("mcRegistryMemGetServiceBlob() failed: Unsupported service type %u", pHeader->serviceType);
     }
     return regobj;
 }
@@ -825,13 +828,13 @@ regObject_t *mcRegistryFileGetServiceBlob(const char* trustlet)
     }
 
     if (fstat(fd, &sb) == -1){
-        LOG_E("mcRegistryGetServiceBlob() failed: Cound't get file size");
+        LOG_E("mcRegistryFileGetServiceBlob() failed: Cound't get file size");
         goto error;
     }
 
     buffer = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
     if (buffer == MAP_FAILED) {
-        LOG_E("mcRegistryGetServiceBlob(): Failed to map file to memory");
+        LOG_E("mcRegistryFileGetServiceBlob(): Failed to map file to memory");
         goto error;
     }
 
@@ -839,12 +842,12 @@ regObject_t *mcRegistryFileGetServiceBlob(const char* trustlet)
 
     // We don't actually care if either of them fails but should still print warnings
     if (munmap(buffer, sb.st_size)) {
-        LOG_E("mcRegistryGetServiceBlob(): Failed to unmap memory");
+        LOG_E("mcRegistryFileGetServiceBlob(): Failed to unmap memory");
     }
 
 error:
     if (close(fd)) {
-        LOG_E("mcRegistryGetServiceBlob(): Failed to close file %s", trustlet);
+        LOG_E("mcRegistryFileGetServiceBlob(): Failed to close file %s", trustlet);
     }
 
     return regobj;
@@ -862,10 +865,11 @@ regObject_t *mcRegistryGetServiceBlob(const mcUuid_t *uuid)
 
     // Open service blob file.
     string tlBinFilePath = getTlBinFilePath(uuid);
-    LOG_I(" Loading %s", tlBinFilePath.c_str());
+    LOG_I("Loading %s", tlBinFilePath.c_str());
 
     return mcRegistryFileGetServiceBlob(tlBinFilePath.c_str());
 }
+
 
 //------------------------------------------------------------------------------
 regObject_t *mcRegistryGetDriverBlob(const char *filename)
@@ -882,7 +886,7 @@ regObject_t *mcRegistryGetDriverBlob(const char *filename)
 
     // If file is not a driver we are not interested
     if (pHeader->serviceType != SERVICE_TYPE_DRIVER) {
-        LOG_E("mcRegistryGetServiceBlob() failed: Unsupported service type %u", pHeader->serviceType);
+        LOG_E("mcRegistryGetDriverBlob() failed: Unsupported service type %u", pHeader->serviceType);
         pHeader = NULL;
         free(regobj);
         regobj = NULL;
