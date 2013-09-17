@@ -2,34 +2,34 @@
  * @{
  * MobiCore Version Helper Macros
  *
- * Copyright © Trustonic Limited 2013
- * 
- * All rights reserved.
- * 
- * Redistribution and use in source and binary forms, with or without modification, 
- * are permitted provided that the following conditions are met:
- * 
- *   1. Redistributions of source code must retain the above copyright notice, this 
- *      list of conditions and the following disclaimer.
- * 
- *   2. Redistributions in binary form must reproduce the above copyright notice, 
- *      this list of conditions and the following disclaimer in the documentation 
- *     and/or other materials provided with the distribution.
- * 
- *   3. Neither the name of the Trustonic Limited nor the names of its contributors 
- *      may be used to endorse or promote products derived from this software 
- *      without specific prior written permission.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
- * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
- * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Copyright (c) 2013 TRUSTONIC LIMITED
+ * All rights reserved
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. The name of the author may not be used to endorse or promote
+ *    products derived from this software without specific prior
+ *    written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
+ * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
  */
 #include <stdio.h>
 
@@ -101,6 +101,7 @@
  *
  */
 #if !defined(NDEBUG)
+#if !defined(TRUSTLET)
 #define MC_CHECK_VERSION(comp, majorRequired, minorRequired) \
     MC_CHECK_VERSION_STATIC(comp, majorRequired, minorRequired) \
     static uint32_t checkVersionOk##comp(uint32_t version, char** errmsg) { \
@@ -119,7 +120,24 @@
         } \
         msgBuf[sizeof(msgBuf) - 1] = '\0'; \
         return ret; \
-    } 
+    }
+#else /* TRUSTLET */
+#define MC_CHECK_VERSION(comp, majorRequired, minorRequired) \
+    MC_CHECK_VERSION_STATIC(comp, majorRequired, minorRequired) \
+    static uint32_t checkVersionOk##comp(uint32_t version, char** errmsg) { \
+        uint32_t major = MC_GET_MAJOR_VERSION(version); \
+        uint32_t minor = MC_GET_MINOR_VERSION(version); \
+        *errmsg = NULL; \
+        if ((major == majorRequired) && (minor >= minorRequired)) { \
+            tlDbgPrintf(#comp " version is %u.%u", major, minor); \
+            return 1; \
+        } else { \
+            tlDbgPrintf( \
+                #comp " version error. Got: %u.%u, want >= %u.%u", major, minor, majorRequired, minorRequired); \
+        } \
+        return 0; \
+    }
+#endif /* TRUSTLET */
 #else
 #define MC_CHECK_VERSION(comp, majorRequired, minorRequired) \
     MC_CHECK_VERSION_STATIC(comp, majorRequired, minorRequired) \
@@ -131,12 +149,12 @@
             return 1; \
         }; \
         return 0; \
-    } 
+    }
 #endif
 
 /** Version check helper macro for version checks of a data object version
  * against an data object consumer.
- * 
+ *
  * @param comp           Name of Interface to check.
  * @param majorRequired Major data object version supported by component.
  * @param minorRequired Minor data object version supported by component.
@@ -163,6 +181,7 @@
  *
  */
 #if !defined(NDEBUG)
+#if !defined(TRUSTLET)
 #define MC_CHECK_DATA_OBJECT_VERSION(comp, majorRequired, minorRequired) \
     MC_CHECK_VERSION_STATIC(comp, majorRequired, minorRequired) \
     static uint32_t checkVersionOkDataObject##comp(uint32_t version, char** errmsg) { \
@@ -181,7 +200,24 @@
         } \
         msgBuf[sizeof(msgBuf) - 1] = '\0'; \
         return ret; \
-    } 
+    }
+#else /* TRUSTLET */
+#define MC_CHECK_DATA_OBJECT_VERSION(comp, majorRequired, minorRequired) \
+    MC_CHECK_VERSION_STATIC(comp, majorRequired, minorRequired) \
+    static uint32_t checkVersionOkDataObject##comp(uint32_t version, char** errmsg) { \
+        uint32_t major = MC_GET_MAJOR_VERSION(version); \
+        uint32_t minor = MC_GET_MINOR_VERSION(version); \
+        *errmsg = NULL; \
+        if ((major == majorRequired) && (minor <= minorRequired)) { \
+            tlDbgPrintf(#comp " version is %u.%u", major, minor); \
+            return 1; \
+        } else { \
+            tlDbgPrintf( \
+                #comp " version error. Got: %u.%u, want <= %u.%u", major, minor, majorRequired, minorRequired); \
+        } \
+        return 0; \
+    }
+#endif /* TRUSTLET */
 #else
 #define MC_CHECK_DATA_OBJECT_VERSION(comp, majorRequired, minorRequired) \
     MC_CHECK_VERSION_STATIC(comp, majorRequired, minorRequired) \
@@ -193,5 +229,5 @@
             return 1; \
         }; \
         return 0; \
-    } 
+    }
 #endif

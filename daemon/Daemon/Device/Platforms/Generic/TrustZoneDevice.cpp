@@ -101,11 +101,13 @@ bool TrustZoneDevice::initDevice(
 
     pMcKMod = new CMcKMod();
     mcResult_t ret = pMcKMod->open(devFile);
-    if (ret != MC_DRV_OK) {
+    if (ret != MC_DRV_OK) 
+    {
         LOG_W(" Opening kernel module device failed");
         return false;
     }
-    if (!pMcKMod->checkVersion()) {
+    if (!pMcKMod->checkVersion()) 
+    {
         LOG_E("kernel module version mismatch");
         return false;
     }
@@ -115,23 +117,29 @@ bool TrustZoneDevice::initDevice(
     // Init MC with NQ and MCP buffer addresses
 
     // Set up MCI buffer
-    if (!getMciInstance(MCI_BUFFER_SIZE, &pWsmMcp, &mciReused)) {
+    if (!getMciInstance(MCI_BUFFER_SIZE, &pWsmMcp, &mciReused)) 
+    {
+        LOG_E("getMciInstance failed");
         return false;
     }
     mciBuffer = pWsmMcp->virtAddr;
 
-    if (!checkMciVersion()) {
+    if (!checkMciVersion()) 
+    {
+        LOG_E("checkMciVersion failed");
         return false;
     }
 
     // Only do a fastcall if MCI has not been reused (MC already initialized)
-    if (!mciReused) {
+    if (!mciReused) 
+    {
         // Wipe memory before first usage
         bzero(mciBuffer, MCI_BUFFER_SIZE);
 
         // Init MC with NQ and MCP buffer addresses
         int ret = pMcKMod->fcInit(0, NQ_BUFFER_SIZE, NQ_BUFFER_SIZE, MCP_BUFFER_SIZE);
-        if (ret != 0) {
+        if (ret != 0) 
+        {
             LOG_E("pMcKMod->fcInit() failed");
             return false;
         }
@@ -140,32 +148,50 @@ bool TrustZoneDevice::initDevice(
         setupLog();
 
         // First empty N-SIQ which results in set up of the MCI structure
-        if (!nsiq()) {
+        if (!nsiq()) 
+        {
+            LOG_E("sending N-SIQ failed");
             return false;
         }
 
         // Wait until MobiCore state switches to MC_STATUS_INITIALIZED
         // It is assumed that MobiCore always switches state at a certain point in time.
-        while (1) {
-            uint32_t status = getMobicoreStatus();
+        for(;;)
+        {
             uint32_t timeslot;
+            uint32_t status = getMobicoreStatus();
 
-            if (MC_STATUS_INITIALIZED == status) {
+            if (MC_STATUS_INITIALIZED == status) 
+            {
                 break;
-            } else if (MC_STATUS_NOT_INITIALIZED == status) {
+            } 
+
+            if (MC_STATUS_NOT_INITIALIZED == status) 
+            {
                 // Switch to MobiCore to give it more CPU time.
                 for (timeslot = 0; timeslot < 10; timeslot++)
+                {
                     if (!yield())
+                    {
+                        LOG_E("yielding to SWd failed");
                         return false;
-            } else if (MC_STATUS_HALT == status) {
+                    }
+                }
+                continue;
+            } 
+
+            if (MC_STATUS_HALT == status) 
+            {
                 dumpMobicoreStatus();
                 LOG_E("MobiCore halted during init !!!, state is 0x%x", status);
                 return false;
-            } else { // MC_STATUS_BAD_INIT or anything else
-                LOG_E("MCI buffer init failed, state is 0x%x", status);
-                return false;
-            }
-        }
+            } 
+
+            // MC_STATUS_BAD_INIT or anything else
+            LOG_E("MCI buffer init failed, state is 0x%x", status);
+            return false;
+
+        } // for(;;)
     }
 
     nqStartOut = (notificationQueue_t *) mciBuffer;
@@ -541,92 +567,118 @@ bool TrustZoneDevice::schedulerAvailable(void)
 void TrustZoneDevice::schedule(void)
 {
     uint32_t timeslice = SCHEDULING_FREQ;
+
     // loop forever
-    for (;;) {
+    for (;;) 
+    {
         // Scheduling decision
-        if (MC_FLAG_SCHEDULE_IDLE == mcFlags->schedule) {
-            // MobiCore is IDLE
+        if (MC_FLAG_SCHEDULE_IDLE == mcFlags->schedule) 
+        {
+            // <t-base is IDLE. Prevent unnecessary consumption of CPU cycles
+            // and wait for S-SIQ
+            schedSync.wait(); // check return code?
+            continue;
+        } 
 
-            // Prevent unnecessary consumption of CPU cycles -> Wait until S-SIQ received
-            schedSync.wait();
-
-        } else {
-            // MobiCore is not IDLE (anymore)
-
-            // Check timeslice
-            if (timeslice == 0) {
-                // Slice expired, so force MC internal scheduling decision
-                timeslice = SCHEDULING_FREQ;
-                if (!nsiq()) {
-                    break;
-                }
-            } else {
-                // Slice not used up, simply hand over control to the MC
-                timeslice--;
-                if (!yield()) {
-                    break;
-                }
+        // <t-base is no longer IDLE, Check timeslice
+        if (timeslice == 0) 
+        {
+            // Slice expired, so force MC internal scheduling decision
+            timeslice = SCHEDULING_FREQ;
+            if (!nsiq()) 
+            {
+                LOG_E("sending N-SIQ failed");
+                break;
             }
+            continue;
+        } 
+
+        // Slice not used up, simply hand over control to the MC
+        timeslice--;
+        if (!yield()) 
+        {
+            LOG_E("yielding to SWd failed");
+            break;
         }
     } //for (;;)
+
+    LOG_E("schedule loop terminated");
 }
+
+
 //------------------------------------------------------------------------------
 void TrustZoneDevice::handleIrq(
     void
-)
-{
+) {
     LOG_I("Starting Notification Queue IRQ handler...");
-    for (;;) {
-        LOG_I(" No notifications pending");
-        if (!waitSsiq()) {
-            LOG_E("Waiting for SSIQ failed");
+
+    for (;;) 
+    {
+
+        LOG_I(" No notifications pending, waiting for S-SIQ");
+        if (!waitSsiq()) 
+        {
+            LOG_E("Waiting for S-SIQ failed");
             break;
         }
+
         LOG_V("S-SIQ received");
 
-        // Save all the
-        for (;;) {
+        // get notifications from queue 
+        for (;;) 
+        {
             notification_t *notification = nq->getNotification();
-            if (NULL == notification) {
+            if (NULL == notification) 
+            {
                 break;
             }
 
+            // process the notification 
             // check if the notification belongs to the MCP session
-            if (notification->sessionId == SID_MCP) {
-                LOG_I(" Found MCP notification, payload=%d",
+            if (notification->sessionId == SID_MCP) 
+            {
+                LOG_I(" Notification for MCP, payload=%d",
                       notification->payload);
 
                 // Signal main thread of the driver to continue after MCP
                 // command has been processed by the MC
                 signalMcpNotification();
-            } else {
-                LOG_I(" Found notification for session %d, payload=%d",
-                      notification->sessionId, notification->payload);
-
-                // Get the NQ connection for the session ID
-                Connection *connection = getSessionConnection(notification->sessionId, notification);
-                if (connection == NULL) {
-                    /* Couldn't find the session for this notifications
-                     * In practice this only means one thing: there is
-                     * a race condition between RTM and the Daemon and
-                     * RTM won. But we shouldn't drop the notification
-                     * right away we should just queue it in the device
-                     */
-                    LOG_W("Notification for unknown session ID");
-                    queueUnknownNotification(*notification);
-                } else {
-                    LOG_I(" Forward notification to McClient.");
-                    // Forward session ID and additional payload of
-                    // notification to the TLC/Application layer
-                    connection->writeData((void *)notification,
-                                          sizeof(notification_t));
-                }
+               continue;
             }
-        }
 
-        // Wake up scheduler
+            // Get the NQ connection for the session ID. Usually, this will work 
+            // fine. But there could be a race condition between RTM and the 
+            // Daemon where RTM won. We shouldn't drop the notification right away,
+            // but just queue it in the device.
+            Connection *connection = getSessionConnection(
+                                         notification->sessionId, 
+                                         notification);
+            if (connection == NULL) 
+            {
+                LOG_W("Notification for unknown session  %d",
+                      notification->sessionId);
+                queueUnknownNotification(*notification);
+                continue;
+            } 
+
+            LOG_I(" Notification for session %d, payload=%d",
+                  notification->sessionId, notification->payload);
+            // Forward session ID and additional payload of
+            // notification to the TLC/Application layer
+            connection->writeData((void *)notification,
+                                  sizeof(notification_t));
+
+        } // for (;;) over notifiction queue
+
+        // finished processing notifications. It does not matter if there were
+        // any notification or not. S-SIQs can also be triggered by an SWd 
+        // driver which was waiting for a FIQ. In this case the S-SIQ tells 
+        // NWd that SWd is no longer idle an will need scheduling again
         schedSync.signal();
-    }
+
+    } //for (;;)
+
+
     LOG_E("S-SIQ exception");
     // Tell main thread that "something happened"
     // MSH thread MUST not block!

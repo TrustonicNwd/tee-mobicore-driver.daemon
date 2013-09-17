@@ -1,4 +1,4 @@
-/** Build tag created during build by ./Out/_build/_src/Scripts/tags/t-base-202_V001/Out/setBuildTag.sh.
+/*
  * <-- Copyright Trustonic Limited 2013 -->
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,5 +25,4 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#define MOBICORE_COMPONENT_BUILD_TAG \
-		"*** t-base-202_V001 ###"
+#define MOBICORE_COMPONENT_BUILD_TAG "*** t-base-202-MSM8974-Android-V002 ###"

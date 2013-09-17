@@ -103,42 +103,37 @@ void MobiCoreDriverDaemon::run(
     void
 )
 {
-	LOG_I_RELEASE("Daemon starting up...");
-	LOG_I_RELEASE("Socket interface version is %u.%u", DAEMON_VERSION_MAJOR, DAEMON_VERSION_MINOR);
+    LOG_I_RELEASE("Daemon starting up...");
+    LOG_I_RELEASE("Socket interface version is %u.%u", DAEMON_VERSION_MAJOR, DAEMON_VERSION_MINOR);
+
 #ifdef MOBICORE_COMPONENT_BUILD_TAG
-	LOG_I_RELEASE("%s", MOBICORE_COMPONENT_BUILD_TAG);
+    LOG_I_RELEASE("%s", MOBICORE_COMPONENT_BUILD_TAG);
 #else
 #warning "MOBICORE_COMPONENT_BUILD_TAG is not defined!"
 #endif
-	LOG_I_RELEASE("Build timestamp is %s %s", __DATE__, __TIME__);
+
+    LOG_I_RELEASE("Build timestamp is %s %s", __DATE__, __TIME__);
 
     int i;
 
     mobiCoreDevice = getDeviceInstance();
 
-    LOG_I("Daemon scheduler is %s", enableScheduler ? "enabled" : "disabled");
-    LOG_I("Initializing MobiCore Device");
+    LOG_I("Initializing Device, Daemon sheduler is %s", 
+          enableScheduler?"enabled" : "disabled");
+
+    // initialize device (setup MCI)
     if (!mobiCoreDevice->initDevice(
                 "/dev/" MC_ADMIN_DEVNODE,
                 enableScheduler)) {
         LOG_E("Could not initialize MobiCore!");
         return;
     }
+
+    // start device (scheduler)
     mobiCoreDevice->start();
 
     LOG_I_RELEASE("Checking version of MobiCore");
     checkMobiCoreVersion(mobiCoreDevice);
-
-    if ( mobiCoreDevice->mobicoreAlreadyRunning() ) {
-        // MC is already initialized, remove all pending sessions
-        #define NUM_DRIVERS         2
-        #define NUM_TRUSTLETS       4
-        #define NUM_SESSIONS        (1 + NUM_DRIVERS + NUM_TRUSTLETS)
-        for (i = 2; i<NUM_SESSIONS; i++) {
-            LOG_I("Closing session %i",i);
-            mobiCoreDevice->closeSession(i);
-        }
-    }
 
     // Load device driver if requested
     if (loadDriver) {
@@ -491,20 +486,26 @@ void MobiCoreDriverDaemon::processOpenTrustlet(Connection *connection)
     MobiCoreDevice  *device = (MobiCoreDevice *) (connection->connectionData);
     CHECK_DEVICE(device, connection);
 
-    uint32_t len = cmdOpenTrustlet.trustlet_len;
-    void *payload = (void*)malloc(len);
-    uint32_t rlen = connection->readData(payload, len);
-    if (rlen < 0) {
-        LOG_E("reading from Client failed");
-        /* it is questionable, if writing to broken socket has any effect here. */
+    uint32_t total_len, rlen, len = cmdOpenTrustlet.trustlet_len;
+    uint8_t *payload = (uint8_t *)malloc(len);
+    uint8_t *p=payload;
+    if(payload == NULL) {
+        LOG_E("failed to allocate payload buffer");
         writeResult(connection, MC_DRV_ERR_DAEMON_SOCKET);
-        free(payload);
-    }
-    if (rlen != len) {
-        LOG_E("wrong buffer length %i received from Client", rlen);
-        writeResult(connection, MC_DRV_ERR_DAEMON_SOCKET);
-        free(payload);
         return;
+    }
+    total_len = 0;
+    while(total_len < len) {
+        rlen = connection->readData(p, len - total_len);
+        if (rlen < 0) {
+                LOG_E("reading from Client failed");
+                /* it is questionable, if writing to broken socket has any effect here. */
+                writeResult(connection, MC_DRV_ERR_DAEMON_SOCKET);
+                free(payload);
+                return;
+        }
+        total_len += rlen;
+        p += rlen;
     }
 
     // Get service blob from registry

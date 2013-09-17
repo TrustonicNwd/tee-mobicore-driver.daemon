@@ -103,6 +103,21 @@ protected:
 
     MobiCoreDevice();
 
+    mcResult_t closeSessionInternal(
+        TrustletSession* session);
+
+    mcResult_t sendSessionCloseCmd(
+        uint32_t sessionId);
+
+    TrustletSession* findSession(
+        Connection *deviceConnection, 
+        uint32_t sessionId);
+
+    TrustletSession *getTrustletSession(
+        uint32_t sessionId);
+
+    mcResult_t mshNotifyAndWait(void);
+
     void signalMcpNotification(void);
 
     bool waitMcpNotification(void);
@@ -116,11 +131,6 @@ private:
 
 public:
     virtual ~MobiCoreDevice();
-
-    TrustletSession *getTrustletSession(uint32_t sessionId);
-
-    void cleanSessionBuffers(TrustletSession *session);
-    void removeTrustletSession(uint32_t sessionId);
 
     Connection *getSessionConnection(uint32_t sessionId, notification_t *notification);
 
@@ -138,13 +148,11 @@ public:
     TrustletSession *registerTrustletConnection(Connection *connection,
             MC_DRV_CMD_NQ_CONNECT_struct  *cmdNqConnect);
 
-    // Internal function
-    mcResult_t closeSession(uint32_t sessionId);
 
-    // Do more checks
     mcResult_t closeSession(Connection *deviceConnection, uint32_t sessionId);
 
     virtual mcResult_t notify(Connection *deviceConnection, uint32_t  sessionId);
+
     virtual void notify(uint32_t  sessionId) = 0;
 
     mcResult_t mapBulk(Connection *deviceConnection, uint32_t sessionId, uint32_t handle, uint32_t pAddrL2,
@@ -220,9 +228,6 @@ public:
      */
     virtual CWsm_ptr allocateContiguousPersistentWsm(uint32_t len) = 0;
 
-    bool mobicoreAlreadyRunning(void) {
-        return mciReused;
-    }
 };
 
 #endif /* MOBICOREDEVICE_H_ */
