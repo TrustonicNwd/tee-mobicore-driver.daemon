@@ -51,7 +51,6 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 /*
 See provisioningagent.h for description of this function.
 */
-
 rootpaerror_t executeCmpCommands(int numberOfCommands, CmpMessage* commandsP, CmpMessage* responsesP, uint32_t* internalError)
 {    
     LOGD(">>executeCmpCommands");
@@ -319,6 +318,38 @@ rootpaerror_t  getSpContainerStructure(mcSpid_t spid, SpContainerStructure* spCo
     return ret;
 }
 
+rootpaerror_t storeTA(mcSpid_t spid, const mcUuid_t* uuidP, const uint8_t* taBinP,  uint32_t taBinLength)
+{
+    rootpaerror_t ret=ROOTPA_OK;
+    mcResult_t result=0;
+    mcContainerState_t state;
+    
+    result=regGetTaState(spid, uuidP, &state);
+    LOGD("storeTA, TA state %d, result 0x%x", state, result);
+    if(MC_DRV_ERR_INVALID_DEVICE_FILE == result)
+    {
+        LOGW("storeTA, not storing, since TA container is missing");
+        ret=ROOTPA_ERROR_ILLEGAL_ARGUMENT;
+    }
+    else if (result!=MC_DRV_OK)
+    {
+        LOGW("storeTA, not storing, due to TA container read error 0x%x", result);
+        ret=ROOTPA_ERROR_REGISTRY;
+    }
+    else
+    {       
+        result =regStoreTA(spid, uuidP, taBinP, taBinLength);
+        
+        if(result != MC_DRV_OK)
+        {
+            LOGE("storeTA, storing TA failed, result from registry 0x%x", result);
+            ret=ROOTPA_ERROR_REGISTRY;
+        }        
+    }
+
+    return ret;
+}
+
 void dummyCallback(ProvisioningState state, rootpaerror_t error, tltInfo_t* tltInfoP)
 {
     LOGD("dummy callback %d %d %ld", state, error, (long int) tltInfoP);
@@ -370,7 +401,7 @@ void* provisioningThreadFunction(void* paramsP)
         free((char*)((provisioningparams_t*)paramsP)->tltInstallationDataP->tltPukHashP);
         free(((provisioningparams_t*)paramsP)->tltInstallationDataP);
     }
-    free(paramsP);
+    free(paramsP);  // Coverity complains that paramsP allocated in "provisioning" is not freed. It is done here.
 
     LOGD("<<provisioningThreadFunction");
     pthread_exit(NULL);
@@ -394,6 +425,7 @@ rootpaerror_t provision(mcSpid_t spid, CallbackFunctionP callbackP, SystemInfoCa
     paramsP->spid=spid;
     if(tltDataP)
     {
+        // Coverity complains that paramsP allocated here is not freed. It is done in "provisioningThreadFunction"
         paramsP->tltInstallationDataP=malloc(sizeof(trustletInstallationData_t));
         if(!paramsP->tltInstallationDataP)
         {
@@ -463,6 +495,7 @@ rootpaerror_t provision(mcSpid_t spid, CallbackFunctionP callbackP, SystemInfoCa
             if(r)
             {
                 LOGE("unable to create thread %d",r);
+                free(paramsP);
                 ret=ROOTPA_ERROR_INTERNAL;
             }
             pthread_attr_destroy(&attributes);

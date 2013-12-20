@@ -2,7 +2,6 @@
  * @file
  * Driver ID definition.
  *
- *
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved
  *
@@ -29,7 +28,6 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef RTMDRVID_H_
@@ -48,20 +46,22 @@ typedef enum {
 typedef enum {
 	MC_DRV_NUMBER_INVALID = 0,
 	MC_DRV_NUMBER_CRYPTO  = 1,
-    MC_DRV_NUMBER_KEYPAD  = 2,
-    /** Last GD driver number reserved for pre-installed drivers. 
+    /** Last GD driver number reserved for pre-installed drivers.
      * GD driver numbers up to this constant may not be used for loadable drivers. */
     MC_DRV_NUMBER_LAST_PRE_INSTALLED = 100,
+    TB_DRV_NUMBER_TUI  = 0x101,
+    TB_DRV_NUMBER_TPLAY  = 0x600,
 } mcDrvNumber_t;
 
 /** MobiCore driver IDs for Trustlets. */
 typedef enum {
 	MC_DRV_ID_INVALID = MC_DRV_VENDOR_ID_GD | MC_DRV_NUMBER_INVALID,
 	MC_DRV_ID_CRYPTO  = MC_DRV_VENDOR_ID_GD | MC_DRV_NUMBER_CRYPTO,
-    MC_DRV_ID_KEYPAD  = MC_DRV_VENDOR_ID_GD | MC_DRV_NUMBER_KEYPAD,
-    /** Last GD driver ID reserved for pre-installed drivers. 
+    /** Last GD driver ID reserved for pre-installed drivers.
      * GD driver IDs up to this constant may not be used for loadable drivers. */
     MC_DRV_ID_LAST_PRE_INSTALLED = MC_DRV_VENDOR_ID_GD | MC_DRV_NUMBER_LAST_PRE_INSTALLED,
+    TB_DRV_ID_TUI  = MC_DRV_VENDOR_ID_GD | TB_DRV_NUMBER_TUI,
+    TB_DRV_ID_TPLAY  = MC_DRV_VENDOR_ID_GD | TB_DRV_NUMBER_TPLAY,
 } mcDriverId_t;
 
 #endif /* RTMDRVID_H_ */

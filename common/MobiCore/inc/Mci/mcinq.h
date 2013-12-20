@@ -1,20 +1,6 @@
-/** @addtogroup NQ
- * @{
- * Notifications inform the MobiCore runtime environment that information is pending in a WSM buffer.
- * The Trustlet Connector (TLC) and the corresponding trustlet also utilize this buffer to notify
- * each other about new data within the Trustlet Connector Interface (TCI).
- *
- * The buffer is set up as a queue, which means that more than one notification can be written to the buffer
- * before the switch to the other world is performed. Each side therefore facilitates an incoming and an
- * outgoing queue for communication with the other side.
- *
- * Notifications hold the session ID, which is used to reference the communication partner in the other world.
- * So if, e.g., the TLC in the normal world wants to notify his trustlet about new data in the TLC buffer
- *
- * @file
- * Notification queue declarations.
- *
- * <!-- Copyright Giesecke & Devrient GmbH 2009-2012 -->
+/*
+ * Copyright (c) 2013 TRUSTONIC LIMITED
+ * All rights reserved
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,7 +25,26 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *
+ * @addtogroup NQ
+ * @{
+ * Notifications inform the MobiCore runtime environment that information is pending in a WSM buffer.
+ * The Trustlet Connector (TLC) and the corresponding trustlet also utilize this buffer to notify
+ * each other about new data within the Trustlet Connector Interface (TCI).
+ *
+ * The buffer is set up as a queue, which means that more than one notification can be written to the buffer
+ * before the switch to the other world is performed. Each side therefore facilitates an incoming and an
+ * outgoing queue for communication with the other side.
+ *
+ * Notifications hold the session ID, which is used to reference the communication partner in the other world.
+ * So if, e.g., the TLC in the normal world wants to notify his trustlet about new data in the TLC buffer
+ *
+ * @file
+ * Notification queue declarations.
+ *
  */
+ 
 #ifndef NQ_H_
 #define NQ_H_
 

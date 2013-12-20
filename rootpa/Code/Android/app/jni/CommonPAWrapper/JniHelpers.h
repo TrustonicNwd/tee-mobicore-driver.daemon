@@ -42,6 +42,7 @@ class JniHelpers
     public:
         JniHelpers(JNIEnv* envP);
         JniHelpers(JNIEnv* envP, jobject* keysP, jobject* valuesP, jbyteArray* productIdP);
+        virtual ~JniHelpers();
         int setVersion(char* fieldName, int version);
         int setProductId(char* productId);
         int setByteArray(jbyteArray* targetArrayP, uint8_t* sourceArrayP , uint32_t length);

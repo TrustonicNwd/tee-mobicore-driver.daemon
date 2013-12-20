@@ -89,19 +89,20 @@ bool getRspElementInfo(uint32_t* elementNbrP, CMTHANDLE handle, uint32_t* elemen
         return false;
     }
     wsmP=handle->wsmP;
-    LOGD(">>pacmtl getRspElementInfo %x %x %d %d %d %d", ((cmpResponseHeaderTci_t*)wsmP)->version, 
-                                                         ((cmpResponseHeaderTci_t*)wsmP)->responseId, 
-                                                         ((cmpResponseHeaderTci_t*)wsmP)->len, 
-                                                         *((uint32_t*)(wsmP+12)), 
-                                                         *((uint32_t*)(wsmP+16)),                                                   
-                                                         *((uint32_t*)(wsmP+20)));
+
     if(NULL==elementNbrP || NULL == elementOffsetP || NULL == elementLengthP || NULL == handle->wsmP)
     {
         LOGE("pacmtl getRspElementInfo NULL's in input, not setting the element %ld %ld", (long int) elementNbrP, (long int) elementOffsetP);
         return false;
     }
 
-
+    LOGD(">>pacmtl getRspElementInfo %x %x %d %d %d %d", ((cmpResponseHeaderTci_t*)wsmP)->version, 
+                                                         ((cmpResponseHeaderTci_t*)wsmP)->responseId, 
+                                                         ((cmpResponseHeaderTci_t*)wsmP)->len, 
+                                                         *((uint32_t*)(wsmP+12)), 
+                                                         *((uint32_t*)(wsmP+16)),                                                   
+                                                         *((uint32_t*)(wsmP+20)));
+   
     if(ILLEGAL_ELEMENT==*elementNbrP)
     {
         LOGE("pacmtl getRspElementInfo error in input (illegal element), not getting the element %d", *elementNbrP);

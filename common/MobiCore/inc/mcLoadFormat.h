@@ -11,7 +11,6 @@
  *
  * Holds the definitions for the layout of MobiCore Trustlet Blob.
  *
- *
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved
  *
@@ -38,9 +37,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
-
 #ifndef MCLOADFORMAT_H_
 #define MCLOADFORMAT_H_
 
@@ -49,7 +46,7 @@
 #include "mcDriverId.h"
 
 #define MCLF_VERSION_MAJOR   2
-#define MCLF_VERSION_MINOR   3
+#define MCLF_VERSION_MINOR   4
 #define MCLF_VERSION_MINOR_CURRENT   3
 
 #define MC_SERVICE_HEADER_MAGIC_BE         ((uint32_t)('M'|('C'<<8)|('L'<<16)|('F'<<24))) /**< "MCLF" in big endian integer representation */
@@ -75,7 +72,8 @@ typedef enum {
     SERVICE_TYPE_ILLEGAL    = 0,        /**< Service type is invalid. */
     SERVICE_TYPE_DRIVER     = 1,        /**< Service is a driver. */
     SERVICE_TYPE_SP_TRUSTLET   = 2,     /**< Service is a Trustlet. */
-    SERVICE_TYPE_SYSTEM_TRUSTLET = 3    /**< Service is a system Trustlet. */
+    SERVICE_TYPE_SYSTEM_TRUSTLET = 3,   /**< Service is a system Trustlet. */
+//    SERVICE_TYPE_SP_TA = 4,             /**< Service is a Trusted Application for t-base 300. */
 } serviceType_t;
 
 /**
@@ -161,6 +159,20 @@ typedef struct {
 } mclfHeaderV23_t, *mclfHeaderV23_ptr;
 /** @} */
 
+
+/**
+ * Version 2.4 MCLF header.
+ */
+typedef struct {
+    mclfHeaderV23_t         mclfHeaderV2;
+    uint32_t                gp_level;           /**<Starting 2.4: 0 for legacy MobiCore trustlets and 1 for Potato TAs. */
+    uint32_t                attestationOffset;  /**<Starting 2.4: Offset of attestation data area. */
+ 
+} mclfHeaderV24_t, *mclfHeaderV24_ptr;
+/** @} */
+
+
+
 /**
  * Version 2 MCLF text segment header.
  * Required to be present in MobiCore 1.2 components at address (0x1080).
@@ -188,6 +200,7 @@ typedef struct {
     uint32_t                drApiVers;      /**< DrApi version used when building trustlet.
                                                  Value set at compile time for drivers. 0 for trustlets.
                                                  Required always. */
+    addr_t                  ta_properties;  /**< address of _TA_Properties in the TA. */
 } mclfTextHeader_t, *mclfTextHeader_ptr;
 
 // Version 2 ///////////////////////////////////////////////////////////////////////////////////////////////////

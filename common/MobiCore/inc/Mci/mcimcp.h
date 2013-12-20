@@ -1,15 +1,6 @@
-/** @addtogroup MCP
- * @{
- * The MCP defines commands and responses which are used to control the MobiCore system.
- * MCP information is exchanged in a world share memory buffer which has been established prior between NWd
- * and SWd using the FastCall interface. The buffer needs to be provided by the MobiCore driver and is utilized
- * to send MCP commands to the MobiCore as well as receiving responses from the MobiCore.
- * The command of the normal world will be overwritten with the response from the secure side.
- *
- * @file
- * MCP command interface definitions.
- *
- * <!-- Copyright Giesecke & Devrient GmbH 2009-2012 -->
+/*
+ * Copyright (c) 2013 TRUSTONIC LIMITED
+ * All rights reserved
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,13 +25,29 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *
+ * @addtogroup MCP
+ * @{
+ * The MCP defines commands and responses which are used to control the MobiCore system.
+ * MCP information is exchanged in a world share memory buffer which has been established prior between NWd
+ * and SWd using the FastCall interface. The buffer needs to be provided by the MobiCore driver and is utilized
+ * to send MCP commands to the MobiCore as well as receiving responses from the MobiCore.
+ * The command of the normal world will be overwritten with the response from the secure side.
+ *
+ * @file
+ * MCP command interface definitions.
+ *
  */
+ 
 #ifndef MCP_H_
 #define MCP_H_
+
 
 #include "mcUuid.h"
 #include "mcLoadFormat.h"
 #include "mcVersionInfo.h"
+
 
 /** MobiCore Return Code Defines.
  * List of the possible MobiCore return codes.
@@ -74,6 +81,7 @@ typedef enum {
     MC_MCP_RET_ERR_SP_TL_DECRYPTION_FAILED          = 25, /**< Decryption of service provider trustlet failed. */
     MC_MCP_RET_ERR_SP_TL_HASH_CHECK_FAILED          = 26, /**< Hash check of service provider trustlet failed. */
     MC_MCP_RET_ERR_LAUNCH_TASK_FAILED               = 27, /**< Activation/starting of task failed. */
+    MC_MCP_RET_ERR_CLOSE_TASK_FAILED                = 28, /**< Closing of task not yet possible, try again later. */
 
     // used for command verification
     MC_MCP_RET_ERR_UNKNOWN_COMMAND                  = 50, /**< The command is unknown. */
@@ -92,9 +100,11 @@ typedef enum {
     MC_MCP_CMD_UNMAP                     = 0x00000005,   /**< Unmap a block of WSM from a session. */
     MC_MCP_CMD_SUSPEND                   = 0x00000006,   /**< Prepare MobiCore for suspend. */
     MC_MCP_CMD_RESUME                    = 0x00000007,   /**< Resume MobiCore from suspension. */
-    MC_MCP_CMD_DONATE_RAM                = 0x00000008,   /**< Donate RAM to MobiCore. */
+    // obsolete: MC_MCP_CMD_DONATE_RAM   = 0x00000008,
     MC_MCP_CMD_GET_MOBICORE_VERSION      = 0x00000009,   /**< Get MobiCore version information. */
     MC_MCP_CMD_CLOSE_MCP                 = 0x0000000A,   /**< Close MCP and unmap MCI. */
+    MC_MCP_CMD_LOAD_TOKEN                = 0x0000000B,   /**< Load token for device attestation */
+    MC_MCP_CMD_CHECK_LOAD_TA             = 0x0000000C,   /**< Check that TA can be loaded */
 } mcpCmdId_t;
 
 
@@ -112,13 +122,6 @@ typedef uint32_t wsmType_t;
 #define WSM_WSM_UNCACHED    0x100   /**< Bitflag indicating that WSM should be uncached */
 #define WSM_L2_UNCACHED     0x100   /**< Bitflag indicating that L2 table should be uncached */
 
-
-/** Types of RAM known to the MobiCore.
- */
-typedef enum {
-    RAM_INVALID     = 0,    /**< Invalid memory type */
-    RAM_GENERIC     = 1,    /**< Generic RAM of no special type. */
-}ramType_t;
 
 /** Command header.
  * It just contains the command ID. Only values specified in mcpCmdId_t are allowed as command IDs.
@@ -144,27 +147,6 @@ typedef struct {
 
 /** @defgroup ASMCMD Administrative Commands
  * @{ */
-
-/** @defgroup MCPDONATERAM DONATE_RAM
- * Donate NWd RAM to MobiCore.
- * This is a debug feature that is not available in release version.
- *
- * @{ */
-
-/** Donate RAM Command */
-typedef struct {
-    commandHeader_t  cmdHeader; /**< Command header. */
-    ramType_t        ramType;            /**< Type of RAM used for memory pool */
-    uint32_t         adrBuffer;          /**< Physical address of the page range*/
-    uint32_t         numPages;          /**< Number of pages contained in the donation. */
-} mcpCmdDonateRam_t, *mcpCmdDonateRam_ptr;
-
-/** Donate RAM Command Response */
-typedef struct {
-    responseHeader_t  rspHeader; /**< Response header. */
-} mcpRspDonateRam_t, *mcpRspDonateRam_ptr;
-/** @} */// End MCPDONATERAM
-
 
 /** @defgroup MCPGETMOBICOREVERSION GET_MOBICORE_VERSION
  * Get MobiCore version info.
@@ -246,12 +228,12 @@ typedef struct {
 typedef struct {
     commandHeader_t   cmdHeader;        /**< Command header. */
     mcUuid_t            uuid;             /**< Byte array containing the service UUID. */
-    wsmType_t         wsmTypeTci;       /**< Type of WSM used for the TCI */
-    uint32_t          adrTciBuffer;     /**< Physical address of the TCI */
+    uint64_t          adrTciBuffer;     /**< Physical address of the TCI */
+    uint64_t          adrLoadData;      /**< Physical address of the data to load. */
     uint32_t          ofsTciBuffer;     /**< Offset to the data. */
     uint32_t          lenTciBuffer;     /**< Length of the TCI. */
+    wsmType_t         wsmTypeTci;       /**< Type of WSM used for the TCI */
     wsmType_t         wsmTypeLoadData;  /**< Type of the memory containing the data to load. */
-    uint32_t          adrLoadData;      /**< Physical address of the data to load. */
     uint32_t          ofsLoadData;      /**< Offset to the data. */
     uint32_t          lenLoadData;      /**< Length of the data to load. */
     mclfHeader_t      tlHeader;         /**< Service header. */
@@ -262,6 +244,23 @@ typedef struct {
     responseHeader_t  rspHeader; /**< Response header. */
     uint32_t          sessionId; /**< Session ID used for further communication. */
 } mcpRspOpen_t, *mcpRspOpen_ptr;
+
+/** TA Load Check Command */
+typedef struct {
+    commandHeader_t   cmdHeader;        /**< Command header. */
+    mcUuid_t          uuid;             /**< Byte array containing the service UUID. */
+    uint64_t          adrLoadData;      /**< Physical address of the data to load. */
+    wsmType_t         wsmTypeLoadData;  /**< Type of the memory containing the data to load. */
+    uint32_t          ofsLoadData;      /**< Offset to the data. */
+    uint32_t          lenLoadData;      /**< Length of the data to load. */
+    mclfHeader_t      tlHeader;         /**< Service header. */
+} mcpCmdCheckLoad_t, *mcpCmdCheckLoad_ptr;
+
+/** TA Load Check Response */
+typedef struct {
+    responseHeader_t  rspHeader; /**< Response header. */
+} mcpRspCheckLoad_t, *mcpRspCheckLoad_ptr;
+
 
 /** @} */// End MCPOPEN
 
@@ -305,8 +304,8 @@ typedef struct {
     commandHeader_t  cmdHeader;     /**< Command header. */
     uint32_t         sessionId;     /**< Session ID of a valid session */
     wsmType_t        wsmType;       /**< Type of WSM used of the memory*/
-    uint32_t         adrBuffer;     /**< Physical address of the memory */
     uint32_t         ofsBuffer;     /**< Offset to the payload. */
+    uint64_t         adrBuffer;     /**< Physical address of the memory */
     uint32_t         lenBuffer;     /**< Length of the buffer. */
 } mcpCmdMap_t, *mcpCmdMap_ptr;
 
@@ -348,6 +347,27 @@ typedef struct {
 
 /** @} */// End SESSCMD
 
+/** @defgroup MCPLOADTOKEN
+ * Load a token from the normal world and share it with <t-base
+ * If something fails, the device attestation functionality will be disabled
+ * @{ */
+
+/** Load Token */
+typedef struct {
+    commandHeader_t   cmdHeader;        /**< Command header. */
+    wsmType_t         wsmTypeLoadData;  /**< Type of the memory containing the data to load. */
+    uint64_t          adrLoadData;      /**< Physical address of the data to load. */
+    uint64_t          ofsLoadData;      /**< Offset to the data to load. */
+    uint64_t          lenLoadData;      /**< Length of the data to load. */
+} mcpCmdLoadToken_t, *mcpCmdLoadToken_ptr;
+
+/** Load Token Command Response */
+typedef struct {
+    responseHeader_t  rspHeader; /**< Response header. */
+} mcpRspLoadToken_t, *mcpRspLoadToken_ptr;
+
+/** @} *///End MCPLOADTOKEN
+
 /** @} */// End CMD
 
 /** Structure of the MCP buffer. */
@@ -366,10 +386,13 @@ typedef union {
     mcpRspSuspend_t              rspSuspend;             /**< Response to SUSPEND command. */
     mcpCmdResume_t               cmdResume;              /**< Resume MobiCore. */
     mcpRspResume_t               rspResume;              /**< Response to RESUME command. */
-    mcpCmdDonateRam_t            cmdDonateRam;           /**< Donate RAM to MobiCore. */
-    mcpRspDonateRam_t            rspDonateRam;           /**< Response to DONATE_RAM command. */
     mcpCmdGetMobiCoreVersion_t   cmdGetMobiCoreVersion;  /**< Get MobiCore Version command. */
     mcpRspGetMobiCoreVersion_t   rspGetMobiCoreVersion;  /**< Response to GET_MOBICORE_VERSION command. */
+    mcpCmdLoadToken_t            cmdLoadToken;
+    mcpRspLoadToken_t            rspLoadToken;
+    mcpCmdCheckLoad_t            cmdCheckLoad;           /**< TA load check command. */
+    mcpRspCheckLoad_t            rspCheckLoad;           /**< Response to TA load check. */
+
 } mcpMessage_t, *mcpMessage_ptr;
 
 

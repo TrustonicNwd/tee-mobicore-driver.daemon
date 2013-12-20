@@ -176,7 +176,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 		<xsd:sequence> \
 			<xsd:choice> \
 				<xsd:element name=\"trustletAxf\" type=\"mces:TrustletAXF\" /> \
-				<xsd:element name=\"tltEncryptionKey\" type=\"mces:TrustletEncryptionKey\" /> \
+				<xsd:element name=\"trustletEncryptionKey\" type=\"mces:TrustletEncryptionKey\" /> \
 			</xsd:choice> \
 		</xsd:sequence> \
 	</xsd:complexType> \

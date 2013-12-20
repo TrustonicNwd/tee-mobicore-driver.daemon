@@ -55,6 +55,11 @@ Open session to content management trustlet and allocate enough memory for commu
 CMTHANDLE tltChannelOpen(int sizeOfWsmBuffer, mcResult_t* result);
 
 /**
+Open session to TA and allocate enough memory for communication. There are two way to do this, give TA uuid or TA binary, binary length and spid. 
+The former works with system TA's the latter with SP TA's.
+*/
+CMTHANDLE taChannelOpen(int sizeOfWsmBuffer,  mcResult_t* result, mcUuid_t* uuidP, uint8_t* taBinaryP, uint32_t taLength, mcSpid_t spid);
+/**
 */
 void tltChannelClose(CMTHANDLE handle);
 /**

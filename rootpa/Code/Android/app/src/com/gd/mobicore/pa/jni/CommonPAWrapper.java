@@ -77,6 +77,7 @@ public class CommonPAWrapper {
                                       int flags, 
                                       byte[] seAddress);
     public native int unregisterRootContainer(byte[] seAddress);
+    public native int storeTA(int spid, byte[] uuid, byte[] taBinary);
     public native void setEnvironmentVariable(byte[] variable, byte[] value);    
 
     static{
@@ -114,9 +115,10 @@ public class CommonPAWrapper {
         Log.d(TAG,">>CommonPAWrapper.getSystemInfo");
         String[] response= new String[RESPONSE_ARRAY_SIZE];
         TelephonyManager telephonyManager = (TelephonyManager)service_.getSystemService(Context.TELEPHONY_SERVICE);
-
-        response[IMEI_ESN_INDEX]=telephonyManager.getDeviceId();
-        response[MNO_INDEX]=telephonyManager.getSimOperatorName();
+        if(telephonyManager!=null){
+            response[IMEI_ESN_INDEX]=telephonyManager.getDeviceId();
+            response[MNO_INDEX]=telephonyManager.getSimOperatorName();
+        }
         response[BRAND_INDEX]=Build.BRAND;
         response[MANUFACTURER_INDEX]=Build.MANUFACTURER;
         response[HARDWARE_INDEX]=Build.HARDWARE;

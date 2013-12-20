@@ -157,6 +157,11 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_unregisterRoo
 JNIEXPORT void JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_setEnvironmentVariable
   (JNIEnv *, jobject, jbyteArray, jbyteArray);
 
+
+JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_storeTA
+  (JNIEnv *, jobject, jint, jbyteArray, jbyteArray);
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -129,3 +129,22 @@ int regCleanupTlt(const mcUuid_t* uuidP, mcSpid_t spid)
 {
     return mcRegistryCleanupTrustlet(uuidP, spid);
 }
+
+int regStoreTA(mcSpid_t spid, const mcUuid_t* uuidP, const uint8_t* taBinary, uint32_t taBinLength)
+{
+    return mcRegistryStoreTABlob(spid, (void*) taBinary, taBinLength);
+}
+
+int regGetTaState(mcSpid_t spid, const mcUuid_t* uuidP, mcContainerState_t* stateP)
+{
+    TLTCONTAINERP taP=NULL;
+    uint32_t containerSize=0;
+    containerSize = CONTAINER_BUFFER_SIZE; // this will be updated to actual size with the registry call    
+    int ret=regReadTlt(uuidP, &taP, &containerSize, spid);
+    if(MC_DRV_OK==ret)
+    {
+        *stateP=taP->cont.common.attribs.state;
+    }
+    free(taP);
+    return ret;
+}

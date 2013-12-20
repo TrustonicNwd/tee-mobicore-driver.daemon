@@ -1,7 +1,6 @@
 /**
  * @addtogroup MC_SPID mcSpid - service provider ID.
  *
-*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved
  *
@@ -29,7 +28,6 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- *
  * @ingroup  MC_DATA_TYPES
  * @{
  */
@@ -51,6 +49,7 @@ static const mcSpid_t MC_SPID_SYSTEM = 0xFFFFFFFE;
 
 /** SPID reserved for tests only */
 static const mcSpid_t MC_SPID_RESERVED_TEST = 0xFFFFFFFD;
+static const mcSpid_t MC_SPID_TRUSTONIC_TEST = 0x4;
 
 #endif // MC_SPID_H_
 

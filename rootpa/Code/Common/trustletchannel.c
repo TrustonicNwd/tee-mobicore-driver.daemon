@@ -45,10 +45,17 @@ static uint32_t tltChannelDeviceId=MC_DEVICE_ID_DEFAULT;
 /*
 Open session to content management trustlet and allocate enough memory for communication
 */
-CMTHANDLE tltChannelOpen(int sizeOfWsmBuffer,  mcResult_t* result){
-    CMTHANDLE           handle = (CMTHANDLE)malloc(sizeof(CMTSTRUCT));
-    const mcUuid_t      UUID = TL_CM_UUID;
+CMTHANDLE tltChannelOpen(int sizeOfWsmBuffer,  mcResult_t* result)
+{
+    mcUuid_t      UUID = TL_CM_UUID;
+    return taChannelOpen(sizeOfWsmBuffer, result, &UUID, NULL, 0,0);
+}
 
+/*
+*/
+CMTHANDLE taChannelOpen(int sizeOfWsmBuffer,  mcResult_t* result, mcUuid_t* uuidP, uint8_t* taBinaryP, uint32_t taLength, mcSpid_t spid)
+{
+    CMTHANDLE           handle = (CMTHANDLE)malloc(sizeof(CMTSTRUCT));
 
     if (unlikely( NULL==handle ))
     {
@@ -64,7 +71,7 @@ CMTHANDLE tltChannelOpen(int sizeOfWsmBuffer,  mcResult_t* result){
 
     if (MC_DRV_OK != *result) 
     {
-      LOGE("tltChannelOpen: Unable to open device, error: %d", *result);
+      LOGE("taChannelOpen: Unable to open device, error: %d", *result);
       free(handle);
 
       return NULL;
@@ -75,16 +82,24 @@ CMTHANDLE tltChannelOpen(int sizeOfWsmBuffer,  mcResult_t* result){
     *result = mcMallocWsm(tltChannelDeviceId, 0, sizeOfWsmBuffer, &handle->wsmP, 0);
     if (MC_DRV_OK != *result) 
     {
-        LOGE("tltChannelOpen: Allocation of CMP WSM failed, error: %d", *result);
+        LOGE("taChannelOpen: Allocation of CMP WSM failed, error: %d", *result);
         mcCloseDevice(tltChannelDeviceId);
         free(handle);
         return NULL;
     }
 
-    *result = mcOpenSession(&handle->session,(const mcUuid_t *)&UUID,handle->wsmP,(uint32_t)sizeOfWsmBuffer);
+    if(taBinaryP!=NULL && taLength!=0)
+    {
+        *result = mcOpenTrustlet(&handle->session, spid, taBinaryP, taLength, handle->wsmP,(uint32_t)sizeOfWsmBuffer);
+    }
+    else
+    {
+        *result = mcOpenSession(&handle->session,uuidP, handle->wsmP,(uint32_t)sizeOfWsmBuffer);
+    }
+    
     if (MC_DRV_OK != *result)
     {
-        LOGE("tltChannelOpen: Open session failed, error: %d", *result);
+        LOGE("taChannelOpen: Open session failed, error: %d", *result);
         mcFreeWsm(tltChannelDeviceId,handle->wsmP);
         mcCloseDevice(tltChannelDeviceId);
         free(handle);
@@ -92,6 +107,7 @@ CMTHANDLE tltChannelOpen(int sizeOfWsmBuffer,  mcResult_t* result){
     }
     return handle;
 }
+
 
 /*
 Close the communication channel and free resources

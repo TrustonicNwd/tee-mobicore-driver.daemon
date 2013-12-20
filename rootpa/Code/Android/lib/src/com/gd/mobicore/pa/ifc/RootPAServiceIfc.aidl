@@ -46,9 +46,9 @@ import com.gd.mobicore.pa.ifc.SPContainerStructure;
 import com.gd.mobicore.pa.ifc.SPContainerStateParcel;
 
 /** 
-* RootPAServiceIfc is intended for SP.PA use at the time of installing new trustlet. It provides means
-* to communicate with content management trustlet (using CMP version 3), request SE to perform provisioning
-* of root container and trustlet container and means to obtain some information on the MobiCore and its registry.
+* RootPAServiceIfc is intended for SP.PA use at the time of installing new TA. It provides means
+* to communicate with content management TA (using CMP version 3), request SE to perform provisioning
+* of root container and TA container and means to obtain some information on the MobiCore and its registry.
 *
 * The service is started by sending intent com.gd.mobicore.pa.service.PROVISIONING_SERVICE in binding.
 */
@@ -133,14 +133,16 @@ interface RootPAServiceIfc {
      CommandResult executeCmpCommands(int uid, in List<CmpCommand> commands, out List<CmpResponse> responses);
 
     /**
-     * Starts provisioning; creates Root Container and SP Container if not already available.
+     * Starts provisioning. What actually happens after calling this depends on the state of the system and the commands SE sends.
+     * In normal situation, SE sends commands to create root container and SP container (indicated by spid) if they do not already 
+     * exist. If given spid is 0, only root container is created (if it does not already exist).
      * Tasks are performed asynchronously. Method returns immediately.
      * Intents are broadcast to indicate the progress of the provisioning. The result is also
      * sent via broadcast.
      *
      * Cannot be executed if the acquireLock is called. Release any lock before calling this 
      * method. Also, this command acquires lock internally before executing and releases lock 
-     * when error occurs or provisioning is finished.
+     * when error occurs or provisioning is finished (just before sending FINISHED_ROOT_PROVISIONING intent) or after 1 minute timeout.
      *
      * The following intents are broadcast after calling doProvisioning:
      * <ul>
@@ -178,7 +180,7 @@ interface RootPAServiceIfc {
      * acquired while this method runs.
      *
      * @param spid provides [in] the id of the SP (SPCont)
-     * @param cs [out] state of the sp container and a list of installed trustlet containers for the given SP
+     * @param cs [out] state of the sp container and a list of installed TA containers for the given SP
      * @return indication of successful completion
      */
     CommandResult getSPContainerStructure(in SPID spid, out SPContainerStructure cs);
@@ -194,6 +196,16 @@ interface RootPAServiceIfc {
      */
     CommandResult getSPContainerState(in SPID spid, out SPContainerStateParcel state);
 
+
+    /**
+     * Stores the actual TA binary to registry.
+     *
+     * @param spid [in] service provider id
+     * @param uuid [in] unique UUID of the TA
+     * @param taBinary [in] the actual TA to be stored
+     * @return indication of successful completion
+     */
+    CommandResult storeTA(in SPID spid, in byte[] uuid, in byte[] taBinary);
 }
 
 /**@}*/

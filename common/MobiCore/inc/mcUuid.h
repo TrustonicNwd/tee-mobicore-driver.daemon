@@ -1,7 +1,6 @@
 /**
  * @addtogroup MC_UUID mcUuid - Universally Unique Identifier.
  *
- *
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved
  *
@@ -29,7 +28,6 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- *
  * @ingroup  MC_DATA_TYPES
  * @{
  */
@@ -39,9 +37,10 @@
 
 #define UUID_TYPE
 
+#define UUID_LENGTH 16
 /** Universally Unique Identifier (UUID) according to ISO/IEC 11578. */
 typedef struct {
-    uint8_t value[16]; /**< Value of the UUID. */
+    uint8_t value[UUID_LENGTH]; /**< Value of the UUID. */
 } mcUuid_t, *mcUuid_ptr;
 
 /** UUID value used as free marker in service provider containers. */

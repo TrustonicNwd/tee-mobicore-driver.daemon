@@ -20,13 +20,13 @@ GLOBAL_INCLUDES := bionic \
 GLOBAL_LIBRARIES := libstlport
 
 # Include the Daemon
-include $(MOBICORE_PROJECT_PATH)/daemon/Android.mk
+include $(MOBICORE_PROJECT_PATH)/MobiCoreDriverLib/Android.mk
 
 MC_INCLUDE_DIR := $(COMP_PATH_MobiCore)/inc \
     $(COMP_PATH_MobiCore)/inc/TlCm \
     $(COMP_PATH_MobiCore)/inc/TlCm/2.0 \
-    $(MOBICORE_PROJECT_PATH)/daemon/ClientLib/public \
-    $(MOBICORE_PROJECT_PATH)/daemon/Registry/Public
+    $(MOBICORE_PROJECT_PATH)/MobiCoreDriverLib/ClientLib/public \
+    $(MOBICORE_PROJECT_PATH)/MobiCoreDriverLib/Registry/Public
 MC_DEBUG := _DEBUG
 SYSTEM_LIB_DIR=/system/lib
 

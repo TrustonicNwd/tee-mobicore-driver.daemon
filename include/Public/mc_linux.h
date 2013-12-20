@@ -1,7 +1,7 @@
 /*
  * The MobiCore Driver Kernel Module is a Linux device driver, which represents
  * the command proxy on the lowest layer to the secure world (Swd). Additional
- * services like memory allocation via mmap and generation of a L2 tables for
+ * services like memory allocation via mmap and generation of a MMU tables for
  * given virtual memory are also supported. IRQ functionality receives
  * information from the SWd in the non secure world (NWd).
  * As customary the driver is handled as linux device driver with "open",
@@ -55,8 +55,6 @@
  * INIT request data to SWD
  */
 struct mc_ioctl_init {
-	/* notification buffer start/length [16:16] [start, length] */
-	uint32_t  nq_offset;
 	/* length of notification queue */
 	uint32_t  nq_length;
 	/* mcp buffer start/length [16:16] [start, length] */
@@ -76,8 +74,7 @@ struct mc_ioctl_info {
 };
 
 /*
- * Data exchange structure of the MC_IO_MAP_WSM, MC_IO_MAP_MCI, and
- *				  MC_IO_MAP_PWSM commands.
+ * Data exchange structure of the MC_IO_MAP_WSM and MC_IO_MAP_MCI commands.
  *
  * Allocate a contiguous memory buffer for a process.
  * The physical address can be used as for later calls to mmap.
@@ -86,19 +83,19 @@ struct mc_ioctl_info {
  * already. I.e. Daemon was restarted.
  */
 struct mc_ioctl_map {
-	size_t	      len;	/* Buffer length */
-	uint32_t      handle;	/* WSM handle */
-	unsigned long addr;	/* Virtual address */
-	unsigned long phys_addr;/* physical address of WSM (or NULL) */
-	bool	      reused;	/* if WSM memory was reused, or new allocated */
+	size_t		len;	/* Buffer length */
+	uint32_t	handle;	/* WSM handle */
+	uint64_t	phys_addr; /* physical address of WSM (or 0) */
+	unsigned long	addr;	/* Virtual address */
+	bool		reused;	/* if WSM memory was reused, or new allocated */
 };
 
 /*
  * Data exchange structure of the MC_IO_REG_WSM command.
  *
- * Allocates a physical L2 table and maps the buffer into this page.
- * Returns the physical address of the L2 table.
- * The page alignment will be created and the appropriated pSize and pOffsetL2
+ * Allocates a physical MMU table and maps the buffer into this page.
+ * Returns the physical address of the MMU table.
+ * The page alignment will be created and the appropriated pSize and pOffsetMMU
  * will be modified to the used values.
  */
 struct mc_ioctl_reg_wsm {
@@ -106,19 +103,7 @@ struct mc_ioctl_reg_wsm {
 	uint32_t len;		/* size of the virtual address space */
 	uint32_t pid;		/* process id */
 	uint32_t handle;	/* driver handle for locked memory */
-	uint32_t table_phys;	/* physical address of the L2 table */
-};
-
-
-/*
- * Data exchange structure of the MC_DRV_MODULE_FC_EXECUTE ioctl command.
- * internal, unsupported
- */
-struct mc_ioctl_execute {
-	/* base address of mobicore binary */
-	uint32_t phys_start_addr;
-	/* length of DDR area */
-	uint32_t length;
+	uint64_t table_phys;	/* physical address of the MMU table */
 };
 
 /*
@@ -127,10 +112,10 @@ struct mc_ioctl_execute {
 struct mc_ioctl_resolv_cont_wsm {
 	/* driver handle for buffer */
 	uint32_t handle;
-	/* base address of memory */
-	uint32_t phys;
 	/* length memory */
 	uint32_t length;
+	/* base address of memory */
+	uint64_t phys;
 	/* fd to owner of the buffer */
 	int32_t fd;
 };
@@ -144,7 +129,7 @@ struct mc_ioctl_resolv_wsm {
 	/* fd to owner of the buffer */
 	int32_t fd;
 	/* base address of memory */
-	uint32_t phys;
+	uint64_t phys;
 };
 
 
@@ -180,28 +165,24 @@ struct mc_ioctl_resolv_wsm {
  */
 #define MC_IO_FREE		_IO(MC_IOC_MAGIC, 5)
 /*
- * Creates a L2 Table of the given base address and the size of the
+ * Creates a MMU Table of the given base address and the size of the
  * data.
- * Parameter: mc_ioctl_app_reg_wsm_l2_params
+ * Parameter: mc_ioctl_reg_wsm
  */
 #define MC_IO_REG_WSM		_IOWR(MC_IOC_MAGIC, 6, struct mc_ioctl_reg_wsm)
 #define MC_IO_UNREG_WSM		_IO(MC_IOC_MAGIC, 7)
 #define MC_IO_LOCK_WSM		_IO(MC_IOC_MAGIC, 8)
 #define MC_IO_UNLOCK_WSM	_IO(MC_IOC_MAGIC, 9)
-#define MC_IO_EXECUTE		_IOWR(MC_IOC_MAGIC, 10, struct mc_ioctl_execute)
 
 /*
  * Allocate contiguous memory for a process for later mapping with mmap.
- * MC_DRV_KMOD_MMAP_WSM	usual operation, pages are registered in
+ * MC_IO_MAP_WSM	usual operation, pages are registered in
  *					device structure and freed later.
- * MC_DRV_KMOD_MMAP_MCI	get Instance of MCI, allocates or mmaps
+ * MC_IO_MAP_MCI	get Instance of MCI, allocates or mmaps
  *					the MCI to daemon
- * MC_DRV_KMOD_MMAP_PERSISTENTWSM	special operation, without
- *						registration of pages
  */
 #define MC_IO_MAP_WSM		_IOWR(MC_IOC_MAGIC, 11, struct mc_ioctl_map)
 #define MC_IO_MAP_MCI		_IOWR(MC_IOC_MAGIC, 12, struct mc_ioctl_map)
-#define MC_IO_MAP_PWSM		_IOWR(MC_IOC_MAGIC, 13, struct mc_ioctl_map)
 
 /*
  * Clean orphaned WSM buffers. Only available to the daemon and should
@@ -215,7 +196,7 @@ struct mc_ioctl_resolv_wsm {
 #define MC_IO_CLEAN_WSM		_IO(MC_IOC_MAGIC, 14)
 
 /*
- * Get L2 phys address of a buffer handle allocated to the user.
+ * Get MMU phys address of a buffer handle allocated to the user.
  * Only available to the daemon.
  */
 #define MC_IO_RESOLVE_WSM	_IOWR(MC_IOC_MAGIC, 15, \

@@ -45,6 +45,7 @@ import com.gd.mobicore.pa.ifc.RootPAOemIfc;
 import com.gd.mobicore.pa.ifc.CommandResult;
 import com.gd.mobicore.pa.ifc.BooleanResult;
 import com.gd.mobicore.pa.ifc.TrustletContainer;
+import com.gd.mobicore.pa.ifc.IfcVersion;
 
 public class OemService extends BaseService {
     private static final String TAG = "RootPA-J";
@@ -73,7 +74,6 @@ public class OemService extends BaseService {
             doProvisioningLockSuid_=tmpSuid;
             Log.d(TAG,"RootPAServiceIfc.Stub.unregisterRootContainer calling JNI");
             
-            boolean[] isRegistered = new boolean[1];
             int ret=CommandResult.ROOTPA_OK;
 
             try{
@@ -128,7 +128,7 @@ public class OemService extends BaseService {
         }catch(Exception e){
             Log.i(TAG,"OemService something wrong in the given logging level "+e );
         }
-        Log.i(TAG,"OemService binding");
+        Log.i(TAG,"OemService binding, IfcVersion: " +IfcVersion.ROOTPA_ANDROID_API_VERSION_MAJOR+"."+IfcVersion.ROOTPA_ANDROID_API_VERSION_MINOR);
         if(se_!=null) Log.d(TAG,new String(se_));
         return mBinder;
     }

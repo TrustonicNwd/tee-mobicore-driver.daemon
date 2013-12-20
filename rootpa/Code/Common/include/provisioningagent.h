@@ -212,6 +212,19 @@ This is helper function for unregistering root container.
 */
 rootpaerror_t unregisterRootContainer(CallbackFunctionP callbackP, SystemInfoCallbackFunctionP systemInfoCallbackP);
 
+
+/**
+Store's the GP TA binary to the registry. The corresponding TA container has to exists and contain correct information for decrypting the TA.
+
+@param spid service provider ID
+@param uuidP pointer to the UUID of the TA binary. This is the UUID that all t-base TA's have, NOT the UUID specific to GP TA's
+@param taBinP pointer to the actual TA binary
+@param taBinLength size of the actual TA binary
+
+@return ROOTPA_OK is unregistering root container succeeds, an error code otherwise
+*/
+rootpaerror_t storeTA(mcSpid_t spid, const mcUuid_t* uuidP, const uint8_t* taBinP, uint32_t taBinLength);
+
 /**
 This is helper function for the platform dependent part to inform the platform independent part 
 on the file storage location

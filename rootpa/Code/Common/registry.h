@@ -62,3 +62,6 @@ int regGetSpState(mcSpid_t spid, mcContainerState_t* stateP);
 int regReadTlt(const mcUuid_t* uuidP, TLTCONTAINERP* tltP, uint32_t* containerSize, mcSpid_t spid);
 int regWriteTlt(const mcUuid_t* uuidP, const TLTCONTAINERP tltP, uint32_t containerSize, mcSpid_t spid);
 int regCleanupTlt(const mcUuid_t* uuidP, mcSpid_t spid);
+
+int regStoreTA(mcSpid_t spid, const mcUuid_t* uuidP, const uint8_t* taBinary, uint32_t taBinLength);
+int regGetTaState(mcSpid_t spid, const mcUuid_t* uuidP, mcContainerState_t* stateP);

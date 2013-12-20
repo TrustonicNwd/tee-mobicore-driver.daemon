@@ -33,6 +33,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <stdbool.h>
 #include <time.h>
+#include <math.h>
 
 #include <curl/curl.h>
 
@@ -66,7 +67,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 #define CECERT_FILENAME "cacert.pem"
 static char certificatePath_[CERT_PATH_MAX_LEN];
 static char certificateFilePath_[CERT_PATH_MAX_LEN];
-
+static long int SE_CONNECTION_DEFAULT_TIMEOUT=58L; // timeout after 58 seconds
 static int MAX_ATTEMPTS=30;  
 static const struct timespec SLEEPTIME={0,300*1000*1000}; // 0.3 seconds  --> 30x0.3 = 9 seconds
 
@@ -75,7 +76,6 @@ rootpaerror_t httpCommunicate(const char* const inputP, const char** linkP, cons
 rootpaerror_t httpPostAndReceiveCommand(const char* const inputP, const char** linkP, const char** relP, const char** commandP)
 {
     LOGD("httpPostAndReceiveCommand %ld", (long int) inputP);
-
     return httpCommunicate(inputP, linkP, relP, commandP, httpMethod_POST);
 }
 
@@ -94,7 +94,7 @@ rootpaerror_t httpPutAndReceiveCommand(const char* const inputP, const char** li
 rootpaerror_t httpGetAndReceiveCommand(const char** linkP, const char** relP, const char** commandP)
 {
     LOGD("httpGetAndReceiveCommand");
-    return httpCommunicate(NULL, linkP, relP, commandP, false);
+    return httpCommunicate(NULL, linkP, relP, commandP, httpMethod_GET);
 }
 
 rootpaerror_t httpDeleteAndReceiveCommand(const char** linkP, const char** relP, const char** commandP)
@@ -384,7 +384,7 @@ bool setBasicOpt(CURL* curl_handle, MemoryStruct* chunkP, HeaderStruct* headerCh
         return false;
     }   
 
-    long int se_connection_timeout=120L; // timeout after 120 seconds
+    long int se_connection_timeout=SE_CONNECTION_DEFAULT_TIMEOUT;
 #ifdef __DEBUG
     curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, 1L);
     curl_easy_setopt(curl_handle, CURLOPT_DEBUGFUNCTION, debug_function);   
@@ -505,13 +505,13 @@ rootpaerror_t openSeClientAndInit()
 {
     if(curl_global_init(CURL_GLOBAL_ALL)!=CURLE_OK)
     {
-        LOGE("curl_gloabal_init failed");
+        LOGE("curl_global_init failed");
         return ROOTPA_ERROR_NETWORK;
     }
     curl_handle_=curl_easy_init();
     if(NULL==curl_handle_)
     {
-        LOGE("initialize failed");
+        LOGE("curl_easy_init failed");
         return ROOTPA_ERROR_NETWORK;
     }
 
@@ -535,6 +535,9 @@ rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, con
     long int http_code = 0;
     int attempts=0;
     struct curl_slist* httpHeaderP = NULL;
+    time_t begintime=0;
+    time_t endtime=0;
+    int timediff=0;
     
     LOGD(">>httpCommunicate");
     if(NULL==linkP || NULL==relP || NULL==commandP || NULL==*linkP)
@@ -617,12 +620,21 @@ rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, con
         return ROOTPA_ERROR_NETWORK;    
     }
 
+    begintime=time(NULL);    
     while(curlRet!=CURLE_OK && attempts++ < MAX_ATTEMPTS)
     {
         curlRet=curl_easy_perform(curl_handle_);
-        LOGD("curl_easy_perform %ld %d", curlRet, attempts);
+        LOGD("curl_easy_perform %ld %d", curlRet, attempts );
         if(CURLE_OK==curlRet) break;
         nanosleep(&SLEEPTIME,NULL);
+        endtime=time(NULL);
+        timediff=(int)ceil(difftime(endtime, begintime));
+        LOGD("timediff (ceil) %d", timediff);
+        if(timediff>(SE_CONNECTION_DEFAULT_TIMEOUT/2))
+        {
+            LOGE("No connection to SE. Exiting retry loop for curl_easy_perform due to timeout %d", timediff);
+            break;
+        }
     }
 
     curl_easy_getinfo (curl_handle_, CURLINFO_RESPONSE_CODE, &http_code);
@@ -636,7 +648,7 @@ rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, con
         return ROOTPA_ERROR_NETWORK;
     }
     
-    LOGD("http return code from SE %ld", (long int) http_code);    
+    LOGD("http return code from SE %ld", (long int) http_code);
     if ((200 <= http_code &&  http_code < 300)) 
     {
         ret=ROOTPA_OK; 
@@ -652,25 +664,29 @@ rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, con
              HTTP_CODE_INTERNAL_ERROR == http_code || 
              HTTP_CODE_HTTP_VERSION == http_code)
     {
+        LOGE("SE returned http error %ld", (long int) http_code);
         ret=ROOTPA_ERROR_INTERNAL;
     }
     else if(HTTP_CODE_MOVED == http_code ||  // new URL would be in Location: header but RootPA does not support in currently (unless libcurl supports it transparently)
             HTTP_CODE_REQUEST_TIMEOUT == http_code  || 
             HTTP_CODE_SERVICE_UNAVAILABLE == http_code)
     {
+        LOGE("SE returned http error %ld", (long int) http_code);
         ret=ROOTPA_ERROR_NETWORK;
     }
     else if (HTTP_CODE_CMP_VERSION == http_code)
     {
-
+        LOGE("SE returned http error %ld", (long int) http_code);
         ret=ROOTPA_ERROR_SE_CMP_VERSION;
     }    
     else if (HTTP_CODE_FAILED_DEPENDENCY == http_code)
     {
+        LOGE("SE returned http error %ld", (long int) http_code);
         ret=ROOTPA_ERROR_SE_PRECONDITION_NOT_MET;
     }
     else if (HTTP_CODE_NOT_FOUND == http_code)
     {
+        LOGE("SE returned http error %ld", (long int) http_code);
         ret=ROOTPA_ERROR_ILLEGAL_ARGUMENT; // since the arguments (spid, in some cases uuid) for the URL are received from the client, 
                                            // this can be returned. It is also possible that suid is wrong (corrupted in device or info 
                                            // from device binding missing from SE, but we can not detect that easily.

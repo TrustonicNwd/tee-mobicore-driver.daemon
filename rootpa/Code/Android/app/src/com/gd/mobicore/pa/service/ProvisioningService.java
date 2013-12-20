@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.Random;
+import java.math.BigInteger;
 
 import com.gd.mobicore.pa.jni.CommonPAWrapper;
 
@@ -57,11 +58,13 @@ import com.gd.mobicore.pa.ifc.SPContainerStateParcel;
 import com.gd.mobicore.pa.ifc.SPContainerState;
 import com.gd.mobicore.pa.ifc.TrustletContainer;
 import com.gd.mobicore.pa.ifc.TrustletContainerState;
+import com.gd.mobicore.pa.ifc.IfcVersion;
 
 public class ProvisioningService extends BaseService {
 //    protected static final String TAG = "RootPA-J";
 
     private static final int PROVISIONING_UID_FOR_LOCK=0x11110000;
+    private static final int LONG_SIZE=8;
     private final RootPAServiceIfc.Stub mBinder = new ServiceIfc();   
     
     // using this instead of anonymous inner class in order to allow call to some of the private methods we define here   
@@ -267,6 +270,11 @@ public class ProvisioningService extends BaseService {
             Log.d(TAG,">>RootPAServiceIfc.Stub.doProvisioning"); 
             int ret=CommandResult.ROOTPA_OK;
 
+            if(spid==null){  // having null out variable leads to null pointer exception in the client, however we still want to do checking so that there is not unncessary execution of the following code
+                Log.d(TAG,"RootPAServiceIfc.Stub.doProvisioning spid==null");
+                return new CommandResult(CommandResult.ROOTPA_ERROR_ILLEGAL_ARGUMENT);
+            }            
+            
             // we do not use uid here since we do not want to let the client to released the lock, it is done 
             // internally at CommonPAWrapper.java when sending Intents. 
             
@@ -338,29 +346,21 @@ public class ProvisioningService extends BaseService {
                 }
                 
                 for(int i=0; i<ints[NUMBER_OF_TLTS_IDX]; i++){
-                    long mostSignificant = uuidArray[i][7];
-                    mostSignificant+= uuidArray[i][6]<<8;
-                    mostSignificant+= uuidArray[i][5]<<16;
-                    mostSignificant+= uuidArray[i][4]<<24;
-                    mostSignificant+= (long)uuidArray[i][3]<<32;
-                    mostSignificant+= (long)uuidArray[i][2]<<40;
-                    mostSignificant+= (long)uuidArray[i][1]<<48;
-                    mostSignificant+= (long)uuidArray[i][0]<<56;
+                    byte[] msBytes=new byte[LONG_SIZE]; 
+                    System.arraycopy(uuidArray[i], 0, msBytes, 0, LONG_SIZE);
+                    BigInteger mostSignificant=new BigInteger(msBytes);
 
-                    long leastSignificant = uuidArray[i][15];
-                    leastSignificant+= uuidArray[i][14]<<8;
-                    leastSignificant+= uuidArray[i][13]<<16;
-                    leastSignificant+= uuidArray[i][12]<<24;
-                    leastSignificant+= (long)uuidArray[i][11]<<32;
-                    leastSignificant+= (long)uuidArray[i][10]<<40;
-                    leastSignificant+= (long)uuidArray[i][9]<<48;
-                    leastSignificant+= (long)uuidArray[i][8]<<56;
+                    byte[] lsBytes=new byte[LONG_SIZE];
+                    System.arraycopy(uuidArray[i], LONG_SIZE, lsBytes, 0, LONG_SIZE);
+                    BigInteger leastSignificant=new BigInteger(lsBytes);
+
+                    Log.d(TAG,"UUID: ls ms"+leastSignificant+" "+mostSignificant);
                     
                     TrustletContainerState ts=mapTltContainerState(trustletStates[i]);
                     if (ts == TrustletContainerState.UNDEFINED){
                         ret=CommandResult.ROOTPA_ERROR_INTERNAL;                
                     }
-                    cs.add(new TrustletContainer(new UUID(mostSignificant, leastSignificant), ts));
+                    cs.add(new TrustletContainer(new UUID(mostSignificant.longValue(), leastSignificant.longValue()), ts));
                 }
                 
             }else if (ret==CommandResult.ROOTPA_ERROR_INTERNAL_NO_CONTAINER){
@@ -381,7 +381,7 @@ public class ProvisioningService extends BaseService {
             return new CommandResult(ret);            
         }
 
-
+                
         public CommandResult getSPContainerState(SPID spid, SPContainerStateParcel state){
             Log.d(TAG,">>RootPAServiceIfc.Stub.getSPContainerState"); 
 
@@ -431,6 +431,24 @@ public class ProvisioningService extends BaseService {
             Log.d(TAG,"<<RootPAServiceIfc.Stub.getSPContainerState"); 
             return new CommandResult(ret);
         }
+
+        public CommandResult storeTA(SPID spid, byte[] uuid, byte[] taBinary){
+            Log.d(TAG,">>RootPAServiceIfc.Stub.storeTA");
+            if(spid==null||uuid==null||taBinary==null|| taBinary.length == 0 || spid.spid()==0){ // having null out variable leads to null pointer exception in the client, however we still want to do checking so that there is not unncessary execution of the following code
+                return new CommandResult(CommandResult.ROOTPA_ERROR_ILLEGAL_ARGUMENT);
+            }
+            
+            int ret=CommandResult.ROOTPA_OK;
+            try{
+                ret=commonPAWrapper().storeTA(spid.spid(), uuid, taBinary);
+            }catch(Exception e){
+                Log.e(TAG,"CommonPAWrapper().storeTA exception: ", e);
+                ret=CommandResult.ROOTPA_ERROR_INTERNAL;
+            }
+            
+            Log.d(TAG,"<<RootPAServiceIfc.Stub.storeTA");
+            return new CommandResult(ret);            
+        }        
 
         private final static int  MC_CONT_STATE_UNREGISTERED=0;
         private final static int  MC_CONT_STATE_REGISTERED=1;
@@ -519,7 +537,7 @@ public class ProvisioningService extends BaseService {
         }catch(Exception e){
             Log.i(TAG,"ProvisioningService something wrong in the given logging level "+e );
         }
-        Log.i(TAG,"ProvisioningService binding");
+        Log.i(TAG,"ProvisioningService binding, IfcVersion: " +IfcVersion.ROOTPA_ANDROID_API_VERSION_MAJOR+"."+IfcVersion.ROOTPA_ANDROID_API_VERSION_MINOR);
         if(se_!=null) Log.d(TAG,new String(se_));
         return mBinder;
     }
