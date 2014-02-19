@@ -44,9 +44,9 @@
 #define AT_TAG_SIZE             20
 #define AT_SHA1_HASH_SIZE       20
 
-// Max size of RSA modulus supported 
+// Max size of RSA modulus supported
 #define AT_MODULUS_MAX_SIZE     256
-// Max size of RSA public exponent supported 
+// Max size of RSA public exponent supported
 #define AT_PUBLIC_EXPO_MAX_SIZE 4
 
 // Attestation version
@@ -62,7 +62,7 @@ const char          TAG[AT_TAG_SIZE]="Trusted Application";
 
 // Public key structure
 typedef struct uuid_public_key {
-    uint32_t    type;           // TEE TYPE RSA KEYPAIR: 0xa0000030
+    uint32_t    type;           // TEE_TYPE_RSA_PUBLIC_KEY: 0xA0000030
     uint16_t    modulus_bytes;  // Length of the modulus in bytes
     uint16_t    exponent_bytes; // Length of the exponent in bytes
     uint8_t     data[];         // Key material

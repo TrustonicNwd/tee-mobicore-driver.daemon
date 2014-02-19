@@ -468,7 +468,10 @@ void copyElement(JNIEnv* envP, char** target, jstring source)
     {
         const char* tmp=envP->GetStringUTFChars(source, NULL);
         *target=(char*)malloc(strlen(tmp)+1);
-        strcpy(*target, tmp);
+        if(*target!=NULL)
+        {
+            strcpy(*target, tmp);
+        }
         envP->ReleaseStringUTFChars(source, tmp);
     }
     else

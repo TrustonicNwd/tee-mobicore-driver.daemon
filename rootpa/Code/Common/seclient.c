@@ -178,6 +178,7 @@ int debug_function (CURL * curl_handle, curl_infotype info, char* debugMessageP,
     if(debugMessageP!=NULL && debugMessageSize!=0)
     {
         char* msgP=malloc(debugMessageSize+1);
+        if(NULL==msgP)return 0;
         memcpy(msgP, debugMessageP, debugMessageSize);
         msgP[debugMessageSize]=0;
         LOGD("curl: %d %s",info, msgP);

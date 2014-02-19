@@ -28,7 +28,6 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 /**
  * Definition of the machine-specific integer types
  **/
@@ -103,15 +102,7 @@ typedef unsigned char bool;
 #define IN
 #define OUT
 
-/*
- * Definition of other common types
- */
-
-// to delete when all completed
-typedef uint32_t TEE_Result;
-typedef TEE_Result TEEC_Result;
-
-typedef uint32_t TEE_HANDLE;
+typedef uint32_t TEEC_Result;
 
 /** Definition of an UUID (from RFC 4122 http://www.ietf.org/rfc/rfc4122.txt) */
 typedef struct TEE_UUID {
@@ -121,43 +112,5 @@ typedef struct TEE_UUID {
     uint8_t clockSeqAndNode[8];
 } TEE_UUID;
 typedef TEE_UUID TEEC_UUID;
-
-/** Type definition for a TEE Identity */
-typedef struct TEE_Identity {
-    uint32_t login;
-    TEE_UUID uuid;
-} TEE_Identity;
-
-typedef struct __TEE_PropSetHandle {
-    unsigned char reserved;
-} __TEE_PropSetHandle;
-
-typedef struct __TEE_PropSetHandle* TEE_PropSetHandle;
-
-/* Property Sets Pseudo Handles */
-#define TEE_PROPSET_CURRENT_TA               (TEE_PropSetHandle)0xFFFFFFFF
-#define TEE_PROPSET_CURRENT_CLIENT           (TEE_PropSetHandle)0xFFFFFFFE
-#define TEE_PROPSET_TEE_IMPLEMENTATION       (TEE_PropSetHandle)0xFFFFFFFD
-
-
-/* DLL Import/Export directives */
-
-#if defined(WIN32) || defined(__ARMCC_VERSION) || defined(__WINSCW__) || defined(_WIN32_WCE)
-#  define S_DLL_EXPORT __declspec(dllexport)
-#  define S_DLL_IMPORT __declspec(dllimport)
-#  define S_NO_RETURN  __declspec(noreturn)
-#elif defined(__GNUC__)
-#  define S_DLL_EXPORT __attribute__ ((visibility ("default")))
-#  define S_DLL_IMPORT __attribute__ ((visibility ("default")))
-#  define S_NO_RETURN  __attribute__ ((noreturn))
-#else
-#  define S_DLL_EXPORT
-#  define S_DLL_IMPORT
-#  define S_NO_RETURN
-#endif
-
-#if defined(_MSC_VER)
-#define __func__ __FUNCTION__
-#endif
 
 #endif /* __TEE_TYPE_H__ */

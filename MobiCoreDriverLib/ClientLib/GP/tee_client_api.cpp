@@ -238,7 +238,7 @@ static TEEC_Result _TEEC_SetupOperation(
 
     // Fill in invalid values for secure world to overwrite
     tci->returnStatus = 0;
-    tci->returnStatus = TEE_ERROR_BAD_STATE;
+    tci->returnStatus = TEEC_ERROR_BAD_STATE;
 
     // Signal completion of request writing
     tci->ready = 1;
@@ -442,7 +442,7 @@ static TEEC_Result _TEEC_CallTA(
                 LOG_E("Target is DEAD");
 
                 *returnOrigin = TEEC_ORIGIN_TEE;
-                teecError = TEE_ERROR_TARGET_DEAD;
+                teecError = TEEC_ERROR_TARGET_DEAD;
             }
         }
     }

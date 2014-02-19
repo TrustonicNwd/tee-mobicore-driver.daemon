@@ -45,7 +45,11 @@
 //#define LOG_VERBOSE
 #include "log.h"
 
+/* The following definitions are not exported in the header files of the
+   client API. */
 #define TEE_DATA_FLAG_EXCLUSIVE              0x00000400
+#define TEE_ERROR_STORAGE_NO_SPACE       ((TEEC_Result)0xFFFF3041)
+#define TEE_ERROR_CORRUPT_OBJECT         ((TEEC_Result)0xF0100001)
 
 extern string getTbStoragePath();
 
@@ -355,8 +359,8 @@ mcResult_t FSD::FSD_LookFile(void){
 	pFile = fopen(Filepath, "r");
 	if (pFile==NULL)
 	{
-		LOG_E("%s: Error looking for file 0x%.8x\n",__func__,TEE_ERROR_ITEM_NOT_FOUND);
-		return TEE_ERROR_ITEM_NOT_FOUND;
+		LOG_E("%s: Error looking for file 0x%.8x\n",__func__,TEEC_ERROR_ITEM_NOT_FOUND);
+		return TEEC_ERROR_ITEM_NOT_FOUND;
 	}
 
 	res = fread(sth_request->payload,sizeof(char),sth_request->payloadLen,pFile);
@@ -365,9 +369,9 @@ mcResult_t FSD::FSD_LookFile(void){
 	if ((uint32_t)res != sth_request->payloadLen)
 	{
 		LOG_E("%s: Error reading file res is %d and errno is %s\n",__func__,res,strerror(errno));
-		return TEE_ERROR_ITEM_NOT_FOUND;
+		return TEEC_ERROR_ITEM_NOT_FOUND;
 	}
-	return TEE_SUCCESS;
+	return TEEC_SUCCESS;
 }
 
 
@@ -402,8 +406,8 @@ mcResult_t FSD::FSD_ReadFile(void){
 	pFile = fopen(Filepath, "r");
 	if (pFile==NULL)
 	{
-		LOG_E("%s: Error looking for file 0x%.8x\n", __func__,TEE_ERROR_ITEM_NOT_FOUND);
-		return TEE_ERROR_ITEM_NOT_FOUND;
+		LOG_E("%s: Error looking for file 0x%.8x\n", __func__,TEEC_ERROR_ITEM_NOT_FOUND);
+		return TEEC_ERROR_ITEM_NOT_FOUND;
 	}
 	res = fread(sth_request->payload,sizeof(char),sth_request->payloadLen,pFile);
 
@@ -412,9 +416,9 @@ mcResult_t FSD::FSD_ReadFile(void){
 	if ((uint32_t)res != sth_request->payloadLen)
 	{
 		LOG_E("%s: Error reading file res is %d and errno is %s\n",__func__,res,strerror(errno));
-		return TEE_ERROR_ITEM_NOT_FOUND;
+		return TEEC_ERROR_ITEM_NOT_FOUND;
 	}
-	return TEE_SUCCESS;
+	return TEEC_SUCCESS;
 }
 
 
@@ -497,7 +501,7 @@ mcResult_t FSD::FSD_WriteFile(void){
 		{
 			LOG_E("%s: remove failed: %s\n",__func__, strerror(errno));
 		}
-		return TEE_ERROR_ITEM_NOT_FOUND;
+		return TEEC_ERROR_ITEM_NOT_FOUND;
 	}
 	else
 	{
@@ -531,7 +535,7 @@ mcResult_t FSD::FSD_WriteFile(void){
 			return TEE_ERROR_STORAGE_NO_SPACE;
 		}
 	}
-	return TEE_SUCCESS;
+	return TEEC_SUCCESS;
 }
 
 
@@ -571,7 +575,7 @@ mcResult_t FSD::FSD_DeleteFile(void){
 	if (pFile==NULL)
 	{
 		LOG_I("%s: file not found: %s (%s)\n",__func__, Filepath, strerror(errno));
-		ret = TEE_SUCCESS;
+		ret = TEEC_SUCCESS;
 	}
 	else
 	{
@@ -590,7 +594,7 @@ mcResult_t FSD::FSD_DeleteFile(void){
 	}
 	else
 	{
-		ret = TEE_SUCCESS;
+		ret = TEEC_SUCCESS;
 	}
 
 	return ret;

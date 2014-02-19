@@ -573,7 +573,6 @@ rootpaerror_t handleCommandAndFillResponse(xmlDocPtr xmlCommandP, xmlDocPtr xmlR
     {
         uint32_t internalError;
         cmpResponsesP=malloc(sizeof(CmpMessage)*numberOfCmpCommands);
-        memset(cmpResponsesP, 0, sizeof(CmpMessage)*numberOfCmpCommands);
 
         if(NULL==cmpResponsesP)
         {
@@ -581,6 +580,7 @@ rootpaerror_t handleCommandAndFillResponse(xmlDocPtr xmlCommandP, xmlDocPtr xmlR
         }
         else
         {
+            memset(cmpResponsesP, 0, sizeof(CmpMessage)*numberOfCmpCommands);            
             tmpRet=executeContentManagementCommands(numberOfCmpCommands, cmpCommandsP, cmpResponsesP, &internalError);
             if(ROOTPA_OK!=tmpRet)
             {
@@ -736,7 +736,10 @@ uint8_t* validateDumpAndFree(xmlDocPtr xmlResponseP)
         // be on the safe side
 
         dumpedP=malloc(size+1);
-        strncpy((char*) dumpedP, (char*) dumpP, size+1);
+        if(dumpedP!=NULL)
+        {
+            strncpy((char*) dumpedP, (char*) dumpP, size+1);
+        }
         xmlFree(dumpP);
     }
     xmlFreeDoc(xmlResponseP);

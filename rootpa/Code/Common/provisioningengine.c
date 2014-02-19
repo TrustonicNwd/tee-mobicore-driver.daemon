@@ -154,9 +154,16 @@ char* createBasicLink(mcSuid_t suid)
     
     urlLength=strlen(initialUrl_) + (sizeof(mcSuid_t)*2) + (sizeof(mcSpid_t)*2) + (sizeof(mcUuid_t)*2)+6; //possible slash and end zero and four dashes
     tmpLinkP=malloc(urlLength);
-    memset(tmpLinkP,0,urlLength);
-    strncpy(tmpLinkP, initialUrl_, urlLength);
-    addBytesToUri(tmpLinkP, (uint8_t*) &suid, sizeof(suid), false);
+    if(tmpLinkP != NULL)
+    {
+        memset(tmpLinkP,0,urlLength);
+        strncpy(tmpLinkP, initialUrl_, urlLength);
+        addBytesToUri(tmpLinkP, (uint8_t*) &suid, sizeof(suid), false);
+    }
+    else
+    {
+        LOGE("createBasicLink, out of memory");        
+    }
     return tmpLinkP;
 }
 
@@ -195,6 +202,11 @@ void doProvisioningWithSe(
     }
 
     linkP=createBasicLink(suid);
+    if(NULL==linkP)
+    {
+        callbackP(ERROR, ROOTPA_ERROR_OUT_OF_MEMORY, NULL);
+        return;
+    }
     
     if (initialRel == initialRel_DELETE)
     {
@@ -317,9 +329,16 @@ void doProvisioningWithSe(
                 free(osSpecificInfo.hardwareP);
                 free(osSpecificInfo.modelP);
                 free(osSpecificInfo.versionP);
-
-                tmpRet=httpPutAndReceiveCommand(responseP, &linkP, &relP, &commandP);
-                if(tmpRet!=ROOTPA_OK) ret=tmpRet;
+                if(responseP!=NULL)
+                {
+                    tmpRet=httpPutAndReceiveCommand(responseP, &linkP, &relP, &commandP);
+                    if(tmpRet!=ROOTPA_OK) ret=tmpRet;
+                }
+                else if(ROOTPA_OK==ret)
+                {
+                    ret=ROOTPA_ERROR_OUT_OF_MEMORY;
+                }
+                
                 if(ret!=ROOTPA_OK)
                 {
                     LOGE("getSysInfoP, getVersionP or buildXmlSystemInfo or httpPutAndReceiveCommand returned an error %d", ret);
