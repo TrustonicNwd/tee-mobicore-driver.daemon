@@ -141,6 +141,45 @@ void MobiCoreDriverDaemon::run(
             loadDeviceDriver(drivers[i]);
     }
 
+    /* Look for tokens in the registry and pass them to <t-base for endorsement
+     * purposes.
+     */
+    LOG_I("Looking for suitable tokens");
+
+    mcSoAuthTokenCont_t authtoken;
+    mcSoRootCont_t rootcont;
+    uint32_t sosize;
+    uint8_t *p = NULL;
+
+    mcResult_t ret = mcRegistryReadAuthToken(&authtoken);
+    if (ret != MC_DRV_OK) {
+        LOG_I("Failed to read AuthToken (ret=%u). Trying Root Container", ret);
+
+        sosize = sizeof(rootcont);
+        ret = mcRegistryReadRoot(&rootcont, &sosize);
+        if (ret != MC_DRV_OK) {
+            LOG_I("Failed to read Root Cont, (ret=%u)", ret);
+            LOG_W("Device endorsements not supported!");
+            sosize = 0;
+        }
+        else {
+            LOG_I("Found Root Cont.");
+            p = (uint8_t *) &rootcont;
+        }
+    } else {
+        LOG_I("Found AuthToken.");
+        p = (uint8_t *) &authtoken;
+        sosize = sizeof(authtoken);
+    }
+
+    if (sosize) {
+        LOG_I("Found token of size: %u", sosize);
+        if (!loadToken(p, sosize)) {
+            LOG_E("Failed to pass token to <t-base. "
+                  "Device endorsements disabled");
+        }
+    }
+
     LOG_I("Creating socket servers");
     // Start listening for incoming TLC connections
     servers[0] = new NetlinkServer(this);
@@ -1245,6 +1284,51 @@ static void checkMobiCoreVersion(
     if (failed) {
         exit(1);
     }
+}
+
+//------------------------------------------------------------------------------
+bool MobiCoreDriverDaemon::loadToken(uint8_t *token, uint32_t sosize)
+{
+    bool ret = false;
+    CWsm_ptr pWsm = NULL;
+    Connection *conn = NULL;
+
+    do {
+        LOG_I("registering L2 in kmod, p=%p, len=%i", token, sosize);
+
+        pWsm = mobiCoreDevice->registerWsmL2((addr_t) (token), sosize, 0);
+        if (pWsm == NULL) {
+            LOG_E("allocating WSM for Token failed");
+            break;
+        }
+
+        /* Initialize information data of LOAD_TOKEN command */
+        loadTokenData_t loadTokenData;
+        loadTokenData.addr = pWsm->physAddr;
+        loadTokenData.offs = ((uint32_t) token) & 0xFFF;
+        loadTokenData.len = sosize;
+
+        conn = new Connection();
+        uint32_t mcRet = mobiCoreDevice->loadToken(conn, &loadTokenData);
+
+        /* Unregister physical memory from kernel module. This will also destroy
+         * the WSM object.
+         */
+        mobiCoreDevice->unregisterWsmL2(pWsm);
+        pWsm = NULL;
+
+        if (mcRet != MC_MCP_RET_OK) {
+            LOG_E("LOAD_TOKEN error 0x%x", mcRet);
+            break;
+        }
+        ret = true;
+
+    } while (false);
+
+    delete pWsm;
+    delete conn;
+
+    return ret;
 }
 
 /** @} */

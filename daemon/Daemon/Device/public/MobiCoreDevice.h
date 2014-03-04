@@ -66,6 +66,12 @@ typedef struct {
     mclfHeader_ptr tlHeader; /**< Pointer to trustlet header. */
 } loadDataOpenSession_t, *loadDataOpenSession_ptr;
 
+typedef struct {
+    addr_t addr;      /**< Physical address of the data to load. */
+    uint32_t offs;      /**< Offset to the data. */
+    uint32_t len;       /**< Length of the data to load. */
+} loadTokenData_t, *loadTokenData_ptr;
+
 /**
  * Factory method to return the platform specific MobiCore device.
  * Implemented in the platform specific *Device.cpp
@@ -227,6 +233,9 @@ public:
      * Allocates persistent WSM memory for TL (won't be released when TLC exits).
      */
     virtual CWsm_ptr allocateContiguousPersistentWsm(uint32_t len) = 0;
+
+    mcResult_t loadToken(Connection        *deviceConnection,
+                         loadTokenData_ptr pLoadTokenData);
 
 };
 

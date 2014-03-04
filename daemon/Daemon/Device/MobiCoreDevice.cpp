@@ -812,4 +812,48 @@ mcResult_t MobiCoreDevice::getMobiCoreVersion(
     return MC_DRV_OK;
 }
 
+//------------------------------------------------------------------------------
+mcResult_t MobiCoreDevice::loadToken(Connection        *deviceConnection,
+                                     loadTokenData_ptr pLoadTokenData)
+{
+    do {
+        mcpMessage->cmdLoadToken.cmdHeader.cmdId = MC_MCP_CMD_LOAD_TOKEN;
+        mcpMessage->cmdLoadToken.wsmTypeLoadData = WSM_L2;
+        mcpMessage->cmdLoadToken.adrLoadData = (uint32_t) pLoadTokenData->addr;
+        mcpMessage->cmdLoadToken.ofsLoadData = pLoadTokenData->offs;
+        mcpMessage->cmdLoadToken.lenLoadData = pLoadTokenData->len;
+
+        /* Clear the notifications queue. We asume the race condition we have
+         * seen in openSession never happens elsewhere
+         */
+        notifications = std::queue<notification_t>();
+
+        mcResult_t mcRet = mshNotifyAndWait();
+        if (mcRet != MC_MCP_RET_OK)
+        {
+            LOG_E("mshNotifyAndWait failed for LOAD_TOKEN, code 0x%x.", mcRet);
+            /* Here <t-base can be considered dead. */
+            return mcRet;
+        }
+
+        /* Check if the command response ID is correct */
+        if ((MC_MCP_CMD_LOAD_TOKEN | FLAG_RESPONSE) !=
+            mcpMessage->rspHeader.rspId) {
+            LOG_E("CMD_LOAD_TOKEN got invalid MCP command response(0x%X)",
+                  mcpMessage->rspHeader.rspId);
+            return MC_DRV_ERR_DAEMON_MCI_ERROR;
+        }
+
+        mcRet = mcpMessage->rspLoadToken.rspHeader.result;
+
+        if (mcRet != MC_MCP_RET_OK) {
+            LOG_E("MCP LOAD_TOKEN returned code 0x%x.", mcRet);
+            return MAKE_MC_DRV_MCP_ERROR(mcRet);
+        }
+
+    } while (0);
+
+    return MC_DRV_OK;
+}
+
 /** @} */

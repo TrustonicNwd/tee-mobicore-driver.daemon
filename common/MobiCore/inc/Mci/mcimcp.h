@@ -95,6 +95,7 @@ typedef enum {
     MC_MCP_CMD_DONATE_RAM                = 0x00000008,   /**< Donate RAM to MobiCore. */
     MC_MCP_CMD_GET_MOBICORE_VERSION      = 0x00000009,   /**< Get MobiCore version information. */
     MC_MCP_CMD_CLOSE_MCP                 = 0x0000000A,   /**< Close MCP and unmap MCI. */
+    MC_MCP_CMD_LOAD_TOKEN                = 0x0000000B,   /**< Load token for device attestation */
 } mcpCmdId_t;
 
 
@@ -348,6 +349,27 @@ typedef struct {
 
 /** @} */// End SESSCMD
 
+/** @defgroup MCPLOADTOKEN
+ * Load a token from the normal world and share it with <t-base
+ * If something fails, the device attestation functionality will be disabled
+ * @{ */
+
+/** Load Token */
+typedef struct {
+    commandHeader_t   cmdHeader;        /**< Command header. */
+    wsmType_t         wsmTypeLoadData;  /**< Type of the memory containing the data to load. */
+    uint32_t          adrLoadData;      /**< Physical address of the data to load. */
+    uint32_t          ofsLoadData;      /**< Offset to the data to load. */
+    uint32_t          lenLoadData;      /**< Length of the data to load. */
+} mcpCmdLoadToken_t, *mcpCmdLoadToken_ptr;
+
+/** Load Token Command Response */
+typedef struct {
+    responseHeader_t  rspHeader; /**< Response header. */
+} mcpRspLoadToken_t, *mcpRspLoadToken_ptr;
+
+/** @} *///End MCPLOADTOKEN
+
 /** @} */// End CMD
 
 /** Structure of the MCP buffer. */
@@ -370,6 +392,8 @@ typedef union {
     mcpRspDonateRam_t            rspDonateRam;           /**< Response to DONATE_RAM command. */
     mcpCmdGetMobiCoreVersion_t   cmdGetMobiCoreVersion;  /**< Get MobiCore Version command. */
     mcpRspGetMobiCoreVersion_t   rspGetMobiCoreVersion;  /**< Response to GET_MOBICORE_VERSION command. */
+    mcpCmdLoadToken_t            cmdLoadToken;
+    mcpRspLoadToken_t            rspLoadToken;
 } mcpMessage_t, *mcpMessage_ptr;
 
 

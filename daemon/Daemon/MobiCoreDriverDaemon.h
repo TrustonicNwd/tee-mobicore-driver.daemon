@@ -239,6 +239,17 @@ private:
      * @param connection Connection object
      */
     void processRegistryDeleteData(uint32_t commandId, Connection *connection);
+
+    /**
+     * Load Token
+     * This function loads a token (if found) from the registry and uses it as
+     * the basis for the device attestation functionality
+     *
+     * @param token the token to base the attestation on (raw format)
+     * @param sosize the size of the token
+     */
+    bool loadToken(uint8_t *token, uint32_t sosize);
+
 };
 
 #endif /* MOBICOREDRIVER_H_ */
