@@ -44,6 +44,24 @@ JniHelpers::JniHelpers(JNIEnv* envP):broken_(false),
                                      listAdd_(NULL)
 {}                                     
 
+JniHelpers::~JniHelpers()
+{
+    if(listCls_!=NULL)
+    {
+        envP_->DeleteLocalRef(listCls_);
+    }
+    
+    if(intCls_!=NULL)
+    {
+        envP_->DeleteLocalRef(intCls_);
+    }    
+    
+    if(stringCls_!=NULL)
+    {
+        envP_->DeleteLocalRef(stringCls_);
+    }    
+}
+
 
 JniHelpers::JniHelpers(JNIEnv* envP,jobject* keysP, jobject* valuesP, jbyteArray* productIdP):broken_(false), 
                                                                                               envP_(envP),
@@ -117,23 +135,25 @@ int JniHelpers::setVersion(char* fieldName, int version)
         broken_=true;
         return ROOTPA_ERROR_INTERNAL;
     }
-
     
     jobject newStringObject = envP_->NewObject(stringCls_, stringConstructur_, fName);
     if(NULL == newStringObject)
     {
         LOGE("JniHelpers::setVersion no newStringObject");    
         broken_=true;
+        envP_->DeleteLocalRef(fName);
         return ROOTPA_ERROR_INTERNAL;
     }
+    envP_->DeleteLocalRef(fName);
 
     if(envP_->CallBooleanMethod(*keysP_, listAdd_, newStringObject)==JNI_FALSE)
     {
         LOGE("JniHelpers::setVersion can not add key");    
         broken_=true;
+        envP_->DeleteLocalRef(newStringObject);
         return ROOTPA_ERROR_INTERNAL;        
     }
-
+    envP_->DeleteLocalRef(newStringObject);
 
     jobject newIntObject = envP_->NewObject(intCls_, intConstructor_, version);
     if(NULL == newIntObject)
@@ -147,8 +167,11 @@ int JniHelpers::setVersion(char* fieldName, int version)
     {
         LOGE("JniHelpers::setVersion can not add value");    
         broken_=true;
+        envP_->DeleteLocalRef(newIntObject);
         return ROOTPA_ERROR_INTERNAL;        
     }
+    envP_->DeleteLocalRef(newIntObject);
+    
     return ROOTPA_OK;   
 }
 
@@ -189,6 +212,7 @@ jbyteArray JniHelpers::byteArrayToJByteArray(uint8_t* dataP, uint32_t length)
     jbyteArray jbArray = NULL;
     if (envP_->EnsureLocalCapacity(1) == JNI_OK) 
     {
+    
         if ((length > 0) && (dataP != NULL)) 
         {
             jbArray = envP_->NewByteArray(length);
@@ -196,8 +220,9 @@ jbyteArray JniHelpers::byteArrayToJByteArray(uint8_t* dataP, uint32_t length)
             {
                 envP_->SetByteArrayRegion(jbArray, 0, length, (jbyte*) dataP);
             }
-        }
+        }       
     }
+
     return jbArray;
 }
 

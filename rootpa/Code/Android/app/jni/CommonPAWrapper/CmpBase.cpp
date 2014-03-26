@@ -64,6 +64,15 @@ CmpBase::CmpBase(JNIEnv* env, jobject msgs): env_(env),
 */
 CmpBase::~CmpBase()
 {
+    if(cls_!=NULL)
+    {
+        env_->DeleteLocalRef(cls_);
+    }
+
+    if(objectCls_!=NULL)
+    {
+        env_->DeleteLocalRef(objectCls_);
+    }
 }
 
 /*
@@ -76,7 +85,7 @@ int CmpBase::numberOfElements()
         jmethodID mid =  env_->GetMethodID(cls_, "size", "()I");
         if(mid !=0)
         {
-            numberOfElements_ = (int) env_->CallIntMethod(msgs_, mid);
+            numberOfElements_ = (int) env_->CallIntMethod(msgs_, mid);            
         }
         else
         {
@@ -85,6 +94,8 @@ int CmpBase::numberOfElements()
     }
     return numberOfElements_;
 }
+
+
 
 
 
