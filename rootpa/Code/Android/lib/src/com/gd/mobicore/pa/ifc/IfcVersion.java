@@ -32,9 +32,11 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 /** @addtogroup ROOTPA
  */
 
-class IfcVersion{
+package com.gd.mobicore.pa.ifc;
 
-    final static int ROOTPA_ANDROID_API_VERSION_MAJOR = 1;
-    final static int ROOTPA_ANDROID_API_VERSION_MINOR=0;
+public class IfcVersion{
+
+    public final static int ROOTPA_ANDROID_API_VERSION_MAJOR = 1;
+    public final static int ROOTPA_ANDROID_API_VERSION_MINOR=0;
 };
 

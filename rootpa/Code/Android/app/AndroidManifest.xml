@@ -25,7 +25,8 @@
 
   <application 
     android:label="RootPA" 
-    android:debuggable="false">
+    android:debuggable="false"
+    android:theme="@android:style/Theme.NoDisplay">
     <service 
         android:name="com.gd.mobicore.pa.service.ProvisioningService" 
         android:enabled="true"

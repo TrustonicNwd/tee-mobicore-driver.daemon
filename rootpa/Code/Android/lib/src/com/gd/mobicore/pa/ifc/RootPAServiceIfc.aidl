@@ -133,14 +133,16 @@ interface RootPAServiceIfc {
      CommandResult executeCmpCommands(int uid, in List<CmpCommand> commands, out List<CmpResponse> responses);
 
     /**
-     * Starts provisioning; creates Root Container and SP Container if not already available.
+     * Starts provisioning. What actually happens after calling this depends on the state of the system and the commands SE sends.
+     * In normal situation, SE sends commands to create root container and SP container (indicated by spid) if they do not already 
+     * exist. If given spid is 0, only root container is created (if it does not already exist).
      * Tasks are performed asynchronously. Method returns immediately.
      * Intents are broadcast to indicate the progress of the provisioning. The result is also
      * sent via broadcast.
      *
      * Cannot be executed if the acquireLock is called. Release any lock before calling this 
      * method. Also, this command acquires lock internally before executing and releases lock 
-     * when error occurs or provisioning is finished.
+     * when error occurs or provisioning is finished (just before sending FINISHED_ROOT_PROVISIONING intent) or after 1 minute timeout.
      *
      * The following intents are broadcast after calling doProvisioning:
      * <ul>

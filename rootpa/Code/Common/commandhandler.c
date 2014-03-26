@@ -370,7 +370,7 @@ void* provisioningThreadFunction(void* paramsP)
         free((char*)((provisioningparams_t*)paramsP)->tltInstallationDataP->tltPukHashP);
         free(((provisioningparams_t*)paramsP)->tltInstallationDataP);
     }
-    free(paramsP);
+    free(paramsP);  // Coverity complains that paramsP allocated in "provisioning" is not freed. It is done here.
 
     LOGD("<<provisioningThreadFunction");
     pthread_exit(NULL);
@@ -394,6 +394,7 @@ rootpaerror_t provision(mcSpid_t spid, CallbackFunctionP callbackP, SystemInfoCa
     paramsP->spid=spid;
     if(tltDataP)
     {
+        // Coverity complains that paramsP allocated here is not freed. It is done in "provisioningThreadFunction"
         paramsP->tltInstallationDataP=malloc(sizeof(trustletInstallationData_t));
         if(!paramsP->tltInstallationDataP)
         {
@@ -463,6 +464,7 @@ rootpaerror_t provision(mcSpid_t spid, CallbackFunctionP callbackP, SystemInfoCa
             if(r)
             {
                 LOGE("unable to create thread %d",r);
+                free(paramsP);
                 ret=ROOTPA_ERROR_INTERNAL;
             }
             pthread_attr_destroy(&attributes);

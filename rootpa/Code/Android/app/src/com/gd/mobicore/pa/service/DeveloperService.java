@@ -44,6 +44,7 @@ import com.gd.mobicore.pa.ifc.RootPADeveloperIfc;
 import com.gd.mobicore.pa.ifc.CommandResult;
 import com.gd.mobicore.pa.ifc.BooleanResult;
 import com.gd.mobicore.pa.ifc.TrustletContainer;
+import com.gd.mobicore.pa.ifc.IfcVersion;
 
 public class DeveloperService extends BaseService {
 
@@ -204,7 +205,7 @@ public class DeveloperService extends BaseService {
         }catch(Exception e){
             Log.i(TAG,"DeveloperService something wrong in the given logging level "+e );
         }
-        Log.i(TAG,"DeveloperService binding");
+        Log.i(TAG,"DeveloperService binding, IfcVersion: " +IfcVersion.ROOTPA_ANDROID_API_VERSION_MAJOR+"."+IfcVersion.ROOTPA_ANDROID_API_VERSION_MINOR);
         if(se_!=null) Log.d(TAG,new String(se_));
         return mBinder;
 

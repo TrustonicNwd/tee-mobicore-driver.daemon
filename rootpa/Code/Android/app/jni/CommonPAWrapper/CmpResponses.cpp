@@ -78,6 +78,7 @@ int CmpResponses::update(CmpMessage* responses, int numberOfResponses)
                 ret=ROOTPA_ERROR_INTERNAL;
                 LOGE("adding cmp response object %d failed", i);                
             }
+            env_->DeleteLocalRef(responseObject);
         }
         else
         {
@@ -133,6 +134,12 @@ jobject CmpResponses::createCmpResponseObject(CmpMessage msg)
             {
                 LOGE("CmpResponses::createCmpResponseObject creating constructor failed");                
             }
+            
+            if(rsp != NULL)
+            {
+                env_->DeleteLocalRef(rsp);
+            }
+            
         }
         else
         {
@@ -140,6 +147,12 @@ jobject CmpResponses::createCmpResponseObject(CmpMessage msg)
         }
     }
     
+    if(objectCls_!=NULL)
+    {
+        env_->DeleteLocalRef(objectCls_);
+        objectCls_=NULL;
+    }
+
     return newObject;
 }
 
