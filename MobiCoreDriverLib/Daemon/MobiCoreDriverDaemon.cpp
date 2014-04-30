@@ -156,25 +156,38 @@ void MobiCoreDriverDaemon::run(
     LOG_I("Looking for suitable tokens");
 
     mcSoAuthTokenCont_t authtoken;
+    mcSoAuthTokenCont_t authtokenbackup;
     mcSoRootCont_t rootcont;
     uint32_t sosize;
     uint8_t *p = NULL;
 
+    // Search order:  1. authtoken 2. authtoken backup 3. root container
+    sosize = 0;
     mcResult_t ret = mcRegistryReadAuthToken(&authtoken);
     if (ret != MC_DRV_OK) {
-        LOG_I("Failed to read AuthToken (ret=%u). Trying Root Container", ret);
+        LOG_I("Failed to read AuthToken (ret=%u). Trying AuthToken backup", ret);
 
-        sosize = sizeof(rootcont);
-        ret = mcRegistryReadRoot(&rootcont, &sosize);
+        ret = mcRegistryReadAuthTokenBackup(&authtokenbackup);
         if (ret != MC_DRV_OK) {
-            LOG_I("Failed to read Root Cont, (ret=%u)", ret);
-            LOG_W("Device endorsements not supported!");
-            sosize = 0;
+            LOG_I("Failed to read AuthToken backup (ret=%u). Trying Root Cont", ret);
+
+            sosize = sizeof(rootcont);
+            ret = mcRegistryReadRoot(&rootcont, &sosize);
+            if (ret != MC_DRV_OK) {
+                LOG_I("Failed to read Root Cont, (ret=%u).", ret);
+                LOG_W("Device endorsements not supported!");
+                sosize = 0;
+            } else {
+                LOG_I("Found Root Cont.");
+                p = (uint8_t *) &rootcont;
+            }
+
+        } else {
+            LOG_I("Found AuthToken backup.");
+            p = (uint8_t *) &authtokenbackup;
+            sosize = sizeof(authtokenbackup);
         }
-        else {
-            LOG_I("Found Root Cont.");
-            p = (uint8_t *) &rootcont;
-        }
+        
     } else {
         LOG_I("Found AuthToken.");
         p = (uint8_t *) &authtoken;

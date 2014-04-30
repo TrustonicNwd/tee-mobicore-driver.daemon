@@ -74,6 +74,7 @@
 #define MC_REGISTRY_DEFAULT_PATH "/system/app/mcRegistry"
 #define MC_REGISTRY_FALLBACK_PATH "/data/app/mcRegistry"
 #define AUTH_TOKEN_FILE_NAME "00000000.authtokcont"
+#define AUTH_TOKEN_FILE_NAME_BACKUP_SUFFIX ".backup"
 #define ENV_MC_AUTH_TOKEN_PATH "MC_AUTH_TOKEN_PATH"
 #define ROOT_FILE_NAME "00000000.rootcont"
 #define SP_CONT_FILE_EXT ".spcont"
@@ -177,6 +178,12 @@ static string getAuthTokenFilePath()
     }
 
     return authTokenPath + "/" + AUTH_TOKEN_FILE_NAME;
+}
+
+//------------------------------------------------------------------------------
+static string getAuthTokenFilePathBackup()
+{
+    return getAuthTokenFilePath() + AUTH_TOKEN_FILE_NAME_BACKUP_SUFFIX;
 }
 
 //------------------------------------------------------------------------------
@@ -294,10 +301,45 @@ mcResult_t mcRegistryReadAuthToken(mcSoAuthTokenCont_t *so)
 }
 
 //------------------------------------------------------------------------------
+mcResult_t mcRegistryReadAuthTokenBackup(mcSoAuthTokenCont_t *so)
+{
+    if (NULL == so) {
+        LOG_E("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
+    const string &authTokenFilePath = getAuthTokenFilePathBackup();
+    LOG_I("read AuthToken: %s", authTokenFilePath.c_str());
+
+    FILE *fs = fopen(authTokenFilePath.c_str(), "rb");
+    if (!fs) {
+        LOG_W("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_INVALID_DEVICE_FILE);
+        return MC_DRV_ERR_INVALID_DEVICE_FILE;
+    }
+    fseek(fs, 0, SEEK_END);
+    int32_t filesize = ftell(fs);
+    if (sizeof(mcSoAuthTokenCont_t) != filesize) {
+        fclose(fs);
+        LOG_W("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_OUT_OF_RESOURCES);
+        return MC_DRV_ERR_OUT_OF_RESOURCES;
+    }
+    fseek(fs, 0, SEEK_SET);
+    if (fread((char *)so, 1, sizeof(mcSoAuthTokenCont_t), fs) !=
+                sizeof(mcSoAuthTokenCont_t))
+    {
+        fclose(fs);
+        LOG_W("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
+    fclose(fs);
+
+    return MC_DRV_OK;
+}
+
+//------------------------------------------------------------------------------
 mcResult_t mcRegistryDeleteAuthToken(void)
 {
-    if (remove(getAuthTokenFilePath().c_str())) {
-        LOG_ERRNO("Delete Auth token file!");
+    if (rename(getAuthTokenFilePath().c_str(), getAuthTokenFilePathBackup().c_str())) {
+        LOG_ERRNO("Rename Auth token file!");
         return MC_DRV_ERR_UNKNOWN;
     } else
         return MC_DRV_OK;
