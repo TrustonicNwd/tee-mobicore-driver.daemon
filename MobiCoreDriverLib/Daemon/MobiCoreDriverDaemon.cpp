@@ -1,10 +1,3 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_CONHDLR
- * @{
- * @file
- *
- * Entry of the MobiCore Driver.
- */
-
 /*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
@@ -35,7 +28,9 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+/**
+ * Entry of the MobiCore Driver.
+ */
 #include <cstdlib>
 #include <signal.h>
 #include <fcntl.h>
@@ -65,10 +60,6 @@ MC_CHECK_VERSION(CONTAINER, 2, 0);
 static void checkMobiCoreVersion(MobiCoreDevice *mobiCoreDevice);
 
 #define LOG_I_RELEASE(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
-
-pthread_mutex_t         syncMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t          syncCondition = PTHREAD_COND_INITIALIZER;
-bool 					Th_sync=false;
 
 //------------------------------------------------------------------------------
 MobiCoreDriverDaemon::MobiCoreDriverDaemon(
@@ -171,23 +162,23 @@ void MobiCoreDriverDaemon::run(
         if (ret != MC_DRV_OK) {
             LOG_I("Failed to read AuthToken backup (ret=%u). Trying Root Cont", ret);
 
-            sosize = sizeof(rootcont);
-            ret = mcRegistryReadRoot(&rootcont, &sosize);
-            if (ret != MC_DRV_OK) {
+        sosize = sizeof(rootcont);
+        ret = mcRegistryReadRoot(&rootcont, &sosize);
+        if (ret != MC_DRV_OK) {
                 LOG_I("Failed to read Root Cont, (ret=%u).", ret);
-                LOG_W("Device endorsements not supported!");
-                sosize = 0;
+            LOG_W("Device endorsements not supported!");
+            sosize = 0;
             } else {
-                LOG_I("Found Root Cont.");
-                p = (uint8_t *) &rootcont;
-            }
+            LOG_I("Found Root Cont.");
+            p = (uint8_t *) &rootcont;
+        }
 
         } else {
             LOG_I("Found AuthToken backup.");
             p = (uint8_t *) &authtokenbackup;
             sosize = sizeof(authtokenbackup);
         }
-        
+
     } else {
         LOG_I("Found AuthToken.");
         p = (uint8_t *) &authtoken;
@@ -213,18 +204,10 @@ void MobiCoreDriverDaemon::run(
         servers[i]->start(i ? "McDaemon.Server" : "NetlinkServer");
     }
 
-    // Create the <t-base File Storage Daemon
-    FSD *FileStorageDaemon = new FSD();
-    // Start File Storage Daemon
-    FileStorageDaemon->start("McDaemon.FSD");
-
     // then wait for them to exit
     for (i = 0; i < MAX_SERVERS; i++) {
         servers[i]->join();
     }
-    //Wait for File Storage Daemon to exit
-	FileStorageDaemon->join();
-	delete FileStorageDaemon;
 }
 
 //------------------------------------------------------------------------------
@@ -764,16 +747,25 @@ void MobiCoreDriverDaemon::processNqConnect(Connection *connection)
         return;
     }
 
+    /*
+     * The fix extends the range of the trustlet_session_list mutex over the
+     * sending of the nq-socket message that confirms the creation of the session.
+     * That way an arriving SSIQ/notification-from-driver will not use the nq-socket before the ok message was sent.
+     */
+    device->mutex_tslist.lock();
     TrustletSession *ts = device->registerTrustletConnection(
                               connection,
                               &cmd);
     if (!ts) {
         LOG_E("registerTrustletConnection() failed!");
         writeResult(connection, MC_DRV_ERR_UNKNOWN);
+        device->mutex_tslist.unlock();
         return;
     }
 
     writeResult(connection, MC_DRV_OK);
+    device->mutex_tslist.unlock();
+
     ts->processQueuedNotifications();
 }
 
@@ -1134,7 +1126,7 @@ bool MobiCoreDriverDaemon::handleConnection(
         LOG_I("Ignore request, <t-base has faulted before.");
         return false;
     }
-   
+
     LOG_I("handleConnection()==== %p", connection);
     do {
         // Read header
@@ -1270,7 +1262,7 @@ bool MobiCoreDriverDaemon::handleConnection(
             break;
         }
     } while (0);
-    
+
     LOG_I("handleConnection()<-------");
 
     return ret;
@@ -1335,10 +1327,6 @@ int main(int argc, char *args[])
     std::vector<std::string> drivers;
     // By default don't fork
     bool forkDaemon = false;
-
-    /* Initialize mutex and condition variable objects */
-    pthread_mutex_init(&syncMutex, NULL);
-    pthread_cond_init (&syncCondition, NULL);
 
     while ((c = getopt(argc, args, "r:sbhp:")) != -1) {
         switch (c) {
@@ -1419,9 +1407,6 @@ int main(int argc, char *args[])
     mobiCoreDriverDaemon->run();
 
     delete mobiCoreDriverDaemon;
-
-    pthread_mutex_destroy(&syncMutex);
-    pthread_cond_destroy(&syncCondition);
 
     // This should not happen
     LOG_E("Exiting <t-base Daemon");
@@ -1520,4 +1505,3 @@ bool MobiCoreDriverDaemon::loadToken(uint8_t *token, uint32_t sosize)
     return ret;
 }
 
-/** @} */

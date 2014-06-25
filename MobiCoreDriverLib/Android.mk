@@ -35,11 +35,11 @@ LOCAL_C_INCLUDES +=\
     $(MOBICORE_PROJECT_PATH)/include/GPD_TEE_Internal_API \
     $(MOBICORE_PROJECT_PATH)/include/public \
     $(COMP_PATH_MobiCore)/inc \
-    $(COMP_PATH_MobiCore)/inc/McLib 
+    $(COMP_PATH_MobiCore)/inc/McLib
 
 LOCAL_EXPORT_C_INCLUDE_DIRS +=\
      $(COMP_PATH_MobiCore)/inc \
-     $(LOCAL_PATH)/ClientLib/public 
+     $(LOCAL_PATH)/ClientLib/public
 
 include $(LOCAL_PATH)/Kernel/Android.mk
 # Import logwrapper
@@ -76,11 +76,11 @@ LOCAL_C_INCLUDES +=\
     $(LOCAL_PATH)/ClientLib/public/GP \
     $(MOBICORE_PROJECT_PATH)/include/public \
     $(COMP_PATH_MobiCore)/inc \
-    $(COMP_PATH_MobiCore)/inc/McLib 
+    $(COMP_PATH_MobiCore)/inc/McLib
 
 # Private Registry components
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/Registry/Public \
-  $(LOCAL_PATH)/Registry 
+  $(LOCAL_PATH)/Registry
 
 LOCAL_SRC_FILES  += Registry/PrivateRegistry.cpp
 
@@ -108,8 +108,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/Common \
 # Common Source files required for building the daemon
 LOCAL_SRC_FILES += Common/CMutex.cpp \
      Common/Connection.cpp \
-     Common/CSemaphore.cpp 
-#     Common/CThread.cpp
+     Common/CSemaphore.cpp
 
 #LOCAL_LDLIBS := -lthread_db
 

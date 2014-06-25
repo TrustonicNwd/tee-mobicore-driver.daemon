@@ -1,6 +1,4 @@
-/** @addtogroup MCD_IMPL_LIB
- * @{
- * @file
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -205,4 +203,3 @@ mcResult_t Session::removeBulkBuf(addr_t virtAddr)
     return MC_DRV_OK;
 }
 
-/** @} */

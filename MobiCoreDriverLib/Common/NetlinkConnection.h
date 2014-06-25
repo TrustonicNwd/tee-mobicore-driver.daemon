@@ -1,9 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_SRV
- * @{
- * @file
- *
- * Connection data.
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -32,6 +27,9 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/**
+ * Connection data.
  */
 #ifndef NETLINKCONNECTION_H_
 #define NETLINKCONNECTION_H_
@@ -167,7 +165,7 @@ public:
      * @return -1 if select() failed (returned -1)
      * @return -2 if no data available, i.e. timeout
      */
-    virtual size_t readData(
+    virtual ssize_t readData(
         void      *buffer,
         uint32_t  len,
         int32_t   timeout
@@ -180,7 +178,7 @@ public:
      * @param len       Number of bytes to read.
      * @return Number of bytes read.
      */
-    virtual size_t readData(
+    virtual ssize_t readData(
         void       *buffer,
         uint32_t  len
     );
@@ -192,7 +190,7 @@ public:
      * @param len       Number of bytes to read.
      * @return Number of bytes written.
      */
-    virtual size_t writeData(
+    virtual ssize_t writeData(
         void      *buffer,
         uint32_t  len
     );
@@ -220,4 +218,3 @@ typedef std::map<uint64_t, NetlinkConnection *>  connectionMap_t;
 
 #endif /* NETLINKCONNECTION_H_ */
 
-/** @} */

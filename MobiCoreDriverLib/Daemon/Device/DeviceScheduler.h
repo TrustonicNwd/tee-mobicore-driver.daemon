@@ -1,9 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_DEV
- * @{
- * @file
- *
- * Scheduler thread
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -33,7 +28,9 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+/**
+ * Scheduler thread
+ */
 #ifndef DEVICESCHEDULER_H_
 #define DEVICESCHEDULER_H_
 
@@ -53,4 +50,3 @@ public:
 
 #endif /* DEVICESCHEDULER_H_ */
 
-/** @} */

@@ -1,12 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_DEV
- * @{
- * @file
- *
- * MobiCore device.
- * The MobiCore device class handles the MCP processing within the driver.
- * Concrete devices implementing the communication behavior for the platforms have to be derived
- * from this.
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -36,6 +28,12 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * MobiCore device.
+ * The MobiCore device class handles the MCP processing within the driver.
+ * Concrete devices implementing the communication behavior for the platforms have to be derived
+ * from this.
+ */
 #ifndef MOBICOREDEVICE_H_
 #define MOBICOREDEVICE_H_
 
@@ -52,7 +50,6 @@
 #include "Connection.h"
 #include "CWsm.h"
 
-#include "ExcDevice.h"
 #include "DeviceScheduler.h"
 #include "DeviceIrqHandler.h"
 #include "TAExitHandler.h"
@@ -97,7 +94,7 @@ protected:
     bool                mcFault; /**< Signal RTM fault */
     bool                mciReused; /**< Signal restart of Daemon. */
     CMutex              mutex_connection; // Mutex to share session->notificationConnection for GP cases
-    CMutex              mutex_tslist;       // Mutex to share Trustlet  session list
+
 
     /* In a special case a Trustlet can create a race condition in the daemon.
      * If at Trustlet start it detects an error of some sort and calls the
@@ -122,7 +119,7 @@ protected:
         uint32_t sessionId);
 
     TrustletSession* findSession(
-        Connection *deviceConnection, 
+        Connection *deviceConnection,
         uint32_t sessionId);
 
     TrustletSession *getTrustletSession(
@@ -142,7 +139,8 @@ private:
     virtual bool waitSsiq(void) = 0;
 
 public:
-    CMutex mutex_mcp; // This mutex should be taken before any access to below functions
+    CMutex mutex_mcp;    // This mutex should be taken before any access to below functions
+    CMutex mutex_tslist; // Mutex to share Trustlet  session list  ==> WARNING, do not CI, temporary fix.
 
     virtual ~MobiCoreDevice();
 
@@ -251,4 +249,3 @@ public:
 
 #endif /* MOBICOREDEVICE_H_ */
 
-/** @} */

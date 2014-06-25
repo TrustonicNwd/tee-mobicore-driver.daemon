@@ -1,7 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_DEV
- * @{
- * @file
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -71,7 +68,7 @@ public:
     bool addBulkBuff(CWsm_ptr pWsm);
 
     bool removeBulkBuff(uint32_t handle);
-    
+
     bool findBulkBuff(uint32_t handle, uint32_t lenBulkMem);
 
     CWsm_ptr popBulkBuff();
@@ -83,4 +80,3 @@ typedef trustletSessionList_t::iterator trustletSessionIterator_t;
 
 #endif /* TRUSTLETSESSION_H_ */
 
-/** @} */

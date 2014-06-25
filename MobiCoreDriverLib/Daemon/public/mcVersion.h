@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *

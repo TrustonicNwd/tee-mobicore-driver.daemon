@@ -1,12 +1,4 @@
-/** @addtogroup MCD_IMPL_LIB
- * @{
- * @file
- *
- * Client library device management.
- *
- * Device and Trustlet Session management Functions.
- *
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -36,6 +28,11 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * Client library device management.
+ *
+ * Device and Trustlet Session management Functions.
+ */
 #ifndef DEVICE_H_
 #define DEVICE_H_
 
@@ -59,6 +56,7 @@ public:
     uint32_t     deviceId; /**< Device identifier */
     Connection   *connection; /**< The device connection */
     CMcKMod_ptr  pMcKMod;
+    uint32_t     openCount;
 
     Device(
         uint32_t    deviceId,
@@ -170,4 +168,3 @@ public:
 
 #endif /* DEVICE_H_ */
 
-/** @} */

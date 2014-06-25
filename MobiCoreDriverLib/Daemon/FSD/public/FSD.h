@@ -1,12 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_SRV
- * @{
- * @file
- *
- * FSD server.
- *
- * Handles incoming storage requests from TA through STH
- *
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -35,6 +27,11 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/**
+ * FSD server.
+ *
+ * Handles incoming storage requests from TA through STH
  */
 #ifndef FSD_H_
 #define FSD_H_
@@ -166,4 +163,3 @@ private:
 
 #endif /* FSD_H_ */
 
-/** @} */

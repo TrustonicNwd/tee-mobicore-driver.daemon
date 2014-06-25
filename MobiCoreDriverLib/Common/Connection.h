@@ -1,9 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_SRV
- * @{
- * @file
- *
- * Connection data.
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -32,6 +27,9 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/**
+ * Connection data.
  */
 #ifndef CONNECTION_H_
 #define CONNECTION_H_
@@ -78,7 +76,7 @@ public:
      * @return -1 if select() failed (returned -1)
      * @return -2 if no data available, i.e. timeout
      */
-    virtual size_t readData(void *buffer, uint32_t len, int32_t timeout);
+    virtual ssize_t readData(void *buffer, uint32_t len, int32_t timeout);
 
     /**
      * Read bytes from the connection.
@@ -87,7 +85,7 @@ public:
      * @param len       Number of bytes to read.
      * @return Number of bytes read.
      */
-    virtual size_t readData(void *buffer, uint32_t len);
+    virtual ssize_t readData(void *buffer, uint32_t len);
 
     /**
      * Write bytes to the connection.
@@ -97,7 +95,7 @@ public:
      * @return Number of bytes written.
      * @return -1 if written bytes not equal to len.
      */
-    virtual size_t writeData(void *buffer, uint32_t len);
+    virtual ssize_t writeData(void *buffer, uint32_t len);
 
     /**
      * Wait for data to be available.
@@ -130,4 +128,3 @@ typedef connectionList_t::iterator     connectionIterator_t;
 
 #endif /* CONNECTION_H_ */
 
-/** @} */

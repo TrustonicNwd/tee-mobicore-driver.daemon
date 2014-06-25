@@ -1,9 +1,7 @@
-/** @addtogroup MC_RTM
- * @{
- * MobiCore Version Helper Macros
- *
- * Copyright (c) 2013 TRUSTONIC LIMITED
+/*
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved
+ *
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,15 +27,15 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * MobiCore Version Helper Macros
+ */
+
+#ifndef MCVERSIONHELPER_H_
+#define MCVERSIONHELPER_H_
+
 #include <stdio.h>
 
-//lint -emacro(*,MC_CHECK_VERSION) Disable all warnings for this macro.
-//lint -emacro(*,MC_MAKE_VERSION) Disable all warnings for this macro.
-//lint -emacro(*,MC_GET_MAJOR_VERSION) Disable all warnings for this macro.
-//lint -emacro(*,MC_GET_MINOR_VERSION) Disable all warnings for this macro.
-//lint -emacro(*,MC_GET_MINOR_VERSION) Disable all warnings for this macro.
-//lint -emacro(*,ASSERT_VERSION_IMPLEMENTATION) Disable all warnings for this macro.
-//lint -esym(*,Actual_*) Disable all warnings for these functions.
 
 /** Create a version number given major and minor numbers. */
 #define MC_MAKE_VERSION(major,minor) \
@@ -229,3 +227,6 @@
         return 0; \
     }
 #endif
+
+#endif // MCVERSIONHELPER_H_
+

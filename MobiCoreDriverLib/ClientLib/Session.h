@@ -1,6 +1,4 @@
-/** @addtogroup MCD_IMPL_LIB
- * @{
- * @file
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -184,4 +182,3 @@ typedef sessionList_t::iterator        sessionIterator_t;
 
 #endif /* SESSION_H_ */
 
-/** @} */

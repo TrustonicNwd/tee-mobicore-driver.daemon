@@ -1,8 +1,7 @@
-/**
- * @addtogroup MC_SUID mcSuid - SoC unique ID.
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved
+ *
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,9 +26,9 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * @ingroup  MC_DATA_TYPES
- * @{
+ */
+/**
+ * SoC unique ID.
  */
 
 #ifndef MC_SUID_H_
@@ -51,4 +50,3 @@ typedef struct {
 
 #endif // MC_SUID_H_
 
-/** @} */

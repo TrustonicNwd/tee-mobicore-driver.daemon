@@ -1,12 +1,3 @@
-/**
- * @addtogroup MCD_MCDIMPL_DAEMON_REG
- * @{
- * G&D MobiCore Registry Private implementation
- *
- * @file
- * Mobicore Driver Registry.
- */
-
 /*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
@@ -36,6 +27,9 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/**
+ * MobiCore Registry Private implementation
  */
 #ifndef MOBICORE_REGISTRY_H_
 #define MOBICORE_REGISTRY_H_
@@ -219,4 +213,3 @@ extern "C" {
 
 #endif // MOBICORE_REGISTRY_H_
 
-/** @} */

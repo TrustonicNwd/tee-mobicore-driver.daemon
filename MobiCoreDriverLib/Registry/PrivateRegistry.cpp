@@ -1,11 +1,3 @@
-/** Mobicore Driver Registry.
- *
- * Implements the MobiCore driver registry which maintains trustlets.
- *
- * @file
- * @ingroup MCD_MCDIMPL_DAEMON_REG
- */
-
 /*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
@@ -36,7 +28,13 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+/** Mobicore Driver Registry.
+ *
+ * Implements the MobiCore driver registry which maintains trustlets.
+ *
+ * @file
+ * @ingroup MCD_MCDIMPL_DAEMON_REG
+ */
 #include <stdlib.h>
 #include <dirent.h>
 #include <stdio.h>
@@ -67,12 +65,11 @@
 /** Maximum size of a shared object container in bytes. */
 #define MAX_SO_CONT_SIZE  (512)
 
-// Asserts expression at compile-time (to be used within a function body).
-#define ASSERT_STATIC(e) do { enum { assert_static__ = 1 / (e) }; } while (0)
+#define MC_REGISTRY_ALL      0
+#define MC_REGISTRY_WRITABLE 1
 
-#define MC_REGISTRY_CONTAINER_PATH "/data/app/mcRegistry"
-#define MC_REGISTRY_DEFAULT_PATH "/system/app/mcRegistry"
-#define MC_REGISTRY_FALLBACK_PATH "/data/app/mcRegistry"
+#define MC_REGISTRY_SYSTEM_PATH "/system/app/mcRegistry"
+#define MC_REGISTRY_DATA_PATH "/data/app/mcRegistry"
 #define AUTH_TOKEN_FILE_NAME "00000000.authtokcont"
 #define AUTH_TOKEN_FILE_NAME_BACKUP_SUFFIX ".backup"
 #define ENV_MC_AUTH_TOKEN_PATH "MC_AUTH_TOKEN_PATH"
@@ -117,48 +114,9 @@ static bool doesDirExist(const char *path)
 }
 
 //------------------------------------------------------------------------------
-static string getRegistryPath()
-{
-    string registryPath;
-
-    // use the default registry path.
-    registryPath = MC_REGISTRY_CONTAINER_PATH;
-    LOG_I("  Using default registry path %s", registryPath.c_str());
-
-    assert(registryPath.length() != 0);
-
-    return registryPath;
-}
-
 string getTbStoragePath()
 {
-    return getRegistryPath()+"/TbStorage";
-}
-
-//------------------------------------------------------------------------------
-string getTlRegistryPath()
-{
-    string registryPath;
-
-    // First, attempt to use regular registry environment variable.
-    if (doesDirExist(MC_REGISTRY_DEFAULT_PATH)) {
-        registryPath = MC_REGISTRY_DEFAULT_PATH;
-        LOG_I(" Using MC_REGISTRY_PATH %s", registryPath.c_str());
-    } else if (doesDirExist(MC_REGISTRY_FALLBACK_PATH)) {
-        // Second, attempt to use fallback registry environment variable.
-        registryPath = MC_REGISTRY_FALLBACK_PATH;
-        LOG_I(" Using MC_REGISTRY_FALLBACK_PATH %s", registryPath.c_str());
-    }
-
-    // As a last resort, use the default registry path.
-    if (registryPath.length() == 0) {
-        registryPath = MC_REGISTRY_CONTAINER_PATH;
-        LOG_I(" Using default registry path %s", registryPath.c_str());
-    }
-
-    assert(registryPath.length() != 0);
-
-    return registryPath;
+    return MC_REGISTRY_DATA_PATH "/TbStorage";
 }
 
 //------------------------------------------------------------------------------
@@ -173,7 +131,7 @@ static string getAuthTokenFilePath()
         LOG_I("getAuthTokenFilePath(): Using MC_AUTH_TOKEN_PATH %s", path);
         authTokenPath = path;
     } else {
-        authTokenPath = getRegistryPath();
+        authTokenPath = MC_REGISTRY_DATA_PATH;
         LOG_I("getAuthTokenFilePath(): Using path %s", authTokenPath.c_str());
     }
 
@@ -189,32 +147,32 @@ static string getAuthTokenFilePathBackup()
 //------------------------------------------------------------------------------
 static string getRootContFilePath()
 {
-    return getRegistryPath() + "/" + ROOT_FILE_NAME;
+    return MC_REGISTRY_DATA_PATH "/" ROOT_FILE_NAME;
 }
 
 //------------------------------------------------------------------------------
 static string getSpDataPath(mcSpid_t spid)
 {
-    return getRegistryPath() + "/" + uint32ToString(spid);
+    return MC_REGISTRY_DATA_PATH "/" + uint32ToString(spid);
 }
 
 //------------------------------------------------------------------------------
 static string getSpContFilePath(mcSpid_t spid)
 {
-    return getRegistryPath() + "/" + uint32ToString(spid) + SP_CONT_FILE_EXT;
+    return MC_REGISTRY_DATA_PATH "/" + uint32ToString(spid) + SP_CONT_FILE_EXT;
 }
 
 //------------------------------------------------------------------------------
 static string getTlContFilePath(const mcUuid_t *uuid, const mcSpid_t spid)
 {
-    return getRegistryPath() + "/" + byteArrayToString(uuid, sizeof(*uuid))
+    return MC_REGISTRY_DATA_PATH "/" + byteArrayToString(uuid, sizeof(*uuid))
            + "." + uint32ToString(spid) + TL_CONT_FILE_EXT;
 }
 
 //------------------------------------------------------------------------------
 static string getTlDataPath(const mcUuid_t *uuid)
 {
-    return getRegistryPath() + "/" + byteArrayToString(uuid, sizeof(*uuid));
+    return MC_REGISTRY_DATA_PATH "/" + byteArrayToString(uuid, sizeof(*uuid));
 }
 
 //------------------------------------------------------------------------------
@@ -224,21 +182,48 @@ static string getTlDataFilePath(const mcUuid_t *uuid, mcPid_t pid)
 }
 
 //------------------------------------------------------------------------------
-static string getTlBinFilePath(const mcUuid_t *uuid)
+static string getTlBinFilePath(const mcUuid_t *uuid, int registry)
 {
-    return getTlRegistryPath() + "/" + byteArrayToString(uuid, sizeof(*uuid)) + TL_BIN_FILE_EXT;
+    string path_ro_registry = MC_REGISTRY_SYSTEM_PATH"/" + byteArrayToString(uuid, sizeof(*uuid)) + TL_BIN_FILE_EXT;
+    string path_rw_registry = MC_REGISTRY_DATA_PATH"/" + byteArrayToString(uuid, sizeof(*uuid)) + TL_BIN_FILE_EXT;
+
+    if (registry == MC_REGISTRY_ALL) {
+        struct stat tmp;
+        if (stat(path_ro_registry.c_str(), &tmp) == 0) {
+            return path_ro_registry;
+        }
+    }
+    return path_rw_registry;
 }
 
 //------------------------------------------------------------------------------
-static string getTABinFilePath(const mcUuid_t *uuid)
+static string getTABinFilePath(const mcUuid_t *uuid, int registry)
 {
-    return getTlRegistryPath() + "/" + byteArrayToString(uuid, sizeof(*uuid)) + GP_TA_BIN_FILE_EXT;
+    string path_ro_registry = MC_REGISTRY_SYSTEM_PATH"/" + byteArrayToString(uuid, sizeof(*uuid)) + GP_TA_BIN_FILE_EXT;
+    string path_rw_registry = MC_REGISTRY_DATA_PATH"/" + byteArrayToString(uuid, sizeof(*uuid)) + GP_TA_BIN_FILE_EXT;
+
+    if (registry == MC_REGISTRY_ALL) {
+        struct stat tmp;
+        if (stat(path_ro_registry.c_str(), &tmp) == 0) {
+            return path_ro_registry;
+        }
+    }
+    return path_rw_registry;
 }
 
 //------------------------------------------------------------------------------
-static string getTASpidFilePath(const mcUuid_t *uuid)
+static string getTASpidFilePath(const mcUuid_t *uuid, int registry)
 {
-    return getTlRegistryPath() + "/" + byteArrayToString(uuid, sizeof(*uuid)) + GP_TA_SPID_FILE_EXT;
+    string path_ro_registry = MC_REGISTRY_SYSTEM_PATH"/" + byteArrayToString(uuid, sizeof(*uuid)) + GP_TA_SPID_FILE_EXT;
+    string path_rw_registry = MC_REGISTRY_DATA_PATH"/" + byteArrayToString(uuid, sizeof(*uuid)) + GP_TA_SPID_FILE_EXT;
+
+    if (registry == MC_REGISTRY_ALL) {
+        struct stat tmp;
+        if (stat(path_ro_registry.c_str(), &tmp) == 0) {
+            return path_ro_registry;
+        }
+    }
+    return path_rw_registry;
 }
 
 //------------------------------------------------------------------------------
@@ -564,11 +549,11 @@ mcResult_t mcRegistryStoreTABlob(mcSpid_t spid, void *blob, uint32_t size)
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
     }
-    const string tlBinFilePath = getTABinFilePath((mcUuid_t *)&uuid);
+    const string taBinFilePath = getTABinFilePath((mcUuid_t *)&uuid, MC_REGISTRY_WRITABLE);
 
-    LOG_I("Store TA blob at: %s", tlBinFilePath.c_str());
+    LOG_I("Store TA blob at: %s", taBinFilePath.c_str());
 
-    FILE *fs = fopen(tlBinFilePath.c_str(), "wb");
+    FILE *fs = fopen(taBinFilePath.c_str(), "wb");
     if (!fs) {
         LOG_E("RegistryStoreTABlob failed - TA blob file open error: %d", MC_DRV_ERR_INVALID_DEVICE_FILE);
         return MC_DRV_ERR_INVALID_DEVICE_FILE;
@@ -579,7 +564,7 @@ mcResult_t mcRegistryStoreTABlob(mcSpid_t spid, void *blob, uint32_t size)
     fclose(fs);
 
     if (header20->serviceType == SERVICE_TYPE_SP_TRUSTLET) {
-        const string taspidFilePath = getTASpidFilePath((mcUuid_t *)&uuid);
+        const string taspidFilePath = getTASpidFilePath((mcUuid_t *)&uuid, MC_REGISTRY_WRITABLE);
 
         LOG_I("Store spid file at: %s", taspidFilePath.c_str());
 
@@ -843,13 +828,12 @@ static bool mcCheckUuid(const mcUuid_t *uuid, const char *filename)
 
 //this function deletes all the files owned by a GP TA and stored in the tbase secure storage dir.
 //then it deletes GP TA folder.
-static int CleanupGPTAStorage(const char *basename)
+static int CleanupGPTAStorage(const char *uuid)
 {
 	DIR            *dp;
 	struct dirent  *de;
 	int             e;
-	string TAPath = getTlRegistryPath()+"/TbStorage/"+ basename;
-
+	string TAPath = getTbStoragePath() + "/" + uuid;
 	if (NULL != (dp = opendir(TAPath.c_str()))) {
 		while (NULL != (de = readdir(dp))) {
 			if (de->d_name[0] != '.') {
@@ -872,21 +856,20 @@ static int CleanupGPTAStorage(const char *basename)
 	return MC_DRV_OK;
 }
 
-static void deleteSPTA(const mcUuid_t *uuid, const mcSpid_t spid, bool checkUuid)
+static void deleteSPTA(const mcUuid_t *uuid, const mcSpid_t spid)
 {
     DIR            *dp;
     struct dirent  *de;
     int             e;
 
     // Delete TABIN and SPID files - we loop searching required spid file
-    string pathname = getRegistryPath();
-    if (NULL != (dp = opendir(pathname.c_str()))) {
+    if (NULL != (dp = opendir(MC_REGISTRY_DATA_PATH))) {
         while (NULL != (de = readdir(dp))) {
             string spidFile;
             string tabinFile;
             string tabinUuid;
             size_t pch_dot, pch_slash;
-            spidFile = pathname + '/' + string(de->d_name);
+            spidFile = MC_REGISTRY_DATA_PATH "/" + string(de->d_name);
             pch_dot = spidFile.find_last_of('.');
             if (pch_dot == string::npos) continue;
             pch_slash = spidFile.find_last_of('/');
@@ -904,28 +887,31 @@ static void deleteSPTA(const mcUuid_t *uuid, const mcSpid_t spid, bool checkUuid
             }
             if (spid == curSpid) {
                 tabinFile =  spidFile.substr(0, pch_dot) + GP_TA_BIN_FILE_EXT;
-                if ((!checkUuid)||(mcCheckUuid(uuid, tabinFile.c_str()))) {
+                if (mcCheckUuid(uuid, tabinFile.c_str())) {
                 	tabinUuid = spidFile.substr(0, pch_dot);
+                	tabinUuid = tabinUuid.substr(tabinUuid.find_last_of('/')+1);
+                	LOG_I("Remove TA storage %s", tabinUuid.c_str());
                 	if (0 != (e = CleanupGPTAStorage(tabinUuid.c_str()))){
-                		LOG_E("cleanup TA Storage dir failed! errno: %d", e);
-                		//return MC_DRV_ERR_UNKNOWN;
+                		LOG_E("Remove TA storage failed! errno: %d", e);
+                		/* Discard error */
                 	}
+                	LOG_I("Remove TA file %s", tabinFile.c_str());
                     if (0 != (e = remove(tabinFile.c_str()))) {
-                        LOG_E("remove TA file failed! errno: %d", e);
-                        //return MC_DRV_ERR_UNKNOWN;
+                        LOG_E("Remove TA file failed! errno: %d", e);
+                        /* Discard error */
                     }
+                    LOG_I("Remove spid file %s", spidFile.c_str());
                     if (0 != (e = remove(spidFile.c_str()))) {
-                        LOG_E("remove SPID file failed! errno: %d", e);
-                        //return MC_DRV_ERR_UNKNOWN;
+                        LOG_E("Remove spid file failed! errno: %d", e);
+                        /* Discard error */
                     }
-                    if (checkUuid) break;
+                    break;
                 }
             }
         }
         if (dp) {
             closedir(dp);
         }
-
     }
 }
 
@@ -963,23 +949,27 @@ mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t *uuid, const mcSpid_t spid)
         }
     }
 
-    // Delete TA binary with the name uuid.tlbin
-    string tlBinFilePath = getTlBinFilePath(uuid);
-    LOG_I("delete Tlb: %s", tlBinFilePath.c_str());
-    if (0 != (e = remove(tlBinFilePath.c_str()))) {
-        LOG_E("remove Tlb failed! errno: %d", e);
-//        return MC_DRV_ERR_UNKNOWN;     // a trustlet-binary must not be present ! (registered but not usable)
+    string tlBinFilePath = getTlBinFilePath(uuid, MC_REGISTRY_WRITABLE);
+    struct stat tmp;
+    string tlContFilePath = getTlContFilePath(uuid, spid);;
+
+    if (stat(tlBinFilePath.c_str(), &tmp) == 0) {
+        /* Legacy TA */
+        LOG_I("Remove TA file %s", tlBinFilePath.c_str());
+        if (0 != (e = remove(tlBinFilePath.c_str()))) {
+            LOG_E("Remove TA file failed! errno: %d", e);
+        }
+    } else {
+        /* GP TA */
+        deleteSPTA(uuid, spid);
     }
 
-    // Delete TABIN and SPID files - we loop searching required spid file
-    deleteSPTA(uuid,spid,true);
-
-    string tlContFilePath = getTlContFilePath(uuid, spid);
-    LOG_I("delete Tlc: %s", tlContFilePath.c_str());
+    LOG_I("Remove TA container %s", tlContFilePath.c_str());
     if (0 != (e = remove(tlContFilePath.c_str()))) {
-        LOG_E("remove Tlc failed! errno: %d", e);
+        LOG_E("Remove TA container failed! errno: %d", e);
         return MC_DRV_ERR_UNKNOWN;
     }
+
     return MC_DRV_OK;
 }
 
@@ -1013,9 +1003,6 @@ mcResult_t mcRegistryCleanupSp(mcSpid_t spid)
         LOG_E("delete SP->UUID failed! Return code: %d", ret);
         return ret;
     }
-
-    // Delete remaining TABIN and SPID files
-    deleteSPTA(NULL,spid,false);
 
     string pathname = getSpDataPath(spid);
 
@@ -1279,15 +1266,15 @@ regObject_t *mcRegistryGetServiceBlob(const mcUuid_t *uuid, bool isGpUuid)
     // Open service blob file.
     string tlBinFilePath;
     if (isGpUuid) {
-        tlBinFilePath = getTABinFilePath(uuid);
+        tlBinFilePath = getTABinFilePath(uuid, MC_REGISTRY_ALL);
     } else {
-        tlBinFilePath = getTlBinFilePath(uuid);
+        tlBinFilePath = getTlBinFilePath(uuid, MC_REGISTRY_ALL);
     }
     LOG_I("Loading %s", tlBinFilePath.c_str());
 
     mcSpid_t spid = 0;
     if (isGpUuid) {
-        string taspidFilePath = getTASpidFilePath(uuid);
+        string taspidFilePath = getTASpidFilePath(uuid, MC_REGISTRY_ALL);
         int fd = open(taspidFilePath.c_str(), O_RDONLY);
         if (fd == -1) {
             // This can be ok for System TAs
@@ -1330,4 +1317,3 @@ regObject_t *mcRegistryGetDriverBlob(const char *filename)
     return regobj;
 }
 
-/** @} */

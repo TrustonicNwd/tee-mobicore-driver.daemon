@@ -1,8 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON
- * @{
- * @file
- *
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -289,4 +285,3 @@ typedef union {
 
 #endif /* MCDAEMON_H_ */
 
-/** @} */

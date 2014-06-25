@@ -1,11 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_DEV
- * @{
- * @file
- *
- * Class for TrustZone Devices.
- * TrustZone device implements communication functions needed for
- * accessing MobiCore located in an TrustZone environment.
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -35,6 +28,11 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * Class for TrustZone Devices.
+ * TrustZone device implements communication functions needed for
+ * accessing MobiCore located in an TrustZone environment.
+ */
 #ifndef TRUSTZONEDEVICE_H_
 #define TRUSTZONEDEVICE_H_
 
@@ -47,7 +45,6 @@
 #include "CMcKMod.h"
 #include "CWsm.h"
 
-#include "ExcDevice.h"
 #include "MobiCoreDevice.h"
 
 
@@ -145,4 +142,3 @@ public:
 
 #endif /* TRUSTZONEDEVICE_H_ */
 
-/** @} */

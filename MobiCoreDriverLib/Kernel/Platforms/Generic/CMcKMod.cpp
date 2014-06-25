@@ -1,9 +1,3 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_KERNEL
- * @{
- * @file
- *
- * <t-base Driver Kernel Module Interface.
- */
 /*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
@@ -34,6 +28,9 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * <t-base Driver Kernel Module Interface.
+ */
 #include <cstdlib>
 
 #include <sys/mman.h>
@@ -57,8 +54,7 @@ MC_CHECK_VERSION(MCDRVMODULEAPI, 1, 1);
 mcResult_t CMcKMod::mapWsm(
     uint32_t    len,
     uint32_t    *pHandle,
-    addr_t      *pVirtAddr,
-    uint64_t      *pPhysAddr)
+    addr_t      *pVirtAddr)
 {
     int ret = 0;
     LOG_V(" mapWsm(): len=%d", len);
@@ -85,8 +81,8 @@ mcResult_t CMcKMod::mapWsm(
     }
 
 
-    LOG_V(" mapped to %p, handle=%d, phys=0x%llX ", virtAddr,
-          mapParams.handle, mapParams.phys_addr);
+    LOG_V(" mapped to %p, handle=%d", virtAddr,
+          mapParams.handle);
 
     if (pVirtAddr != NULL) {
         *pVirtAddr = virtAddr;
@@ -94,10 +90,6 @@ mcResult_t CMcKMod::mapWsm(
 
     if (pHandle != NULL) {
         *pHandle = mapParams.handle;
-    }
-
-    if (pPhysAddr != NULL) {
-        *pPhysAddr = mapParams.phys_addr;
     }
 
     return 0;
@@ -108,7 +100,6 @@ mcResult_t CMcKMod::mapMCI(
     uint32_t    len,
     uint32_t    *pHandle,
     addr_t      *pVirtAddr,
-    uint64_t      *pPhysAddr,
     bool        *pReuse)
 {
     LOG_I("Mapping MCI: len=%d", len);
@@ -132,43 +123,23 @@ mcResult_t CMcKMod::mapMCI(
         LOG_ERRNO("mmap");
         return MAKE_MC_DRV_KMOD_WITH_ERRNO(errno);
     }
-    mapParams.addr = (unsigned long)virtAddr;
+
     *pReuse = mapParams.reused;
 
-    LOG_V(" MCI mapped to %p, handle=%d, phys=0x%llx, reused=%s",
-          (void *)mapParams.addr, mapParams.handle, mapParams.phys_addr,
-          mapParams.reused ? "true" : "false");
+    LOG_V(" MCI mapped to %p, handle=%d, reused=%s",
+    	  (void *)virtAddr, mapParams.handle,
+    	  mapParams.reused ? "true" : "false");
 
     if (pVirtAddr != NULL) {
-        *pVirtAddr = (void *)mapParams.addr;
+        *pVirtAddr = (void *)virtAddr;
     }
 
     if (pHandle != NULL) {
         *pHandle = mapParams.handle;
     }
 
-    if (pPhysAddr != NULL) {
-        *pPhysAddr = mapParams.phys_addr;
-    }
-
-    // clean memory
-    //memset(pMmapResp, 0, sizeof(*pMmapResp));
-
     return MC_DRV_OK;
 }
-
-//------------------------------------------------------------------------------
-mcResult_t CMcKMod::mapPersistent(
-    uint32_t    len,
-    uint32_t    *pHandle,
-    addr_t      *pVirtAddr,
-    addr_t      *pPhysAddr)
-{
-    // Not currently supported by the driver
-    LOG_E("<t-base Driver doesn't support persistent buffers");
-    return MC_DRV_ERR_NOT_IMPLEMENTED;
-}
-
 
 //------------------------------------------------------------------------------
 int CMcKMod::read(addr_t buffer, uint32_t len)
@@ -281,6 +252,7 @@ int CMcKMod::fcYield(void)
 
 
 //------------------------------------------------------------------------------
+
 int CMcKMod::fcNSIQ(void)
 {
     int ret = 0;
@@ -557,4 +529,3 @@ bool CMcKMod::checkVersion(void)
     return true;
 }
 
-/** @} */

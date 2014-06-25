@@ -1,9 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_SRV
- * @{
- * @file
- *
- * Mutex implementation (pthread wrapper).
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -32,6 +27,9 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/**
+ * Mutex implementation (pthread wrapper).
  */
 #include "CMutex.h"
 #include "log.h"
@@ -83,4 +81,3 @@ int32_t CMutex::unlock(
     return pthread_mutex_unlock(&m_mutex);
 }
 
-/** @} */

@@ -1,9 +1,7 @@
-/** @addtogroup MC_CONTAINER mcContainer - Containers for MobiCore Content Management.
- * @ingroup  MC_DATA_TYPES
- * @{
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved
+ *
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +28,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/**
+ * Containers for MobiCore Content Management.
+ */
 
 #ifndef MC_CONTAINER_H_
 #define MC_CONTAINER_H_
@@ -53,7 +54,7 @@
 #define CONTAINER_VERSION_MINOR   0
 #endif
 
-#define MC_CONT_SYMMETRIC_KEY_SIZE      32 
+#define MC_CONT_SYMMETRIC_KEY_SIZE      32
 #define MC_CONT_PUBLIC_KEY_SIZE         320
 #define MC_CONT_CHILDREN_COUNT          16
 #define MC_DATA_CONT_MAX_DATA_SIZE      2048
@@ -109,15 +110,15 @@ typedef enum {
     /** SOC container. */
     CONT_TYPE_SOC = 0,
     /** Root container. */
-    CONT_TYPE_ROOT,
+    CONT_TYPE_ROOT = 1,
     /** Service provider container. */
-    CONT_TYPE_SP,
+    CONT_TYPE_SP = 2,
     /** Trustlet container. */
-    CONT_TYPE_TLCON,
+    CONT_TYPE_TLCON = 3,
     /** Service provider data. */
-    CONT_TYPE_SPDATA,
+    CONT_TYPE_SPDATA = 4,
     /** Trustlet data. */
-    CONT_TYPE_TLDATA
+    CONT_TYPE_TLDATA = 5
 } contType_t;
 
 /** SHA256 checksum. */
@@ -127,7 +128,7 @@ typedef struct {
 
 /** @defgroup MC_CONTAINER_CRYPTO_OBJECTS Container secrets.
  * Data that is stored encrypted within the container.
- * @{ */
+ */
 
 /** SoC secret */
 typedef struct {
@@ -160,11 +161,9 @@ typedef union {
     mcUuid_t uuid;
 } mcCid_t;
 
-/** @} */
-
 /** @defgroup MC_CONTAINER_CONTAINER_OBJECTS Container definitions.
  * Container type definitions.
- * @{ */
+ */
 
 /** SoC Container */
 typedef struct {
@@ -186,7 +185,7 @@ typedef struct {
     spChild_t children;
     // Secrets.
     mcCoRootCont_t co;
-} mcRootCont_t; 
+} mcRootCont_t;
 
 /** */
 typedef struct {
@@ -218,7 +217,7 @@ typedef struct {
 /** */
 typedef struct {
     mcTltContCommon_t common;
-    mcSha256_t skSpTltEnc; 
+    mcSha256_t skSpTltEnc;
     mcContVersion_t tltVersion;
 } mcTltCont_2_1_t;
 
@@ -231,8 +230,6 @@ typedef struct {
     // Secrets.
     mcCoDataCont_t co;
 } mcDataCont_t;
-
-/** @} */
 
 /** Helper for finding maximum value */
 #define MC_MAX(x, y) (((x)<(y))?(y):(x))
@@ -253,7 +250,7 @@ typedef struct {
 
 /** @defgroup MC_CONTAINER_SECURE_OBJECTS Containers in secure objects.
  * Secure objects wrapping different containers.
- * @{ */
+ */
 
 /** Authentication token */
 typedef struct {
@@ -265,7 +262,7 @@ typedef struct {
 /** Root container */
 typedef struct {
     mcSoHeader_t soHeader;
-    mcRootCont_t cont; 
+    mcRootCont_t cont;
     uint8_t hashAndPad[SO_CONT_HASH_AND_PAD_SIZE(sizeof(mcRootCont_t), sizeof(mcCoRootCont_t))];
 } mcSoRootCont_t;
 
@@ -306,7 +303,7 @@ typedef struct {
     mcSoHeader_t soHeader;
     mcDataCont_t cont;
     uint8_t hashAndPad[SO_CONT_HASH_AND_PAD_SIZE(sizeof(mcDataCont_t), sizeof(mcCoDataCont_t))];
-} mcSoDataCont_t; 
+} mcSoDataCont_t;
 
 /** Trustlet Blob length info */
 typedef struct {
@@ -319,8 +316,5 @@ typedef struct {
 
 #define MC_TLBLOBLEN_MAGIC 0x7672746C
 
-/** @} */
-
 #endif // MC_CONTAINER_H_
 
-/** @} */

@@ -1,11 +1,3 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_SRV
- * @{
- * @file
- *
- * Connection server.
- *
- * Handles incoming socket connections from clients using the MobiCore driver.
- */
 /*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
@@ -36,6 +28,11 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * Connection server.
+ *
+ * Handles incoming socket connections from clients using the MobiCore driver.
+ */
 #include "public/Server.h"
 #include <unistd.h>
 #include <string.h>
@@ -43,10 +40,7 @@
 
 //#define LOG_VERBOSE
 #include "log.h"
-
-extern pthread_mutex_t         syncMutex;
-extern pthread_cond_t          syncCondition;
-extern bool Th_sync;
+#include "FSD.h"
 
 //------------------------------------------------------------------------------
 Server::Server(
@@ -64,8 +58,10 @@ void Server::run(
     void
 )
 {
+    bool isFSDStarted=false;
+    FSD *FileStorageDaemon=NULL;
+
     do {
-        pthread_mutex_lock(&syncMutex);
 
         LOG_I("Server: start listening on socket %s", socketAddr.c_str());
 
@@ -120,9 +116,14 @@ void Server::run(
                 }
             }
 
-            pthread_cond_signal(&syncCondition);
-            Th_sync=true;
-            pthread_mutex_unlock(&syncMutex);
+            if (!isFSDStarted) {
+                // Create the <t-base File Storage Daemon
+                FSD *FileStorageDaemon = new FSD();
+                // Start File Storage Daemon
+                FileStorageDaemon->start("McDaemon.FSD");
+
+                isFSDStarted=true;
+            }
 
             // Wait for activities, select() returns the number of sockets
             // which require processing
@@ -208,6 +209,12 @@ void Server::run(
 
     } while (false);
 
+    //Wait for File Storage Daemon to exit
+    if (FileStorageDaemon) {
+    	FileStorageDaemon->join();
+	    delete FileStorageDaemon;
+    }
+
     LOG_ERRNO("Exiting Server, because");
 }
 
@@ -252,4 +259,3 @@ Server::~Server(
     }
 }
 
-/** @} */

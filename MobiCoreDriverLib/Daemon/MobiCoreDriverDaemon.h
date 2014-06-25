@@ -1,11 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_CONHDLR
- * @{
- * @file
- *
- * <t-base driver class.
- * The <t-base driver class implements the ConnectionHandler interface.
- *
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -35,6 +28,10 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * <t-base driver class.
+ * The <t-base driver class implements the ConnectionHandler interface.
+ */
 #ifndef MOBICOREDRIVER_H_
 #define MOBICOREDRIVER_H_
 
@@ -47,8 +44,6 @@
 
 
 #define MAX_SERVERS 2
-
-extern string getTlRegistryPath();
 
 class MobicoreDriverResources
 {
@@ -268,4 +263,3 @@ private:
 
 #endif /* MOBICOREDRIVER_H_ */
 
-/** @} */

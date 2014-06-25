@@ -1,11 +1,3 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_SRV
- * @{
- * @file
- *
- * Connection server.
- *
- * Handles incoming socket connections from clients using the MobiCore driver.
- */
 /*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
@@ -35,6 +27,11 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/**
+ * Connection server.
+ *
+ * Handles incoming socket connections from clients using the MobiCore driver.
  */
 #include "public/NetlinkServer.h"
 #include <unistd.h>
@@ -284,4 +281,3 @@ void NetlinkServer::cleanupConnections(
     }
 }
 
-/** @} */

@@ -1,9 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_SRV
- * @{
- * @file
- *
- * Connection data.
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -32,6 +27,9 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/**
+ * Connection data.
  */
 #include <stdlib.h>
 #include <unistd.h>
@@ -168,7 +166,7 @@ void NetlinkConnection::handleMessage(
 }
 
 //------------------------------------------------------------------------------
-size_t NetlinkConnection::readData(
+ssize_t NetlinkConnection::readData(
     void *buffer,
     uint32_t len
 )
@@ -178,13 +176,13 @@ size_t NetlinkConnection::readData(
 
 
 //------------------------------------------------------------------------------
-size_t NetlinkConnection::readData(
+ssize_t NetlinkConnection::readData(
     void      *buffer,
     uint32_t  len,
     int32_t   timeout
 )
 {
-    size_t ret = -1;
+    ssize_t ret = -1;
     assert(NULL != buffer);
 
     if (!dataLeft.wait(timeout)) {
@@ -204,11 +202,11 @@ size_t NetlinkConnection::readData(
 
     // trying to read more than the left data
     if (len > dataLen) {
-        ret = dataLen;
+        ret = (ssize_t)dataLen;
         memcpy(buffer, dataStart, dataLen);
         dataLen = 0;
     } else {
-        ret = len;
+        ret = (ssize_t)len;
         memcpy(buffer, dataStart, len);
         dataLen -= len;
         dataStart += len;
@@ -229,12 +227,12 @@ size_t NetlinkConnection::readData(
 }
 
 //------------------------------------------------------------------------------
-size_t NetlinkConnection::writeData(
+ssize_t NetlinkConnection::writeData(
     void *buffer,
     uint32_t len
 )
 {
-    size_t ret;
+    ssize_t ret;
     struct sockaddr_nl dest_addr;
     struct nlmsghdr *nlh = NULL;
     struct iovec iov;
@@ -279,12 +277,12 @@ size_t NetlinkConnection::writeData(
     ret = sendmsg(socketDescriptor, &msg, 0);
     if (ret != NLMSG_SPACE(len)) {
         LOG_E( "%s: could no send all data, ret=%d, errno: %d(%s)",
-               __FUNCTION__, ret, errno, strerror(errno));
+               __FUNCTION__, (uint32_t)ret, errno, strerror(errno));
         ret = -1;
     } else {
         /* The whole message sent also includes the header, so make sure to
          * return only the number of payload data sent, not everything */
-        ret = len;
+        ret = (ssize_t)len;
     }
 
     free(nlh);
@@ -292,4 +290,3 @@ size_t NetlinkConnection::writeData(
     return ret;
 }
 
-/** @} */

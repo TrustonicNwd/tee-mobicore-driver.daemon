@@ -1,12 +1,4 @@
-/** @addtogroup MCD_IMPL_LIB
- * @{
- * @file
- *
- * Client library device management.
- *
- * Device and Trustlet Session management Funtions.
- *
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -36,6 +28,11 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * Client library device management.
+ *
+ * Device and Trustlet Session management Funtions.
+ */
 #include <stdint.h>
 #include <vector>
 
@@ -51,6 +48,7 @@ Device::Device(uint32_t deviceId, Connection *connection)
 {
     this->deviceId = deviceId;
     this->connection = connection;
+    this->openCount = 0;
 
     pMcKMod = new CMcKMod();
 }
@@ -158,7 +156,6 @@ mcResult_t Device::allocateContiguousWsm(uint32_t len, CWsm **wsm)
     // Allocate shared memory
     addr_t    virtAddr;
     uint32_t  handle;
-    uint64_t    physAddr;
     mcResult_t  ret;
 
     assert(wsm != NULL);
@@ -167,15 +164,15 @@ mcResult_t Device::allocateContiguousWsm(uint32_t len, CWsm **wsm)
         return MC_DRV_ERR_INVALID_LENGTH;
     }
 
-    ret = pMcKMod->mapWsm(len, &handle, &virtAddr, &physAddr);
+    ret = pMcKMod->mapWsm(len, &handle, &virtAddr);
     if (ret) {
         return ret;
     }
 
-    LOG_I(" mapped handle %d to %p, phys=%#llx  ", handle, virtAddr, physAddr);
+    LOG_I(" mapped handle %d to %p", handle, virtAddr);
 
     // Register (vaddr,paddr) with device
-    *wsm = new CWsm(virtAddr, len, handle, physAddr);
+    *wsm = new CWsm(virtAddr, len, handle, 0);
 
     wsmL2List.push_back(*wsm);
 
@@ -261,4 +258,3 @@ mcResult_t Device::mapBulkBuf(addr_t buf, uint32_t len, BulkBufferDescriptor **b
     return MC_DRV_OK;
 }
 
-/** @} */

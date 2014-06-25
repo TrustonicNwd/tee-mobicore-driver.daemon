@@ -1,10 +1,7 @@
-/**
- * @defgroup MC_DATA_TYPES MobiCore generic data types
- *
- * @addtogroup MC_SO mcSo - Secure objects definitions.
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved
+ *
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,10 +26,9 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * @ingroup  MC_DATA_TYPES
- * @{
- *
+ */
+/**
+ * Secure objects definitions.
  */
 
 #ifndef MC_SO_H_
@@ -249,4 +245,3 @@ typedef struct {
 
 #endif // MC_SO_H_
 
-/** @} */

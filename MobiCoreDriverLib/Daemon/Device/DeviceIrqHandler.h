@@ -1,9 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_DEV
- * @{
- * @file
- *
- * IRQ handler thread.
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -33,6 +28,9 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * IRQ handler thread.
+ */
 
 #ifndef DEVICEIRQHANDLER_H_
 #define DEVICEIRQHANDLER_H_
@@ -52,4 +50,3 @@ public:
 
 #endif /* DEVICEIRQHANDLER_H_ */
 
-/** @} */

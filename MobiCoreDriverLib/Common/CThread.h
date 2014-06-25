@@ -1,9 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_SRV
- * @{
- * @file
- *
- * Thread implementation (pthread abstraction).
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -32,6 +27,9 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/**
+ * Thread implementation (pthread abstraction).
  */
 #ifndef CTHREAD_H_
 #define CTHREAD_H_
@@ -89,4 +87,3 @@ extern "C" void *CThreadStartup(void *);
 
 #endif /*CTHREAD_H_*/
 
-/** @} */

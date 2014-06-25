@@ -1,9 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_SRV
- * @{
- * @file
- *
- * Connection data.
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -32,6 +27,9 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/**
+ * Connection data.
  */
 #include <unistd.h>
 #include <assert.h>
@@ -119,16 +117,17 @@ bool Connection::connect(const char *dest)
 
 
 //------------------------------------------------------------------------------
-size_t Connection::readData(void *buffer, uint32_t len)
+ssize_t Connection::readData(void *buffer, uint32_t len)
 {
     return readData(buffer, len, -1);
 }
 
 
 //------------------------------------------------------------------------------
-size_t Connection::readData(void *buffer, uint32_t len, int32_t timeout)
+ssize_t Connection::readData(void *buffer, uint32_t len, int32_t timeout)
 {
-    size_t ret = 0;
+    int ret_s;
+    ssize_t ret = 0;
     struct timeval tv;
     struct timeval *ptv = NULL;
     fd_set readfds;
@@ -145,16 +144,16 @@ size_t Connection::readData(void *buffer, uint32_t len, int32_t timeout)
 
     FD_ZERO(&readfds);
     FD_SET(socketDescriptor, &readfds);
-    ret = select(socketDescriptor + 1, &readfds, NULL, NULL, ptv);
+    ret_s = select(socketDescriptor + 1, &readfds, NULL, NULL, ptv);
 
     // check for read error
-    if ((int)ret == -1) {
+    if (ret_s == -1) {
         LOG_ERRNO("select");
         return -1;
     }
 
     // Handle case of no descriptor ready
-    if (ret == 0) {
+    if (ret_s == 0) {
         LOG_W(" Timeout during select() / No more notifications.");
         return -2;
     }
@@ -164,7 +163,7 @@ size_t Connection::readData(void *buffer, uint32_t len, int32_t timeout)
     // finally check if fd has been selected -> must socketDescriptor
     if (!FD_ISSET(socketDescriptor, &readfds)) {
         LOG_ERRNO("no fd is set, select");
-        return ret;
+        return ret_s;
     }
 
     ret = recv(socketDescriptor, buffer, len, MSG_DONTWAIT);
@@ -177,15 +176,15 @@ size_t Connection::readData(void *buffer, uint32_t len, int32_t timeout)
 
 
 //------------------------------------------------------------------------------
-size_t Connection::writeData(void *buffer, uint32_t len)
+ssize_t Connection::writeData(void *buffer, uint32_t len)
 {
     assert(buffer != NULL);
     assert(socketDescriptor != -1);
 
-    size_t ret = send(socketDescriptor, buffer, len, 0);
-    if (ret != len) {
+    ssize_t ret = send(socketDescriptor, buffer, len, 0);
+    if ((uint32_t)ret != len) {
         LOG_ERRNO("could not send all data, because send");
-        LOG_E("ret = %d", ret);
+        LOG_E("ret = %d", (uint32_t)ret);
         ret = -1;
     }
 
@@ -261,4 +260,4 @@ bool Connection::getPeerCredentials(struct ucred &cr)
     }
     return false;
 }
-/** @} */
+

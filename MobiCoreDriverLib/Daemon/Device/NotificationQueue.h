@@ -1,9 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_DEV
- * @{
- * @file
- *
- * MobiCore Notification Queue handling.
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -32,6 +27,9 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/**
+ * MobiCore Notification Queue handling.
  */
 #ifndef NOTIFICATIONQUEUE_H_
 #define NOTIFICATIONQUEUE_H_
@@ -87,4 +85,3 @@ private:
 
 #endif /* NOTIFICATIONQUEUE_H_ */
 
-/** @} */

@@ -1,18 +1,7 @@
-/**
- * @defgroup MCLF   MobiCore Load Format
- *
- * @defgroup MCLF_VER    MCLF Versions
- * @ingroup MCLF
- *
- * @addtogroup MCLF
- * @{
- *
- * MobiCore Load Format declarations.
- *
- * Holds the definitions for the layout of MobiCore Trustlet Blob.
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved
+ *
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,6 +27,11 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * MobiCore Load Format declarations.
+ *
+ * Holds the definitions for the layout of MobiCore Trustlet Blob.
+ */
 #ifndef MCLOADFORMAT_H_
 #define MCLOADFORMAT_H_
 
@@ -54,11 +48,9 @@
 #define MC_SERVICE_HEADER_MAGIC_STR         "MCLF"                                        /**< "MCLF" as string */
 
 /** @name MCLF flags */
-/*@{*/
 #define MC_SERVICE_HEADER_FLAGS_PERMANENT               (1U << 0) /**< Loaded service cannot be unloaded from MobiCore. */
 #define MC_SERVICE_HEADER_FLAGS_NO_CONTROL_INTERFACE    (1U << 1) /**< Service has no WSM control interface. */
 #define MC_SERVICE_HEADER_FLAGS_DEBUGGABLE              (1U << 2) /**< Service can be debugged. */
-/*@}*/
 
 #if !defined(ADDR_T_DEFINED)
 #define ADDR_T_DEFINED
@@ -102,8 +94,6 @@ typedef struct {
     uint32_t        version;    /**< Version of the MCLF header structure. */
 } mclfIntro_t, *mclfIntro_ptr;
 
-/** @} */
-
 
 // Version 2 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
@@ -111,7 +101,6 @@ typedef struct {
  * @ingroup MCLF_VER
  *
  * @addtogroup MCLF_VER_V2
- * @{
  */
 
 /**
@@ -146,7 +135,6 @@ typedef struct {
 //    uint32_t                permittedHwCf;  /**< Starting 2.3: If nonzero, hw configuration which is allowed to execute binary */
 
 } mclfHeaderV2_t, *mclfHeaderV2_ptr;
-/** @} */
 
 
 /**
@@ -157,7 +145,6 @@ typedef struct {
     mcSuid_t                permittedSuid;  /**< Starting 2.3: If nonzero, suid which is allowed to execute binary */
     uint32_t                permittedHwCfg; /**< Starting 2.3: If nonzero, hw configuration which is allowed to execute binary */
 } mclfHeaderV23_t, *mclfHeaderV23_ptr;
-/** @} */
 
 
 /**
@@ -167,9 +154,8 @@ typedef struct {
     mclfHeaderV23_t         mclfHeaderV2;
     uint32_t                gp_level;           /**<Starting 2.4: 0 for legacy MobiCore trustlets and 1 for Potato TAs. */
     uint32_t                attestationOffset;  /**<Starting 2.4: Offset of attestation data area. */
- 
+
 } mclfHeaderV24_t, *mclfHeaderV24_ptr;
-/** @} */
 
 
 
@@ -206,7 +192,6 @@ typedef struct {
 // Version 2 ///////////////////////////////////////////////////////////////////////////////////////////////////
 /**
  * @addtogroup MCLF
- * @{
  */
 
 /** MCLF header */
@@ -228,4 +213,3 @@ typedef union {
 
 #endif /* MCLOADFORMAT_H_ */
 
-/** @} */

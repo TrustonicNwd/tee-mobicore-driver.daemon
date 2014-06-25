@@ -1,8 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_DEV
- * @{
- * @file
- *
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -79,4 +75,3 @@ notification_t *NotificationQueue::getNotification(
     return ret;
 }
 
-/** @} */

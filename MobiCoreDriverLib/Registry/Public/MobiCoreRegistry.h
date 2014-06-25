@@ -1,12 +1,3 @@
-/**
- * @addtogroup MCD_MCDIMPL_DAEMON_REG
- * @{
- * G&D MobiCore Registry
- *
- * @file
- * Mobicore Driver Registry.
- */
-
 /*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
@@ -147,4 +138,3 @@ extern "C" {
 
 #endif // MOBICORE_REGISTRY_H_
 
-/** @} */

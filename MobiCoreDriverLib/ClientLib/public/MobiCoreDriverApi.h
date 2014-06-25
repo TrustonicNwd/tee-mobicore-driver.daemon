@@ -1,44 +1,37 @@
-/**
- * @defgroup MCD_API                    MobiCore Driver API
- * @addtogroup MCD_API
- * @{
- *
- * @if DOXYGEN_MCDRV_API
- *   @mainpage MobiCore Driver API.
- * @endif
- *
- * MobiCore Driver API.
- *
- * The MobiCore (MC) Driver API provides access functions to the t-base trusted execution environment and the contained Trusted Applications.
- *
- * @image html DoxyOverviewDrvApi500x.png
- * @image latex DoxyOverviewDrvApi500x.png "t-base Overview" width=12cm
- */
-/* <!-- Copyright Trustonic 2013-2014 -->
+/*
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. The name of the author may not be used to endorse or promote
- *    products derived from this software without specific prior
- *    written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
- * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 3. Neither the name of the TRUSTONIC LIMITED nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/**
+ * MobiCore Driver API.
+ *
+ * The MobiCore (MC) Driver API provides access functions to the t-base trusted execution environment and the contained Trusted Applications.
  */
 #ifndef MCDRIVER_H_
 #define MCDRIVER_H_
@@ -147,14 +140,6 @@ typedef uint32_t mcResult_t;
 
 #define MAKE_MC_DRV_MCP_ERROR(mcpCode)              (MC_DRV_ERR_MCP_ERROR | ((mcpCode&0x000FFFFF)<<8))
 #define MAKE_MC_DRV_KMOD_WITH_ERRNO(theErrno)       (MC_DRV_ERR_KERNEL_MODULE| (((theErrno)&0x0000FFFF)<<16))
-
-/**
- * Driver control command.
- */
-typedef enum {
-    MC_CTRL_DUMMY = 1 /**< Dummy. */
-} mcDriverCtrl_t;
-
 
 /** Structure of Session Handle, includes the Session ID and the Device ID the Session belongs to.
  * The session handle will be used for session-based t-base communication.
@@ -454,26 +439,6 @@ __MC_CLIENT_LIB_API mcResult_t mcUnmap(
     mcBulkMap_t        *mapInfo
 );
 
-
-/**
- * @attention: Not implemented.
- * Execute driver specific command.
- * mcDriverCtrl() can be used to execute driver specific commands.
- * Besides the control command MC_CTRL_GET_VERSION commands are implementation specific.
- * Please refer to the corresponding specification of the driver manufacturer.
- *
- * @param [in] param Command ID of the command to be executed.
- * @param [in, out] data  Command data and response depending on command.
- * @param [in] len Length of the data block.
- *
- * @return MC_DRV_ERR_NOT_IMPLEMENTED.
- */
-__MC_CLIENT_LIB_API mcResult_t mcDriverCtrl(
-    mcDriverCtrl_t  param,
-    uint8_t         *data,
-    uint32_t        len
-);
-
 /**
  * Get additional error information of the last error that occurred on a session.
  * After the request the stored error code will be deleted.
@@ -512,4 +477,3 @@ __MC_CLIENT_LIB_API mcResult_t mcGetMobiCoreVersion(
 #endif
 #endif /** MCDRIVER_H_ */
 
-/** @} */

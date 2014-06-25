@@ -1,14 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_SRV
- * @{
- * @file
- *
- * Connection server.
- *
- * Handles incoming socket connections from clients using the MobiCore driver.
- *
- * Iterative socket server using Netlink dgram protocol.
- *
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -37,6 +27,13 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/**
+ * Connection server.
+ *
+ * Handles incoming socket connections from clients using the MobiCore driver.
+ *
+ * Iterative socket server using Netlink dgram protocol.
  */
 #ifndef NETLINKSERVER_H_
 #define NETLINKSERVER_H_
@@ -158,4 +155,3 @@ private:
 
 #endif /* SERVER_H_ */
 
-/** @} */

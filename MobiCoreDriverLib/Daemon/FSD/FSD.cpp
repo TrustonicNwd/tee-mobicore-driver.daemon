@@ -1,12 +1,5 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_SRV
- * @{
- * @file
- *
- * FSD server.
- *
- * Handles incoming storage requests from TA through STH
- */
-/* Copyright (c) 2013 TRUSTONIC LIMITED
+/*
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,6 +28,11 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * FSD server.
+ *
+ * Handles incoming storage requests from TA through STH
+ */
 #include "public/FSD.h"
 #include <unistd.h>
 #include <string.h>
@@ -52,10 +50,6 @@
 #define TEE_ERROR_CORRUPT_OBJECT         ((TEEC_Result)0xF0100001)
 
 extern string getTbStoragePath();
-
-extern pthread_mutex_t         syncMutex;
-extern pthread_cond_t          syncCondition;
-extern bool Th_sync;
 
 //------------------------------------------------------------------------------
 FSD::FSD(
@@ -92,15 +86,7 @@ void FSD::run(
 		}
 	}
 	do{
-		pthread_mutex_lock(&syncMutex);
-		pthread_cond_wait(&syncCondition, &syncMutex);
-		if (Th_sync==true)
-		{
-			LOG_I("%s: starting File Storage Daemon", TAG_LOG);
-
-		}
-		pthread_mutex_unlock(&syncMutex);
-
+		LOG_I("%s: starting File Storage Daemon", TAG_LOG);
 		ret = FSD_Open();
 		if (ret != MC_DRV_OK)
 			break;
@@ -364,13 +350,24 @@ mcResult_t FSD::FSD_LookFile(void){
 	}
 
 	res = fread(sth_request->payload,sizeof(char),sth_request->payloadLen,pFile);
-	fclose(pFile);
 
-	if ((uint32_t)res != sth_request->payloadLen)
+	if (ferror(pFile))
 	{
 		LOG_E("%s: Error reading file res is %d and errno is %s\n",__func__,res,strerror(errno));
+        fclose(pFile);
 		return TEEC_ERROR_ITEM_NOT_FOUND;
 	}
+
+    if (res < sth_request->payloadLen)
+    {
+        //File is shorter than expected
+        if (feof(pFile)) {
+            LOG_I("%s: EOF reached: res is %d, payloadLen is %d\n",__func__,res, sth_request->payloadLen);
+        }
+    }
+
+	fclose(pFile);
+
 	return TEEC_SUCCESS;
 }
 
@@ -411,13 +408,23 @@ mcResult_t FSD::FSD_ReadFile(void){
 	}
 	res = fread(sth_request->payload,sizeof(char),sth_request->payloadLen,pFile);
 
-	fclose(pFile);
-
-	if ((uint32_t)res != sth_request->payloadLen)
+	if (ferror(pFile))
 	{
 		LOG_E("%s: Error reading file res is %d and errno is %s\n",__func__,res,strerror(errno));
-		return TEEC_ERROR_ITEM_NOT_FOUND;
+        fclose(pFile);
+		return TEE_ERROR_CORRUPT_OBJECT;
 	}
+
+    if (res < sth_request->payloadLen)
+    {
+       //File is shorter than expected
+       if (feof(pFile)) {
+           LOG_I("%s: EOF reached: res is %d, payloadLen is %d\n",__func__,res, sth_request->payloadLen);
+       }
+    }
+
+    fclose(pFile);
+
 	return TEEC_SUCCESS;
 }
 
@@ -469,7 +476,7 @@ mcResult_t FSD::FSD_WriteFile(void){
 		fd = open(Filepath, O_WRONLY | O_CREAT | O_EXCL, S_IWUSR);
 		if (fd == -1)
 		{
-			LOG_E("%s: error creating file: %s (%s)\n",__func__,Filepath,strerror(errno));
+			LOG_E("%s: error creating file: %s \n",__func__,strerror(errno));
 			return TEE_ERROR_CORRUPT_OBJECT;
 		}
 		else
@@ -489,7 +496,7 @@ mcResult_t FSD::FSD_WriteFile(void){
 	}
 	res = fwrite(sth_request->payload,sizeof(char),sth_request->payloadLen,pFile);
 
-	if ((uint32_t)res != sth_request->payloadLen)
+	if (ferror(pFile))
 	{
 		LOG_E("%s: Error writing file res is %d and errno is %s\n",__func__,res,strerror(errno));
 		fclose(pFile);
@@ -501,12 +508,12 @@ mcResult_t FSD::FSD_WriteFile(void){
 		{
 			LOG_E("%s: remove failed: %s\n",__func__, strerror(errno));
 		}
-		return TEEC_ERROR_ITEM_NOT_FOUND;
+		return TEE_ERROR_STORAGE_NO_SPACE;
 	}
 	else
 	{
 		res = fclose(pFile);
-		if (res < 0)
+		if ((int32_t) res < 0)
 		{
 			LOG_E("%s: Error closing file res is %d and errno is %s\n",__func__,res,strerror(errno));
 			if(remove(Filepath)==-1)
@@ -521,9 +528,9 @@ mcResult_t FSD::FSD_WriteFile(void){
 		}
 
 		res = rename(Filepath_new,Filepath);
-		if (res < 0)
+		if ((int32_t) res < 0)
 		{
-			LOG_E("%s: Error renaming %s: %s\n",__func__,Filepath_new,strerror(errno));
+			LOG_E("%s: Error renaming: %s\n",__func__,strerror(errno));
 			if(remove(Filepath)==-1)
             {
                 LOG_E("%s: remove failed: %s\n",__func__, strerror(errno));
@@ -587,7 +594,7 @@ mcResult_t FSD::FSD_DeleteFile(void){
 	}
 
 	res = rmdir(TAdirpath);
-	if ((res < 0) && (errno != ENOTEMPTY) && (errno != EEXIST) && (errno != ENOENT))
+	if (((int32_t) res < 0) && (errno != ENOTEMPTY) && (errno != EEXIST) && (errno != ENOENT))
 	{
 		ret = TEE_ERROR_STORAGE_NO_SPACE;
 		LOG_E("%s: rmdir failed: %s (%s)\n",__func__, TAdirpath, strerror(errno));
@@ -603,4 +610,3 @@ mcResult_t FSD::FSD_DeleteFile(void){
 
 //------------------------------------------------------------------------------
 
-/** @} */

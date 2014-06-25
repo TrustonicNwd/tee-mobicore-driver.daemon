@@ -1,9 +1,7 @@
-/** @addtogroup MC_RTM
- * @{
- * MobiCore Version Information
- *
- * Copyright (c) 2013 TRUSTONIC LIMITED
+/*
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved
+ *
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +27,9 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+/**
+ * MobiCore Version Information
+ */
 #ifndef MCVERSIONINFO_H_
 #define MCVERSIONINFO_H_
 

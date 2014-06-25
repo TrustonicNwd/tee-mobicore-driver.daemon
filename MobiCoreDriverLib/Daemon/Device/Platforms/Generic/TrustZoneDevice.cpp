@@ -1,8 +1,3 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_DEV
- * @{
- * @file
- */
-
 /*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
@@ -33,7 +28,6 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 #include <cstdlib>
 #include <stdio.h>
 #include <inttypes.h>
@@ -402,20 +396,19 @@ bool TrustZoneDevice::getMciInstance(uint32_t len, CWsm_ptr *mci, bool *reused)
 {
     addr_t virtAddr;
     uint32_t handle;
-    uint64_t physAddr;
     bool isReused = true;
     if (len == 0) {
         LOG_E("allocateWsm() length is 0");
         return false;
     }
 
-    mcResult_t ret = pMcKMod->mapMCI(len, &handle, &virtAddr, &physAddr, &isReused);
+    mcResult_t ret = pMcKMod->mapMCI(len, &handle, &virtAddr, &isReused);
     if (ret != MC_DRV_OK) {
         LOG_E("pMcKMod->mmap() failed: %x", ret);
         return false;
     }
 
-    *mci = new CWsm(virtAddr, len, handle, physAddr);
+    *mci = new CWsm(virtAddr, len, handle, 0);
     *reused = isReused;
     return true;
 }
@@ -462,16 +455,15 @@ CWsm_ptr TrustZoneDevice::allocateContiguousPersistentWsm(uint32_t len)
     // Allocate shared memory
     addr_t virtAddr;
     uint32_t handle;
-    uint64_t physAddr;
 
     if (len == 0 )
         return NULL;
 
-    if (pMcKMod->mapWsm(len, &handle, &virtAddr, &physAddr))
+    if (pMcKMod->mapWsm(len, &handle, &virtAddr))
         return NULL;
 
     // Register (vaddr,paddr) with device
-    pWsm = new CWsm(virtAddr, len, handle, physAddr);
+    pWsm = new CWsm(virtAddr, len, handle, 0);
 
     // Return pointer to the allocated memory
     return pWsm;
@@ -753,4 +745,4 @@ void TrustZoneDevice::handleIrq(
     DeviceIrqHandler::setExiting();
     signalMcpNotification();
 }
-/** @} */
+

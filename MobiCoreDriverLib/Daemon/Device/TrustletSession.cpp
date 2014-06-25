@@ -1,7 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_DEV
- * @{
- * @file
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -31,7 +28,6 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 #include "TrustletSession.h"
 #include <cstdlib>
 
@@ -158,4 +154,3 @@ CWsm_ptr TrustletSession::popBulkBuff()
     return pWsm;
 }
 
-/** @} */

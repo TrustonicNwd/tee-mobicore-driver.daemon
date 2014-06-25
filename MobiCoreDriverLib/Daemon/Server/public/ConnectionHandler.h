@@ -1,10 +1,4 @@
-/** @addtogroup MCD_MCDIMPL_DAEMON_SRV
- * @{
- * @file
- *
- * Interface for connection handlers used by Server.
- *
- *
+/*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
  *
@@ -33,6 +27,9 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/**
+ * Interface for connection handlers used by Server.
  */
 #ifndef CONNECTIONHANDLER_H_
 #define CONNECTIONHANDLER_H_
@@ -70,4 +67,3 @@ public:
 
 #endif /* CONNECTIONHANDLER_H_ */
 
-/** @} */

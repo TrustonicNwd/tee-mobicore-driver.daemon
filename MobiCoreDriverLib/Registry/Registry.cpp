@@ -1,11 +1,3 @@
-/** Mobicore Driver Registry Interface
- *
- * Implements the MobiCore registry interface for the ROOT-PA
- *
- * @file
- * @ingroup MCD_MCDIMPL_DAEMON_REG
- */
-
 /*
  * Copyright (c) 2013 TRUSTONIC LIMITED
  * All rights reserved.
@@ -35,6 +27,13 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+/** Mobicore Driver Registry Interface
+ *
+ * Implements the MobiCore registry interface for the ROOT-PA
+ *
+ * @file
+ * @ingroup MCD_MCDIMPL_DAEMON_REG
  */
 
 #include <stdlib.h>
@@ -395,4 +394,3 @@ mcResult_t mcRegistryReadData(uint32_t context, const mcCid_t *cid, mcPid_t pid,
     return MC_DRV_ERR_INVALID_PARAMETER;
 }
 
-/** @} */
