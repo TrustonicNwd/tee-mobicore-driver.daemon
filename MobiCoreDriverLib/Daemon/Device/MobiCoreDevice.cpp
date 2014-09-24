@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -119,14 +119,14 @@ TrustletSession* MobiCoreDevice::findSession(
     TrustletSession *session = getTrustletSession(sessionId);
     if (session == NULL)
     {
-        LOG_E("no session found with id=%d", sessionId);
+        LOG_E("no session found with id %03x", sessionId);
     }
     else
     {
         // check is connection own this session
         if (session->deviceConnection != deviceConnection)
         {
-            LOG_E("connection does not own session id=%d", sessionId);
+            LOG_E("connection does not own session id %03x", sessionId);
             session = NULL;
         }
     }
@@ -181,7 +181,7 @@ mcResult_t MobiCoreDevice::sendSessionCloseCmd(
 mcResult_t MobiCoreDevice::closeSessionInternal(
     TrustletSession *session
 ) {
-    LOG_I("closing session with id=%d", session->sessionId);
+    LOG_I("closing session %03x", session->sessionId);
 
     mcResult_t mcRet = sendSessionCloseCmd(session->sessionId);
     switch(mcRet){
@@ -308,11 +308,12 @@ void MobiCoreDevice::start(void)
 
     if (mciReused)
     {
-        // remove all pending sessions. 20 is as good a any other number, we-
-        // actually should ass a MCP message that tells SWd to invalidate all-
-        // session that are there besides the MSH session.
-        for (int sessionId = 2; sessionId<20; sessionId++) {
-            LOG_I("invalidating session %d",sessionId);
+        // Remove all pending sessions. In <t-base-301, there is a maximum of 32 sessions.
+        // Few sessions in the start are reserved by the system.
+#define LOG_SOURCE_TASK_SHIFT      8
+        for (int sessionNumber = 3; sessionNumber<32; sessionNumber++) {
+            int sessionId = ((sessionNumber<<LOG_SOURCE_TASK_SHIFT)+1);
+            LOG_I("invalidating session %03x", sessionId);
             mcResult_t mcRet = sendSessionCloseCmd(sessionId);
             if (mcRet != MC_MCP_RET_OK) {
                 LOG_I("sendSessionCloseCmd error %d", mcRet);
@@ -366,27 +367,40 @@ bool MobiCoreDevice::waitMcpNotification(void)
     } // while(1)
 
     // Check healthiness state of the device
-    if (DeviceIrqHandler::isExiting()) {
-        LOG_I("waitMcpNotification(): IrqHandler thread died! Joining");
+	if (DeviceIrqHandler::isExiting() || 
+		DeviceScheduler::isExiting() ||
+		TAExitHandler::isExiting())
+	{
+        LOG_I("waitMcpNotification(): Threads state:");
+        LOG_I("Irq handler : %s", (DeviceIrqHandler::isExiting()==true)?"running":"exit");
+        LOG_I("Scheduler   : %s", (DeviceScheduler::isExiting()==true)?"running":"exit");
+        LOG_I("Exit handler: %s", (TAExitHandler::isExiting()==true)?"running":"exit");
+        
+        //There is no CThread::wait() so no need to wake up
+        LOG_I("waitMcpNotification(): IrqHandler thread should exit automatically");
+        
+        DeviceScheduler::terminate();
+        //Cancel waiting just in case.
+        DeviceScheduler::wakeup();
+        LOG_I("waitMcpNotification(): terminate Scheduler  thread");
+    
+        TAExitHandler::terminate();
+        //Cancel waiting just in case.
+        TAExitHandler::wakeup();
+        LOG_I("waitMcpNotification(): terminate Exit handler thread");
+
         DeviceIrqHandler::join();
-        LOG_I("waitMcpNotification(): Joined");
+        LOG_I("waitMcpNotification(): IrqHandler joined");
         LOG_E("IrqHandler thread died!");
-        return false;
-    }
 
-    if (DeviceScheduler::isExiting()) {
-        LOG_I("waitMcpNotification(): Scheduler thread died! Joining");
         DeviceScheduler::join();
-        LOG_I("waitMcpNotification(): Joined");
+        LOG_I("waitMcpNotification(): Scheduler Joined");
         LOG_E("Scheduler thread died!");
-        return false;
-    }
 
-    if (TAExitHandler::isExiting()) {
-        LOG_I("waitMcpNotification(): TAExitHandler thread died! Joining");
         TAExitHandler::join();
-        LOG_I("waitMcpNotification(): Joined");
+        LOG_I("waitMcpNotification(): Exit handler Joined");
         LOG_E("TAExitHandler thread died!");
+
         return false;
     }
     return true;
@@ -514,8 +528,10 @@ mcResult_t MobiCoreDevice::openSession(
             deviceConnection,
             mcpMessage->rspOpen.sessionId);
 
+        // Security TODO: device connection peer has to match the NQ connection peer
+    	// The check here is not 100% correct
         pRspOpenSessionPayload->sessionId = trustletSession->sessionId;
-        pRspOpenSessionPayload->deviceSessionId = (uint32_t)trustletSession;
+        pRspOpenSessionPayload->deviceSessionId = (uint32_t)((uintptr_t)trustletSession & UINT_MAX);
         pRspOpenSessionPayload->sessionMagic = trustletSession->sessionMagic;
 
         trustletSession->gp_level=((mclfHeaderV24_ptr)&pLoadDataOpenSession->tlHeader->mclfHeaderV2)->gp_level;
@@ -527,7 +543,7 @@ mcResult_t MobiCoreDevice::openSession(
         mutex_tslist.unlock();
 
         if (tciHandle != 0 && tciLen != 0) {
-            trustletSession->addBulkBuff(new CWsm((void *)pLoadDataOpenSession->offs, pLoadDataOpenSession->len, tciHandle, 0));
+            trustletSession->addBulkBuff(new CWsm(NULL, pLoadDataOpenSession->len, tciHandle, 0));
         }
 
         // We have some queued notifications and we need to send them to them
@@ -598,9 +614,9 @@ TrustletSession *MobiCoreDevice::registerTrustletConnection(
     MC_DRV_CMD_NQ_CONNECT_struct *cmdNqConnect
 )
 {
-    LOG_I(" Registering notification socket with Service session %d.",
+    LOG_I(" Registering notification socket with Service session %03x.",
           cmdNqConnect->sessionId);
-    LOG_V("  Searching sessionId %d with sessionMagic %d",
+    LOG_V("  Searching sessionId %03x with sessionMagic %d",
           cmdNqConnect->sessionId,
           cmdNqConnect->sessionMagic);
 
@@ -611,7 +627,7 @@ TrustletSession *MobiCoreDevice::registerTrustletConnection(
     {
         TrustletSession *session = *iterator;
 
-        if (session != (TrustletSession *) (cmdNqConnect->deviceSessionId)) {
+        if (((uintptr_t)session & UINT_MAX) != cmdNqConnect->deviceSessionId) {
             continue;
         }
 
@@ -645,7 +661,7 @@ mcResult_t MobiCoreDevice::closeSession(
 ) {
     TrustletSession *session = findSession(deviceConnection,sessionId);
     if (session == NULL) {
-        LOG_E("cannot close session with id=%d", sessionId);
+        LOG_E("cannot close session %03x", sessionId);
         return MC_DRV_ERR_DAEMON_UNKNOWN_SESSION;
     }
 
@@ -730,7 +746,7 @@ mcResult_t MobiCoreDevice::notify(
     TrustletSession *session = findSession(deviceConnection,sessionId);
     if (session == NULL)
     {
-        LOG_E("cannot notify session with id=%d", sessionId);
+        LOG_E("cannot notify session %03x", sessionId);
         return MC_DRV_ERR_DAEMON_UNKNOWN_SESSION;
     }
 
@@ -751,14 +767,14 @@ mcResult_t MobiCoreDevice::mapBulk(
 ) {
     TrustletSession *session = findSession(deviceConnection,sessionId);
     if (session == NULL) {
-        LOG_E("cannot mapBulk on session with id=%d", sessionId);
+        LOG_E("cannot mapBulk on session %03x", sessionId);
         return MC_DRV_ERR_DAEMON_UNKNOWN_SESSION;
     }
 
     // TODO-2012-09-06-haenellu: considernot ignoring the error case, ClientLib
     //                           does not allow this.
     session->addBulkBuff(
-                new CWsm((void *)offsetPayload,
+                new CWsm(NULL,
                 lenBulkMem,
                 handle,
                 pAddrL2));
@@ -806,7 +822,7 @@ mcResult_t MobiCoreDevice::unmapBulk(
 ) {
     TrustletSession *session = findSession(deviceConnection,sessionId);
     if (session == NULL) {
-        LOG_E("cannot unmapBulk on session with id=%d", sessionId);
+        LOG_E("cannot unmapBulk on session %03x", sessionId);
         return MC_DRV_ERR_DAEMON_UNKNOWN_SESSION;
     }
 

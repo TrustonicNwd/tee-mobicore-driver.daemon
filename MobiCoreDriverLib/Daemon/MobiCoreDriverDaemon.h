@@ -259,6 +259,13 @@ private:
      * @param sosize the size of the token
      */
     bool loadToken(uint8_t *token, uint32_t sosize);
+
+    /**
+     * installEndorsementToken
+     * Look for tokens in the registry and pass them to <t-base for endorsement purposes
+     * Search order:  1. authtoken 2. authtoken backup 3. root container
+     */
+    void installEndorsementToken(void);
 };
 
 #endif /* MOBICOREDRIVER_H_ */

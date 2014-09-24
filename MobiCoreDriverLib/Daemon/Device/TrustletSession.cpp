@@ -69,7 +69,7 @@ void TrustletSession::queueNotification(notification_t *notification)
         return;
     }
     if ((gp_level == 1) && (notification->payload != 0)) {
-        LOG_I("  Mark session %i dead", sessionId);
+        LOG_I("  Mark session %03x dead", sessionId);
         sessionState = TS_TA_DEAD;
     }
     // Note this is a very subtle synchronization requirement:

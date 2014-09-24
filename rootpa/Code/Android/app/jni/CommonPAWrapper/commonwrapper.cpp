@@ -343,7 +343,7 @@ void stateUpdateCallback(ProvisioningState state, rootpaerror_t error, tltInfo_t
         }
         else
         {
-	        envP->CallVoidMethod(obj_, provisioningStateCallback_, ERROR, ROOTPA_ERROR_INTERNAL);
+	        envP->CallVoidMethod(obj_, provisioningStateCallback_, ERROR_STATE, ROOTPA_ERROR_INTERNAL);
         }
     }
     else

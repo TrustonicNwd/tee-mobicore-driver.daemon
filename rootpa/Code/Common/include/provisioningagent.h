@@ -36,7 +36,7 @@ extern "C" {
 #endif
 
 
-#include <stdbool.h>
+#include <wrapper.h>
 #include <TlCm/3.0/cmp.h>
 #include <mcVersionInfo.h>
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,7 +55,6 @@ class TrustZoneDevice : public MobiCoreDevice
 
 protected:
     bool         schedulerEnabled; /**< NQ IRQ Scheduler enabling */
-    CSemaphore   schedSync; /**< Semaphore to synchronize S-SIQs with scheduler thread */
     CMcKMod_ptr  pMcKMod; /**< kernel module */
     CWsm_ptr     pWsmMcp; /**< WSM use for MCP */
     CWsm_ptr     mobicoreInDDR;  /**< WSM used for Mobicore binary */
@@ -109,6 +108,7 @@ public:
 
     CWsm_ptr registerWsmL2(addr_t buffer, uint32_t len, uint32_t pid);
 
+    /* pWsm is freed even in case of error */
     bool unregisterWsmL2(CWsm_ptr pWsm);
 
     bool lockWsmL2(uint32_t handle);

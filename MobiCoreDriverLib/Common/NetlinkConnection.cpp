@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -183,7 +183,6 @@ ssize_t NetlinkConnection::readData(
 )
 {
     ssize_t ret = -1;
-    assert(NULL != buffer);
 
     if (!dataLeft.wait(timeout)) {
         return -2;
@@ -198,7 +197,6 @@ ssize_t NetlinkConnection::readData(
     //LOG_I("%s: reading connection data %u, connection data left %u",
     //      __FUNCTION__, len, dataLen);
 
-    assert(dataStart != NULL);
 
     // trying to read more than the left data
     if (len > dataLen) {
@@ -238,7 +236,6 @@ ssize_t NetlinkConnection::writeData(
     struct iovec iov;
     struct msghdr msg;
 
-    assert(NULL != buffer);
     assert(-1 != socketDescriptor);
 
     //LOG_I("%s: send data %u to PID %u", __FUNCTION__, len, sequenceMagic);

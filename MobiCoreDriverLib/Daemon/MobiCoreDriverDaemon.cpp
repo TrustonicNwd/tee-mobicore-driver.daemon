@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -88,7 +88,8 @@ MobiCoreDriverDaemon::~MobiCoreDriverDaemon(
     for (it = driverResources.begin(); it != driverResources.end(); it++) {
         MobicoreDriverResources *res = *it;
         mobiCoreDevice->closeSession(res->conn, res->sessionId);
-        mobiCoreDevice->unregisterWsmL2(res->pTciWsm);
+        (void)mobiCoreDevice->unregisterWsmL2(res->pTciWsm);
+        res->pTciWsm = NULL;
     }
     delete mobiCoreDevice;
     for (int i = 0; i < MAX_SERVERS; i++) {
@@ -141,57 +142,8 @@ void MobiCoreDriverDaemon::run(
             loadDeviceDriver(drivers[i]);
     }
 
-    /* Look for tokens in the registry and pass them to <t-base for endorsement
-     * purposes.
-     */
-    LOG_I("Looking for suitable tokens");
-
-    mcSoAuthTokenCont_t authtoken;
-    mcSoAuthTokenCont_t authtokenbackup;
-    mcSoRootCont_t rootcont;
-    uint32_t sosize;
-    uint8_t *p = NULL;
-
-    // Search order:  1. authtoken 2. authtoken backup 3. root container
-    sosize = 0;
-    mcResult_t ret = mcRegistryReadAuthToken(&authtoken);
-    if (ret != MC_DRV_OK) {
-        LOG_I("Failed to read AuthToken (ret=%u). Trying AuthToken backup", ret);
-
-        ret = mcRegistryReadAuthTokenBackup(&authtokenbackup);
-        if (ret != MC_DRV_OK) {
-            LOG_I("Failed to read AuthToken backup (ret=%u). Trying Root Cont", ret);
-
-        sosize = sizeof(rootcont);
-        ret = mcRegistryReadRoot(&rootcont, &sosize);
-        if (ret != MC_DRV_OK) {
-                LOG_I("Failed to read Root Cont, (ret=%u).", ret);
-            LOG_W("Device endorsements not supported!");
-            sosize = 0;
-            } else {
-            LOG_I("Found Root Cont.");
-            p = (uint8_t *) &rootcont;
-        }
-
-        } else {
-            LOG_I("Found AuthToken backup.");
-            p = (uint8_t *) &authtokenbackup;
-            sosize = sizeof(authtokenbackup);
-        }
-
-    } else {
-        LOG_I("Found AuthToken.");
-        p = (uint8_t *) &authtoken;
-        sosize = sizeof(authtoken);
-    }
-
-    if (sosize) {
-        LOG_I("Found token of size: %u", sosize);
-        if (!loadToken(p, sosize)) {
-            LOG_E("Failed to pass token to <t-base. "
-                  "Device endorsements disabled");
-        }
-    }
+    // Look for tokens and send it to <t-base if any
+    installEndorsementToken();
 
     LOG_I("Creating socket servers");
     // Start listening for incoming TLC connections
@@ -312,7 +264,7 @@ bool MobiCoreDriverDaemon::loadDeviceDriver(
         // Initialize information data of open session command
         loadDataOpenSession_t loadDataOpenSession;
         loadDataOpenSession.baseAddr = pWsm->physAddr;
-        loadDataOpenSession.offs = ((uint32_t) regObj->value) & 0xFFF;
+        loadDataOpenSession.offs = ((uintptr_t) regObj->value) & 0xFFF;
         loadDataOpenSession.len = regObj->len;
         loadDataOpenSession.tlHeader = (mclfHeader_ptr) (regObj->value + regObj->tlStartOffset);
 
@@ -333,7 +285,12 @@ bool MobiCoreDriverDaemon::loadDeviceDriver(
 
         // Unregister physical memory from kernel module.
         // This will also destroy the WSM object.
-        mobiCoreDevice->unregisterWsmL2(pWsm);
+        if (!mobiCoreDevice->unregisterWsmL2(pWsm))
+        {
+            pWsm = NULL;
+            LOG_E("unregistering of WsmL2 failed.");
+            break;
+        }
         pWsm = NULL;
 
         // Free memory occupied by Trustlet data
@@ -352,9 +309,9 @@ bool MobiCoreDriverDaemon::loadDeviceDriver(
         LOG_I("%s: Freeing previously allocated resources!", __FUNCTION__);
         if (pWsm != NULL) {
             if (!mobiCoreDevice->unregisterWsmL2(pWsm)) {
-                // At least make sure we don't leak the WSM object
-                delete pWsm;
+                LOG_E("unregisterWsmL2 failed");
             }
+            pWsm = NULL;
         }
         // No matter if we free NULL objects
         free(regObj);
@@ -372,7 +329,7 @@ bool MobiCoreDriverDaemon::loadDeviceDriver(
 
 #define RECV_PAYLOAD_FROM_CLIENT(CONNECTION, CMD_BUFFER) \
 { \
-    void *payload = (void*)((uint32_t)CMD_BUFFER + sizeof(mcDrvCommandHeader_t)); \
+    void *payload = (void*)((uintptr_t)CMD_BUFFER + sizeof(mcDrvCommandHeader_t)); \
     uint32_t payload_len = sizeof(*CMD_BUFFER) - sizeof(mcDrvCommandHeader_t); \
     int32_t rlen = CONNECTION->readData(payload, payload_len); \
     if (rlen < 0) { \
@@ -495,7 +452,7 @@ void MobiCoreDriverDaemon::processOpenSession(Connection *connection, bool isGpU
     // Initialize information data of open session command
     loadDataOpenSession_t loadDataOpenSession;
     loadDataOpenSession.baseAddr = pWsm->physAddr;
-    loadDataOpenSession.offs = ((uint32_t) regObj->value) & 0xFFF;
+    loadDataOpenSession.offs = ((uintptr_t) regObj->value) & 0xFFF;
     loadDataOpenSession.len = regObj->len;
     loadDataOpenSession.tlHeader = (mclfHeader_ptr) (regObj->value + regObj->tlStartOffset);
 
@@ -513,12 +470,13 @@ void MobiCoreDriverDaemon::processOpenSession(Connection *connection, bool isGpU
 
     // This will also destroy the WSM object.
     if (!device->unregisterWsmL2(pWsm)) {
+        pWsm = NULL;
         // TODO-2012-07-02-haenellu: Can this ever happen? And if so, we should assert(), also TL might still be running.
         free(regObj);
         writeResult(connection, MC_DRV_ERR_DAEMON_KMOD_ERROR);
         return;
     }
-
+    pWsm = NULL;
     // Free memory occupied by Trustlet data
     free(regObj);
 
@@ -568,7 +526,7 @@ mcResult_t MobiCoreDriverDaemon::processLoadCheck(mcSpid_t spid, void *blob, uin
     // Initialize information data of open session command
     loadDataOpenSession_t loadDataOpenSession;
     loadDataOpenSession.baseAddr = pWsm->physAddr;
-    loadDataOpenSession.offs = ((uint32_t) regObj->value) & 0xFFF;
+    loadDataOpenSession.offs = ((uintptr_t) regObj->value) & 0xFFF;
     loadDataOpenSession.len = regObj->len;
     loadDataOpenSession.tlHeader = (mclfHeader_ptr) (regObj->value + regObj->tlStartOffset);
 
@@ -582,11 +540,13 @@ mcResult_t MobiCoreDriverDaemon::processLoadCheck(mcSpid_t spid, void *blob, uin
 
     // This will also destroy the WSM object.
     if (!device->unregisterWsmL2(pWsm)) {
+        pWsm = NULL;
         // Free memory occupied by Trustlet data
         free(regObj);
         LOG_E("deallocating WSM for Trustlet failed");
         return MC_DRV_ERR_DAEMON_KMOD_ERROR;
     }
+    pWsm = NULL;
 
     // Free memory occupied by Trustlet data
     free(regObj);
@@ -659,7 +619,7 @@ void MobiCoreDriverDaemon::processOpenTrustlet(Connection *connection)
     // Initialize information data of open session command
     loadDataOpenSession_t loadDataOpenSession;
     loadDataOpenSession.baseAddr = pWsm->physAddr;
-    loadDataOpenSession.offs = ((uint32_t) regObj->value) & 0xFFF;
+    loadDataOpenSession.offs = ((uintptr_t) regObj->value) & 0xFFF;
     loadDataOpenSession.len = regObj->len;
     loadDataOpenSession.tlHeader = (mclfHeader_ptr) (regObj->value + regObj->tlStartOffset);
 
@@ -677,11 +637,13 @@ void MobiCoreDriverDaemon::processOpenTrustlet(Connection *connection)
 
     // This will also destroy the WSM object.
     if (!device->unregisterWsmL2(pWsm)) {
+        pWsm = NULL;
         free(regObj);
         // TODO-2012-07-02-haenellu: Can this ever happen? And if so, we should assert(), also TL might still be running.
         writeResult(connection, MC_DRV_ERR_DAEMON_KMOD_ERROR);
         return;
     }
+    pWsm = NULL;
 
     // Free memory occupied by Trustlet data
     free(regObj);
@@ -776,7 +738,7 @@ void MobiCoreDriverDaemon::processNotify(Connection  *connection)
     // Read entire command data
     MC_DRV_CMD_NOTIFY_struct  cmd;
     //RECV_PAYLOAD_FROM_CLIENT(connection, &cmd);
-    void *payload = (void *)((uint32_t)&cmd + sizeof(mcDrvCommandHeader_t));
+    void *payload = (void *)((uintptr_t)&cmd + sizeof(mcDrvCommandHeader_t));
     uint32_t payload_len = sizeof(cmd) - sizeof(mcDrvCommandHeader_t);
     uint32_t rlen = connection->readData(payload, payload_len);
     if ((int) rlen < 0) {
@@ -932,6 +894,8 @@ mcDrvResponseHeader_t rspRegistry = { responseId :
     mcSpid_t spid;
     mcUuid_t uuid;
 
+    memset(&spid, 0, sizeof(spid));
+
     if (!checkPermission(connection)) {
         connection->writeData(&rspRegistry, sizeof(rspRegistry));
         return;
@@ -972,7 +936,7 @@ void MobiCoreDriverDaemon::processRegistryWriteData(uint32_t commandId, Connecti
 mcDrvResponseHeader_t rspRegistry = { responseId :
                                           MC_DRV_ERR_INVALID_OPERATION
                                         };
-    uint32_t soSize;
+    uint32_t soSize = 0;
     void *so;
 
     if (!checkPermission(connection)) {
@@ -999,12 +963,32 @@ mcDrvResponseHeader_t rspRegistry = { responseId :
         if (!getData(connection, so, soSize))
             break;
         rspRegistry.responseId = mcRegistryStoreAuthToken(so, soSize);
+        if (rspRegistry.responseId != MC_DRV_OK) {
+            LOG_E("mcRegistryStoreAuthToken() failed");
+            break;
+        }
+        /* Load authentication token. Need to update <t-base to avoid
+         * reboot */
+        LOG_I("Auth Token stored. Updating <t-base.");
+        if (!loadToken((uint8_t *)so, sizeof(mcSoAuthTokenCont_t))) {
+            LOG_E("Failed to pass Auth Token to <t-base.");
+        }
         break;
     }
     case MC_DRV_REG_WRITE_ROOT_CONT: {
         if (!getData(connection, so, soSize))
             break;
         rspRegistry.responseId = mcRegistryStoreRoot(so, soSize);
+        if (rspRegistry.responseId != MC_DRV_OK) {
+            LOG_E("mcRegistryStoreRoot() failed");
+            break;
+        }
+        /* Load Root container. Need to update <t-base to avoid
+         * reboot */
+        LOG_I("Root container stored. Updating <t-base.");
+        if (!loadToken((uint8_t *)so, sizeof(mcSoRootCont_t))) {
+            LOG_E("Failed to pass Root container to <t-base.");
+        }
         break;
     }
     case MC_DRV_REG_WRITE_SP_CONT: {
@@ -1019,6 +1003,7 @@ mcDrvResponseHeader_t rspRegistry = { responseId :
     case MC_DRV_REG_WRITE_TL_CONT: {
         mcUuid_t uuid;
         mcSpid_t spid;
+        memset(&spid, 0, sizeof(spid));
         if (!getData(connection, &uuid, sizeof(uuid)))
             break;
         if (!getData(connection, &spid, sizeof(spid)))
@@ -1038,6 +1023,7 @@ mcDrvResponseHeader_t rspRegistry = { responseId :
         uint32_t blobSize = soSize;
         mcSpid_t spid;
         void     *blob;
+        memset(&spid, 0, sizeof(spid));
         if (!getData(connection, &spid, sizeof(spid)))
             break;
         blob = malloc(blobSize);
@@ -1075,7 +1061,7 @@ void MobiCoreDriverDaemon::processRegistryDeleteData(uint32_t commandId, Connect
 mcDrvResponseHeader_t rspRegistry = { responseId :
                                           MC_DRV_ERR_INVALID_OPERATION
                                         };
-    mcSpid_t spid;
+    mcSpid_t spid = MC_SPID_RESERVED; /* MC_SPID_RESERVED = 0 */
 
     if (!checkPermission(connection)) {
         connection->writeData(&rspRegistry, sizeof(rspRegistry));
@@ -1086,9 +1072,16 @@ mcDrvResponseHeader_t rspRegistry = { responseId :
     case MC_DRV_REG_DELETE_AUTH_TOKEN:
         rspRegistry.responseId = mcRegistryDeleteAuthToken();
         break;
-    case MC_DRV_REG_DELETE_ROOT_CONT:
+    case MC_DRV_REG_DELETE_ROOT_CONT: {
         rspRegistry.responseId = mcRegistryCleanupRoot();
+        if (rspRegistry.responseId != MC_DRV_OK) {
+            LOG_E("mcRegistryCleanupRoot() failed");
+            break;
+        }
+        // Look for tokens and send it to <t-base if any
+        installEndorsementToken();
         break;
+    }
     case MC_DRV_REG_DELETE_SP_CONT:
         if (!getData(connection, &spid, sizeof(spid)))
             break;
@@ -1363,25 +1356,12 @@ int main(int argc, char *args[])
         /* ignore terminal has been closed signal */
         signal(SIGHUP, SIG_IGN);
 
-        int i = fork();
-        if (i < 0) {
-            exit(1);
-        }
-        // Parent
-        else if (i > 0) {
-            exit(0);
+        /* become a daemon */
+        if (daemon(0, 0) < 0) {
+            fprintf(stderr, "Fork failed, exiting.\n");
+            return 1;
         }
 
-        // obtain a new process group */
-        setsid();
-        /* close all descriptors */
-        for (i = getdtablesize(); i >= 0; --i) {
-            close(i);
-        }
-        // STDIN, STDOUT and STDERR should all point to /dev/null */
-        i = open("/dev/null", O_RDWR);
-        dup(i);
-        dup(i);
         /* ignore tty signals */
         signal(SIGTSTP, SIG_IGN);
         signal(SIGTTOU, SIG_IGN);
@@ -1479,7 +1459,7 @@ bool MobiCoreDriverDaemon::loadToken(uint8_t *token, uint32_t sosize)
         /* Initialize information data of LOAD_TOKEN command */
         loadTokenData_t loadTokenData;
         loadTokenData.addr = pWsm->physAddr;
-        loadTokenData.offs = ((uint32_t) token) & 0xFFF;
+        loadTokenData.offs = ((uintptr_t) token) & 0xFFF;
         loadTokenData.len = sosize;
 
         conn = new Connection();
@@ -1488,7 +1468,11 @@ bool MobiCoreDriverDaemon::loadToken(uint8_t *token, uint32_t sosize)
         /* Unregister physical memory from kernel module. This will also destroy
          * the WSM object.
          */
-        mobiCoreDevice->unregisterWsmL2(pWsm);
+        if (!mobiCoreDevice->unregisterWsmL2(pWsm)) {
+            LOG_E("Unregistering of WsmL2 failed.");
+            pWsm = NULL;
+            break;
+        }
         pWsm = NULL;
 
         if (mcRet != MC_MCP_RET_OK) {
@@ -1505,3 +1489,58 @@ bool MobiCoreDriverDaemon::loadToken(uint8_t *token, uint32_t sosize)
     return ret;
 }
 
+//------------------------------------------------------------------------------
+void MobiCoreDriverDaemon::installEndorsementToken(void)
+{
+    /* Look for tokens in the registry and pass them to <t-base for endorsement
+     * purposes.
+     */
+    LOG_I("Looking for suitable tokens");
+
+    mcSoAuthTokenCont_t authtoken;
+    mcSoAuthTokenCont_t authtokenbackup;
+    mcSoRootCont_t rootcont;
+    uint32_t sosize;
+    uint8_t *p = NULL;
+
+    // Search order:  1. authtoken 2. authtoken backup 3. root container
+    sosize = 0;
+    mcResult_t ret = mcRegistryReadAuthToken(&authtoken);
+    if (ret != MC_DRV_OK) {
+        LOG_I("Failed to read AuthToken (ret=%u). Trying AuthToken backup", ret);
+
+        ret = mcRegistryReadAuthTokenBackup(&authtokenbackup);
+        if (ret != MC_DRV_OK) {
+            LOG_I("Failed to read AuthToken backup (ret=%u). Trying Root Cont", ret);
+
+        sosize = sizeof(rootcont);
+        ret = mcRegistryReadRoot(&rootcont, &sosize);
+        if (ret != MC_DRV_OK) {
+                LOG_I("Failed to read Root Cont, (ret=%u).", ret);
+            LOG_W("Device endorsements not supported!");
+            sosize = 0;
+            } else {
+            LOG_I("Found Root Cont.");
+            p = (uint8_t *) &rootcont;
+        }
+
+        } else {
+            LOG_I("Found AuthToken backup.");
+            p = (uint8_t *) &authtokenbackup;
+            sosize = sizeof(authtokenbackup);
+        }
+
+    } else {
+        LOG_I("Found AuthToken.");
+        p = (uint8_t *) &authtoken;
+        sosize = sizeof(authtoken);
+    }
+
+    if (sosize) {
+        LOG_I("Found token of size: %u", sosize);
+        if (!loadToken(p, sosize)) {
+            LOG_E("Failed to pass token to <t-base. "
+                  "Device endorsements disabled");
+        }
+    }
+}

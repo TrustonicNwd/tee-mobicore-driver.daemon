@@ -36,6 +36,7 @@
 #include "Mci/mcinq.h"
 #include <sys/mman.h>
 #include "GpTci.h"
+#include "../Session.h"
 
 //------------------------------------------------------------------------------
 // Macros
@@ -333,7 +334,7 @@ static TEEC_Result _TEEC_UnwindOperation(
 
         if ((buffer != NULL) && (imp->memref.mapInfo.sVirtualLen != 0)) {
             // This function assumes that we cannot handle error of mcUnmap
-            mcUnmap(handle, buffer, &imp->memref.mapInfo);
+            (void)mcUnmap(handle, buffer, &imp->memref.mapInfo);
         }
     }
 
@@ -428,7 +429,7 @@ static TEEC_Result _TEEC_CallTA(
     if (mcRet != MC_DRV_OK) {
         teecError = TEEC_ERROR_COMMUNICATION;
         if (mcRet == MC_DRV_INFO_NOTIFICATION) {
-            int32_t lastErr;
+            int32_t lastErr = SESSION_ERR_NO;
             mcGetSessionErrorCode(&session->imp.handle, &lastErr);
             if (lastErr == TA_EXIT_CODE_FINISHED) {
                 // We may get here if the TA_OpenSessionEntryPoint returns an error and TA goes fast through DestroyEntryPoint and exits the TA.

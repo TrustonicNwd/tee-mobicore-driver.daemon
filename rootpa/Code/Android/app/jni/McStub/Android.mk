@@ -48,7 +48,9 @@ ifeq ($(ROOTPA_MODULE_TEST), 1)
     LOCAL_C_INCLUDES += $(MOBICORE_DIR_INC)
     LOCAL_C_INCLUDES += $(MOBICORE_DIR_INC)/TlCm
     LOCAL_C_INCLUDES += $(MOBICOREDRIVER_DIR_INC)
-    LOCAL_C_INCLUDES +=  $(LOCAL_PATH)/../../../../Common/include
+    LOCAL_C_INCLUDES += $(MOBICORE_PROJECT_PATH)/rootpa/Code/Common/include
 
+    LOCAL_32_BIT_ONLY := true
+	
     include $(BUILD_STATIC_LIBRARY)
 endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -77,6 +77,7 @@ mcResult_t CMcKMod::mapWsm(
                              fdKMod, mapParams.phys_addr);
     if (virtAddr == MAP_FAILED) {
         LOG_ERRNO("mmap");
+        (void)ioctl(fdKMod, MC_IO_FREE, mapParams.handle);
         return MAKE_MC_DRV_KMOD_WITH_ERRNO(errno);
     }
 
@@ -98,7 +99,6 @@ mcResult_t CMcKMod::mapWsm(
 //------------------------------------------------------------------------------
 mcResult_t CMcKMod::mapMCI(
     uint32_t    len,
-    uint32_t    *pHandle,
     addr_t      *pVirtAddr,
     bool        *pReuse)
 {
@@ -117,6 +117,7 @@ mcResult_t CMcKMod::mapMCI(
         return MAKE_MC_DRV_KMOD_WITH_ERRNO(errno);
     }
 
+    // MCI is defined as offset 0, so we do not pass the mapParams.phys_addr to mmap.
     addr_t virtAddr = ::mmap(0, len, PROT_READ | PROT_WRITE, MAP_SHARED,
                              fdKMod, 0);
     if (virtAddr == MAP_FAILED) {
@@ -132,10 +133,6 @@ mcResult_t CMcKMod::mapMCI(
 
     if (pVirtAddr != NULL) {
         *pVirtAddr = (void *)virtAddr;
-    }
-
-    if (pHandle != NULL) {
-        *pHandle = mapParams.handle;
     }
 
     return MC_DRV_OK;
@@ -285,7 +282,7 @@ mcResult_t CMcKMod::free(uint32_t handle, addr_t buffer, uint32_t len)
     // Even if unmap fails we still go on with our request
     if (::munmap(buffer, len)) {
         LOG_I("buffer = %p, len = %d", buffer, len);
-        LOG_ERRNO("mmap failed");
+        LOG_ERRNO("munmap failed");
     }
 
     int ret = ioctl(fdKMod, MC_IO_FREE, handle);
@@ -315,7 +312,7 @@ mcResult_t CMcKMod::registerWsmL2(
 
     struct mc_ioctl_reg_wsm params = {
 buffer :
-        (uint32_t) buffer,
+        (uintptr_t) buffer,
 len :
         len,
 pid :

@@ -155,10 +155,16 @@ typedef struct {
  * In order to use the memory within a Trusted Application the Client Application has to inform the Trusted Application with
  * the content of this structure via the TCI.
  */
+
 typedef struct {
-    void *sVirtualAddr;         /**< The virtual address of the Bulk buffer regarding the address space of the Trusted Application, already includes a possible offset! */
+#if ( __WORDSIZE == 64 )
+    uint32_t sVirtualAddr;         /**< The virtual address of the Bulk buffer regarding the address space of the Trusted Application, already includes a possible offset! */
+#else
+    void *sVirtualAddr;
+#endif
     uint32_t sVirtualLen;       /**< Length of the mapped Bulk buffer */
 } mcBulkMap_t;
+
 
 
 #define MC_DEVICE_ID_DEFAULT       0 /**< The default device ID */

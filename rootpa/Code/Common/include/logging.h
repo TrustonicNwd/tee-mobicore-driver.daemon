@@ -45,16 +45,49 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
         #define LOGD(scite ...)
     #endif     
 #else
+#ifdef WIN32
     #include <stdio.h>
+	#include <windows.h>
+    void MyOutputFunction(const char *str, ...);
+	void OutputToLogfile(char buf[]);
 
-    #define LOGE(fmt, ...)  printf(fmt "\n", ##__VA_ARGS__)    
-    #define LOGW(fmt, ...)  printf(fmt "\n", ##__VA_ARGS__)    
-    #define LOGI(fmt, ...)  printf(fmt "\n", ##__VA_ARGS__)    
+
+#ifdef __cplusplus
+
+	extern "C" void MyOutputFunctionC(const char *str, ...);
+
+	#define LOGE(fmt, ...)  MyOutputFunction(fmt "\n", ##__VA_ARGS__)    
+    #define LOGW(fmt, ...)  MyOutputFunction(fmt "\n", ##__VA_ARGS__)    
+    #define LOGI(fmt, ...)  MyOutputFunction(fmt "\n", ##__VA_ARGS__)
+
     #ifdef __DEBUG
-        #define LOGD(fmt, ...)  printf(fmt "\n", ##__VA_ARGS__)
+        #define LOGD(fmt, ...)  MyOutputFunction(fmt "\n", ##__VA_ARGS__)
     #else
         #define LOGD(fmt, ...)
-    #endif 
+    #endif
+#else
+
+	#define LOGE(fmt, ...)  MyOutputFunctionC(fmt "\n", ##__VA_ARGS__)    
+    #define LOGW(fmt, ...)  MyOutputFunctionC(fmt "\n", ##__VA_ARGS__)    
+    #define LOGI(fmt, ...)  MyOutputFunctionC(fmt "\n", ##__VA_ARGS__)
+
+    #ifdef __DEBUG
+        #define LOGD(fmt, ...)  MyOutputFunctionC(fmt "\n", ##__VA_ARGS__)
+    #else
+        #define LOGD(fmt, ...)
+    #endif
+
 #endif
 
+#else
+    #define LOGE(fmt, ...)  printf(fmt "\n", ##__VA_ARGS__)    
+    #define LOGW(fmt, ...)  printf(fmt "\n", ##__VA_ARGS__)    
+    #define LOGI(fmt, ...)  printf(fmt "\n", ##__VA_ARGS__)
+    #ifdef __DEBUG
+	    #define LOGD(fmt, ...)  printf(fmt "\n", ##__VA_ARGS__)
+    #else
+        #define LOGD(fmt, ...)
+    #endif	
+#endif // WIN32
+#endif // ANDROID
 #endif // LOGGING_H

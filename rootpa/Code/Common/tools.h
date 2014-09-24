@@ -32,9 +32,22 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef OWNTOOLS_H
 #define OWNTOOLS_H
 
+#ifdef WIN32
+
+#include <windows.h>
+
+#define likely(cond)          cond
+#define unlikely(cond)        cond
+#define bad_read_ptr(_p,_c)   IsBadReadPtr((const void *)(_p),(UINT_PTR)(_c))
+#define bad_write_ptr(_p,_c)  IsBadWritePtr((void *)(_p),(UINT_PTR)(_c))
+
+#else
+
 #define likely(x)             __builtin_expect((x),1)
 #define unlikely(x)           __builtin_expect((x),0)
 #define bad_read_ptr(_p,_c)   (NULL==(_p))
 #define bad_write_ptr(_p,_c)  (NULL==(_p))
+
+#endif
 
 #endif // OWNTOOLS_H

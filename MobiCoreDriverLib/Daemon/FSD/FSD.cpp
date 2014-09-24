@@ -39,7 +39,7 @@
 #include <errno.h>
 #include <cstdlib>
 #include <stdio.h>
-
+#include <assert.h>
 //#define LOG_VERBOSE
 #include "log.h"
 
@@ -80,7 +80,7 @@ void FSD::run(
 	/*Create Tbase storage directory*/
 	if (stat(tbstpath, &st) == -1) {
 		LOG_I("%s: Creating <t-base storage Folder %s\n",TAG_LOG,tbstpath);
-		if(mkdir(tbstpath, 0600)==-1)
+		if(mkdir(tbstpath, 0700)==-1)
 		{
 			LOG_E("%s: failed creating storage folder\n",TAG_LOG);
 		}
@@ -240,37 +240,90 @@ void FSD::FSD_listenDci(void){
     }
 }
 
+// Output FileName is guaranteed to be 0 ended.
 void FSD_HexFileName(
 				unsigned char*		fn,
 				char*				FileName,
-				uint32_t 			elems
+				uint32_t 			fnSize,
+				uint32_t 			FileNameSize
 ){
-
-	char tmp[elems * 2 + 1];
+	assert (FileNameSize == fnSize *2 +1);
+	char tmp[fnSize * 2 + 1];
 	uint32_t i=0;
 
-	for (i = 0; i < elems; i++) {
-		sprintf(&tmp[i * 2], "%02x", fn[i]);
+	// tmp is size-variabled array, have to init it with memset
+	memset(tmp, 0, fnSize * 2 + 1);
+	for (i = 0; i < fnSize; i++) {
+        // the implementation of snprintf counts also the trailing "\0"
+		snprintf(&tmp[i * 2], 2 + sizeof("\0"), "%02x", fn[i]);
 	}
-	strcpy(FileName,tmp);
+	tmp[fnSize * 2 + 1] = '\0';
+	strncpy(FileName,tmp,FileNameSize);
 }
 
 
-void FSD_CreateTaDirName(
+// Output DirName is guaranteed to be 0 ended.
+static void FSD_CreateTaDirName(
 				TEE_UUID*			ta_uuid,
 				char*				DirName,
-				uint32_t 			elems
+				uint32_t            DirNameSize
 ){
 
-	char tmp[elems * 2 + 1];
-	unsigned char*		fn;
+	assert (DirNameSize == sizeof(TEE_UUID) *2 +1);
+	char tmp[sizeof(TEE_UUID) * 2 + 1];
+	unsigned char* fn;
 	uint32_t i=0;
 
+	memset(tmp, 0, sizeof(tmp));
 	fn = (unsigned char*)ta_uuid;
-	for (i = 0; i < elems; i++) {
-		sprintf(&tmp[i * 2], "%02x", fn[i]);
+	for (i = 0; i < sizeof(TEE_UUID); i++) {
+		// the implementation of snprintf counts also the trailing "\0"
+		snprintf(&tmp[i * 2], 2 + sizeof("\0"), "%02x", fn[i]);
 	}
-	strcat(DirName,tmp);
+	strncpy(DirName,tmp,DirNameSize);
+}
+
+void FSD_CreateTaDirPath(
+				string               storage,
+				STH_FSD_message_t    *sth_request,
+				char                 *TAdirpath,
+				size_t               TAdirpathSize   //sizeof(TAdirpathSize)
+){
+	const char* tbstpath = storage.c_str();
+	size_t tbstpathSize = storage.length();
+	char tadirname[TEE_UUID_STRING_SIZE+1] = {0};
+	assert (TAdirpathSize == tbstpathSize+1+TEE_UUID_STRING_SIZE+1);
+
+	FSD_CreateTaDirName(&sth_request->uuid,tadirname,sizeof(tadirname));
+
+	strncpy(TAdirpath, tbstpath, tbstpathSize);
+	strncat(TAdirpath, "/", strlen(("/")));
+	strncat(TAdirpath, tadirname, strlen(tadirname));
+
+	LOG_I("%s: Storage    %s\n", __func__, tbstpath);
+	LOG_I("%s: TA dirname %s\n", __func__, tadirname);
+
+}
+
+void FSD_CreateFilePath(
+				STH_FSD_message_t    *sth_request,
+				char                 *Filepath,
+				size_t               FilepathSize, // sizeof(FilepathSize)
+				char                 *TAdirpath,
+				size_t               TAdirpathSize // sizeof(TAdirpath)
+
+){
+	char filename[2*FILENAMESIZE+1] = {0};
+	assert (FilepathSize == TAdirpathSize + 2*FILENAMESIZE+1);
+	FSD_HexFileName(sth_request->filename,filename,FILENAMESIZE,sizeof(filename));
+
+	strncpy(Filepath, TAdirpath, TAdirpathSize-1);
+	strncat(Filepath, "/", strlen("/"));
+	strncat(Filepath, filename, strlen(filename));
+
+	LOG_I("%s: filename   %s\n", __func__, filename);
+	LOG_I("%s: fullpath   %s\n", __func__, Filepath);
+
 }
 
 //------------------------------------------------------------------------------
@@ -319,29 +372,24 @@ mcResult_t FSD::FSD_LookFile(void){
 	STH_FSD_message_t* sth_request=NULL;
 	size_t res;
 	string storage = getTbStoragePath();
-	const char* tbstpath = storage.c_str();
-	char tadirname[TEE_UUID_STRING_SIZE+1];
-	char filename[2*FILENAMESIZE+1];
-	char TAdirpath[strlen(tbstpath)+1+TEE_UUID_STRING_SIZE+1];
-	char Filepath[strlen(tbstpath)+1+TEE_UUID_STRING_SIZE+1+2*FILENAMESIZE+1];
+	char TAdirpath[storage.length()+1+TEE_UUID_STRING_SIZE+1];
+	char Filepath[storage.length()+1+TEE_UUID_STRING_SIZE+1+2*FILENAMESIZE+1];
 
+	memset(TAdirpath, 0, storage.length()+1+TEE_UUID_STRING_SIZE+1);
+	memset(Filepath, 0, storage.length()+1+TEE_UUID_STRING_SIZE+1+2*FILENAMESIZE+1);
 	sth_request= &dci->sth_request;
-	//create TA folder name from TA UUID
-	FSD_CreateTaDirName(&sth_request->uuid,tadirname,sizeof(TEE_UUID));
-	FSD_HexFileName(sth_request->filename,filename,FILENAMESIZE);
+	FSD_CreateTaDirPath(
+					storage,
+					sth_request,
+					TAdirpath,
+					sizeof(TAdirpath));
 
-	//Create path to TA folder and test if does exist
-	strcpy(TAdirpath,tbstpath);
-	strcat(TAdirpath, "/");
-	strcat(TAdirpath, tadirname);
-
-	strcpy(Filepath, TAdirpath);
-	strcat(Filepath, "/");
-	strcat(Filepath, filename);
-	LOG_I("%s: Storage    %s\n", __func__, tbstpath);
-	LOG_I("%s: TA dirname %s\n", __func__, tadirname);
-	LOG_I("%s: filename   %s\n", __func__, filename);
-	LOG_I("%s: fullpath   %s\n", __func__, Filepath);
+	FSD_CreateFilePath(
+					sth_request,
+					Filepath,
+					sizeof(Filepath),
+					TAdirpath,
+					sizeof(TAdirpath));
 	pFile = fopen(Filepath, "r");
 	if (pFile==NULL)
 	{
@@ -377,29 +425,25 @@ mcResult_t FSD::FSD_ReadFile(void){
 	STH_FSD_message_t* sth_request=NULL;
 	size_t res;
 	string storage = getTbStoragePath();
-	const char* tbstpath = storage.c_str();
-	char tadirname[TEE_UUID_STRING_SIZE+1];
-	char filename[2*FILENAMESIZE+1];
-	char TAdirpath[strlen(tbstpath)+1+TEE_UUID_STRING_SIZE+1];
-	char Filepath[strlen(tbstpath)+1+TEE_UUID_STRING_SIZE+1+2*FILENAMESIZE+1];
+	char TAdirpath[storage.length()+1+TEE_UUID_STRING_SIZE+1];
+	char Filepath[storage.length()+1+TEE_UUID_STRING_SIZE+1+2*FILENAMESIZE+1];
 
+	memset(TAdirpath, 0, storage.length()+1+TEE_UUID_STRING_SIZE+1);
+	memset(Filepath, 0, storage.length()+1+TEE_UUID_STRING_SIZE+1+2*FILENAMESIZE+1);
 	sth_request= &dci->sth_request;
-	//create TA folder name from TA UUID
-	FSD_CreateTaDirName(&sth_request->uuid,tadirname,sizeof(TEE_UUID));
-	FSD_HexFileName(sth_request->filename,filename,FILENAMESIZE);
+	FSD_CreateTaDirPath(
+					storage,
+					sth_request,
+					TAdirpath,
+					sizeof(TAdirpath));
 
-	//Create path to TA folder and test if does exist
-	strcpy(TAdirpath,tbstpath);
-	strcat(TAdirpath, "/");
-	strcat(TAdirpath, tadirname);
+	FSD_CreateFilePath(
+					sth_request,
+					Filepath,
+					sizeof(Filepath),
+					TAdirpath,
+					sizeof(TAdirpath));
 
-	strcpy(Filepath, TAdirpath);
-	strcat(Filepath, "/");
-	strcat(Filepath, filename);
-	LOG_I("%s: Storage    %s\n", __func__, tbstpath);
-	LOG_I("%s: TA dirname %s\n", __func__, tadirname);
-	LOG_I("%s: filename   %s\n", __func__, filename);
-	LOG_I("%s: fullpath   %s\n", __func__, Filepath);
 	pFile = fopen(Filepath, "r");
 	if (pFile==NULL)
 	{
@@ -411,7 +455,7 @@ mcResult_t FSD::FSD_ReadFile(void){
 	if (ferror(pFile))
 	{
 		LOG_E("%s: Error reading file res is %d and errno is %s\n",__func__,res,strerror(errno));
-        fclose(pFile);
+		fclose(pFile);
 		return TEE_ERROR_CORRUPT_OBJECT;
 	}
 
@@ -436,23 +480,21 @@ mcResult_t FSD::FSD_WriteFile(void){
 	size_t res=0;
 	int stat=0;
 	string storage = getTbStoragePath();
-	const char* tbstpath = storage.c_str();
-	char tadirname[TEE_UUID_STRING_SIZE+1];
-	char filename[2*FILENAMESIZE+1];
-	char TAdirpath[strlen(tbstpath)+1+TEE_UUID_STRING_SIZE+1];
-	char Filepath[strlen(tbstpath)+1+TEE_UUID_STRING_SIZE+1+2*FILENAMESIZE+1];
-	char Filepath_new[strlen(tbstpath)+TEE_UUID_STRING_SIZE+2*FILENAMESIZE+strlen(NEW_EXT)+1];
+	char TAdirpath[storage.length()+1+TEE_UUID_STRING_SIZE+1];
+	char Filepath[storage.length()+1+TEE_UUID_STRING_SIZE+1+2*FILENAMESIZE+1];
+	char Filepath_new[storage.length()+TEE_UUID_STRING_SIZE+2*FILENAMESIZE+strlen(NEW_EXT)+1];
 
+	memset(TAdirpath, 0, storage.length()+1+TEE_UUID_STRING_SIZE+1);
+	memset(Filepath, 0, storage.length()+1+TEE_UUID_STRING_SIZE+1+2*FILENAMESIZE+1);
+	memset(Filepath_new, 0, storage.length()+TEE_UUID_STRING_SIZE+2*FILENAMESIZE+strlen(NEW_EXT)+1);
 	sth_request= &dci->sth_request;
+	FSD_CreateTaDirPath(
+					storage,
+					sth_request,
+					TAdirpath,
+					sizeof(TAdirpath));
 
-	FSD_CreateTaDirName(&sth_request->uuid,tadirname,sizeof(TEE_UUID));
-	FSD_HexFileName(sth_request->filename,filename,FILENAMESIZE);
-
-	strcpy(TAdirpath,tbstpath);
-	strcat(TAdirpath, "/");
-	strcat(TAdirpath, tadirname);
-
-	stat = mkdir(TAdirpath, 0700);
+    stat = mkdir(TAdirpath, 0700);
 	if((stat==-1) && (errno!=EEXIST))
 	{
 		LOG_E("%s: error when creating TA dir: %s (%s)\n",__func__,TAdirpath,strerror(errno));
@@ -460,15 +502,14 @@ mcResult_t FSD::FSD_WriteFile(void){
 	}
 
 	/* Directory exists. */
-	strcpy(Filepath, TAdirpath);
-	strcat(Filepath, "/");
-	strcat(Filepath, filename);
-	strcpy(Filepath_new,Filepath);
-	strcat(Filepath_new, NEW_EXT);
-	LOG_I("%s: Storage    %s\n", __func__, tbstpath);
-	LOG_I("%s: TA dirname %s\n", __func__, tadirname);
-	LOG_I("%s: filename   %s\n", __func__, filename);
-	LOG_I("%s: fullpath   %s\n", __func__, Filepath);
+	FSD_CreateFilePath(
+					sth_request,
+					Filepath,
+					sizeof(Filepath),
+					TAdirpath,
+					sizeof(TAdirpath));
+	strncpy(Filepath_new,Filepath,sizeof(Filepath) - 1);
+	strncat(Filepath_new,NEW_EXT,strlen(NEW_EXT));
 	LOG_I("%s: filename.new   %s\n", __func__, Filepath_new);
 	if(sth_request->flags == TEE_DATA_FLAG_EXCLUSIVE)
 	{
@@ -552,31 +593,24 @@ mcResult_t FSD::FSD_DeleteFile(void){
 	size_t res;
 	STH_FSD_message_t* sth_request=NULL;
 	string storage = getTbStoragePath();
-	const char* tbstpath = storage.c_str();
-	char tadirname[TEE_UUID_STRING_SIZE+1];
-	char filename[2*FILENAMESIZE+1];
-	char TAdirpath[strlen(tbstpath)+1+TEE_UUID_STRING_SIZE+1];
-	char Filepath[strlen(tbstpath)+1+TEE_UUID_STRING_SIZE+1+2*FILENAMESIZE+1];
+	char TAdirpath[storage.length()+1+TEE_UUID_STRING_SIZE+1];
+	char Filepath[storage.length()+1+TEE_UUID_STRING_SIZE+1+2*FILENAMESIZE+1];
 
+	memset(TAdirpath, 0, storage.length()+1+TEE_UUID_STRING_SIZE+1);
+	memset(Filepath, 0, storage.length()+1+TEE_UUID_STRING_SIZE+1+2*FILENAMESIZE+1);
 	sth_request= &dci->sth_request;
+	FSD_CreateTaDirPath(
+					storage,
+					sth_request,
+					TAdirpath,
+					sizeof(TAdirpath));
 
-	//create TA folder name from TA UUID
-	FSD_CreateTaDirName(&sth_request->uuid,tadirname,sizeof(TEE_UUID));
-	FSD_HexFileName(sth_request->filename,filename,FILENAMESIZE);
-
-	//Create path to TA folder and test if does exist
-	strcpy(TAdirpath,tbstpath);
-	strcat(TAdirpath, "/");
-	strcat(TAdirpath, tadirname);
-
-	/* Directory exists. */
-	strcpy(Filepath, TAdirpath);
-	strcat(Filepath, "/");
-	strcat(Filepath, filename);
-	LOG_I("%s: Storage    %s\n", __func__, tbstpath);
-	LOG_I("%s: TA dirname %s\n", __func__, tadirname);
-	LOG_I("%s: filename   %s\n", __func__, filename);
-	LOG_I("%s: fullpath   %s\n", __func__, Filepath);
+	FSD_CreateFilePath(
+					sth_request,
+					Filepath,
+					sizeof(Filepath),
+					TAdirpath,
+					sizeof(TAdirpath));
 
 	pFile = fopen(Filepath, "r");
 	if (pFile==NULL)

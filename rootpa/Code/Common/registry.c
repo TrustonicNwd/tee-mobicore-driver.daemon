@@ -42,7 +42,7 @@ int regWriteAuthToken(const AUTHTOKENCONTAINERP atP, uint32_t containerSize)
 int regReadAuthToken(AUTHTOKENCONTAINERP* atP, uint32_t* containerSize)
 {
     *containerSize = CONTAINER_BUFFER_SIZE; // this will be updated to actual size with the registry call    
-    *atP=malloc(CONTAINER_BUFFER_SIZE);
+    *atP=(AUTHTOKENCONTAINERP)malloc(CONTAINER_BUFFER_SIZE);
     if(NULL==*atP) return MC_DRV_ERR_NO_FREE_MEMORY;
     return mcRegistryReadAuthToken(*atP, containerSize);
 }
@@ -57,7 +57,7 @@ int regDeleteAuthToken(void)
 int regReadRoot(ROOTCONTAINERP* rootP, uint32_t* containerSize)
 {
     *containerSize = CONTAINER_BUFFER_SIZE; // this will be updated to actual size with the registry call
-    *rootP=malloc(CONTAINER_BUFFER_SIZE);
+    *rootP=(ROOTCONTAINERP)malloc(CONTAINER_BUFFER_SIZE);
     if(NULL==*rootP) return MC_DRV_ERR_NO_FREE_MEMORY;
     return mcRegistryReadRoot(*rootP, containerSize);
 }
@@ -79,7 +79,7 @@ int regCleanupRoot(void)
 int regReadSp(mcSpid_t spid, SPCONTAINERP* spP, uint32_t* containerSize)
 {
     *containerSize = CONTAINER_BUFFER_SIZE; // this will be updated to actual size with the registry call    
-    *spP=malloc(CONTAINER_BUFFER_SIZE);
+    *spP= (SPCONTAINERP)malloc(CONTAINER_BUFFER_SIZE);
     if(NULL==*spP) return MC_DRV_ERR_NO_FREE_MEMORY;    
     return mcRegistryReadSp(spid, *spP, containerSize);
 }
@@ -97,10 +97,11 @@ int regCleanupSp(mcSpid_t spid)
 
 int regGetSpState(mcSpid_t spid, mcContainerState_t* stateP)
 {
+    int ret;
     SPCONTAINERP spP=NULL;
     uint32_t containerSize=0;
     containerSize = CONTAINER_BUFFER_SIZE; // this will be updated to actual size with the registry call    
-    int ret=regReadSp(spid, &spP, &containerSize);
+    ret=regReadSp(spid, &spP, &containerSize);
     if(MC_DRV_OK==ret)
     {
         *stateP=spP->cont.attribs.state;
@@ -115,7 +116,7 @@ int regGetSpState(mcSpid_t spid, mcContainerState_t* stateP)
 int regReadTlt(const mcUuid_t* uuidP, TLTCONTAINERP* tltP, uint32_t* containerSize, mcSpid_t spid)
 {
     *containerSize = CONTAINER_BUFFER_SIZE; // this will be update to actual size with the registry call    
-    *tltP=malloc(CONTAINER_BUFFER_SIZE);
+    *tltP=(TLTCONTAINERP)malloc(CONTAINER_BUFFER_SIZE);
     if(NULL==*tltP) return MC_DRV_ERR_NO_FREE_MEMORY;
     return mcRegistryReadTrustletCon(uuidP, spid, *tltP, containerSize);
 }
@@ -132,7 +133,11 @@ int regCleanupTlt(const mcUuid_t* uuidP, mcSpid_t spid)
 
 int regStoreTA(mcSpid_t spid, const mcUuid_t* uuidP, const uint8_t* taBinary, uint32_t taBinLength)
 {
+#ifdef WIN32
+	return MC_DRV_ERR_INVALID_OPERATION; // TODO-fix Currently the Windows version of mcRegistry does not support mcRegistryStoreTABlob
+#else
     return mcRegistryStoreTABlob(spid, (void*) taBinary, taBinLength);
+#endif
 }
 
 int regGetTaState(mcSpid_t spid, const mcUuid_t* uuidP, mcContainerState_t* stateP)

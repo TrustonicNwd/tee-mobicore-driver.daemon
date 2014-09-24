@@ -64,7 +64,6 @@ public:
     * Map data.
     *
     * @param len
-    * @param pHandle
     * @param pVirtAddr
     * @param pMciReuse [in|out] set to true [in] for reusing MCI buffer
     *                 is set to true [out] if MCI buffer has been reused
@@ -74,7 +73,6 @@ public:
     */
     mcResult_t mapMCI(
         uint32_t    len,
-        uint32_t    *pHandle,
         addr_t      *pVirtAddr,
         bool        *pReuse);
 

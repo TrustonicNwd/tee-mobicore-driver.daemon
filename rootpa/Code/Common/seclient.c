@@ -31,7 +31,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string.h>
 #include <stdlib.h>
-#include <stdbool.h>
+#include <wrapper.h>
 #include <time.h>
 #include <math.h>
 
@@ -68,10 +68,35 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 static char certificatePath_[CERT_PATH_MAX_LEN];
 static char certificateFilePath_[CERT_PATH_MAX_LEN];
 static long int SE_CONNECTION_DEFAULT_TIMEOUT=58L; // timeout after 58 seconds
-static int MAX_ATTEMPTS=30;  
-static const struct timespec SLEEPTIME={0,300*1000*1000}; // 0.3 seconds  --> 30x0.3 = 9 seconds
+static int MAX_ATTEMPTS=30; //30x0.3 = 9 seconds
+#ifdef WIN32
+	static const DWORD SLEEPTIME_MS=300; // 0.3 seconds 
+#else
+	static const struct timespec SLEEPTIME={0,300*1000*1000}; // 0.3 seconds
+#endif
 
 rootpaerror_t httpCommunicate(const char* const inputP, const char** linkP, const char** relP, const char** commandP, httpMethod_t method);
+
+#ifdef WIN32
+    
+	char* strcasestr(char const *s, char const *find) 
+	{ 
+		char* pos;
+		char* ret;
+		char* ls=_strdup(s); 
+		char* lfind=_strdup(find); 
+
+		ls=_strlwr(ls); 
+		lfind=_strlwr(lfind); 
+		pos = strstr(ls, lfind); 
+		ret = pos == NULL ? NULL : (char *)(s + (pos-ls)); 
+		free(ls); 
+		free(lfind); 
+		return ret; 
+	} 
+    
+    
+#endif
 
 rootpaerror_t httpPostAndReceiveCommand(const char* const inputP, const char** linkP, const char** relP, const char** commandP)
 {
@@ -157,8 +182,7 @@ static size_t writeMemoryCallback(void *contents, size_t size, size_t nmemb, voi
 {
     size_t realsize = size * nmemb;
     MemoryStruct* mem = (MemoryStruct *)userp;
- 
-    mem->memoryP = realloc(mem->memoryP, mem->size + realsize + 1);
+    mem->memoryP = (char*)realloc(mem->memoryP, mem->size + realsize + 1);
     if (mem->memoryP == NULL) {
         /* out of memory! */ 
         LOGE("not enough memory (realloc returned NULL)\n");
@@ -177,7 +201,7 @@ int debug_function (CURL * curl_handle, curl_infotype info, char* debugMessageP,
 {
     if(debugMessageP!=NULL && debugMessageSize!=0)
     {
-        char* msgP=malloc(debugMessageSize+1);
+        char* msgP=(char*)malloc(debugMessageSize+1);
         if(NULL==msgP)return 0;
         memcpy(msgP, debugMessageP, debugMessageSize);
         msgP[debugMessageSize]=0;
@@ -194,7 +218,7 @@ int debug_function (CURL * curl_handle, curl_infotype info, char* debugMessageP,
 
 bool copyHeader(void *contents, size_t length, char** headerP)
 {
-    *headerP = malloc(length + 1);
+    *headerP = (char *)malloc(length + 1);
     if (*headerP == NULL) {
         /* out of memory! */ 
         LOGE("not enough memory (malloc returned NULL)\n");
@@ -285,23 +309,23 @@ void setCertPath(const char* localPathP, const char* certPathP)
     
     if (certPathP!=NULL && (strlen(certPathP)+1)<CERT_PATH_MAX_LEN) 
     {
-        strcpy(certificatePath_, certPathP);
+        strlcpy(certificatePath_, certPathP, sizeof(certificatePath_));
     }
     
     if (localPathP!=NULL && (strlen(localPathP)+1+sizeof(CECERT_FILENAME))<CERT_PATH_MAX_LEN) 
     {
-        strcpy(certificateFilePath_, localPathP);
-        strcat(certificateFilePath_, "/");
+        strlcpy(certificateFilePath_, localPathP,sizeof(certificateFilePath_));
+        strlcat(certificateFilePath_, "/",sizeof(certificateFilePath_));
     }
-    strcat(certificateFilePath_, CECERT_FILENAME);
+    strlcat(certificateFilePath_, CECERT_FILENAME,sizeof(certificateFilePath_));
 }
 //
 // TODO-refactor: saveCertFile is duplicate from saveFile in xmlMessageHandler.c, move these to common place
 //
 void saveCertFile(char* filePath, char* fileContent)
 {
-    LOGD(">>saveCertFile %s", filePath);
     FILE* fh;
+    LOGD(">>saveCertFile %s", filePath);
     if ((fh = fopen(filePath, "w")) != NULL) // recreating the file every time, this is not the most efficient way, but ensures 
 	{                                        // the file is updated in case rootpa and the required content is updated
         fprintf(fh, "%s", fileContent);
@@ -316,6 +340,8 @@ void saveCertFile(char* filePath, char* fileContent)
 
 bool setBasicOpt(CURL* curl_handle, MemoryStruct* chunkP, HeaderStruct* headerChunkP, const char* linkP,  struct curl_slist* headerListP)
 {
+    long int se_connection_timeout=SE_CONNECTION_DEFAULT_TIMEOUT;
+    
     if(curl_easy_setopt(curl_handle, CURLOPT_URL, linkP)!=CURLE_OK)
     {
         LOGE("curl_easy_setopt CURLOPT_URL failed");
@@ -385,7 +411,6 @@ bool setBasicOpt(CURL* curl_handle, MemoryStruct* chunkP, HeaderStruct* headerCh
         return false;
     }   
 
-    long int se_connection_timeout=SE_CONNECTION_DEFAULT_TIMEOUT;
 #ifdef __DEBUG
     curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, 1L);
     curl_easy_setopt(curl_handle, CURLOPT_DEBUGFUNCTION, debug_function);   
@@ -421,6 +446,7 @@ bool setBasicOpt(CURL* curl_handle, MemoryStruct* chunkP, HeaderStruct* headerCh
 
 bool setPutOpt(CURL* curl_handle, ResponseStruct* responseChunk)
 {
+    long chunkSize=responseChunk->size;
     LOGD(">>setPutOpt");
     if (curl_easy_setopt(curl_handle, CURLOPT_READFUNCTION, readResponseCallback)!=CURLE_OK)
     {
@@ -446,8 +472,8 @@ bool setPutOpt(CURL* curl_handle, ResponseStruct* responseChunk)
         return false;
     }
 
-    long s=responseChunk->size;
-    if (curl_easy_setopt(curl_handle, CURLOPT_INFILESIZE, s)!=CURLE_OK)
+
+    if (curl_easy_setopt(curl_handle, CURLOPT_INFILESIZE, chunkSize)!=CURLE_OK)
     {
         LOGE("curl_easy_setopt CURLOPT_INFILESIZE_LARGE failed");
         return false;
@@ -539,6 +565,14 @@ rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, con
     time_t begintime=0;
     time_t endtime=0;
     int timediff=0;
+
+    ResponseStruct responseChunk;
+    MemoryStruct chunk;
+    HeaderStruct headerChunk;     
+    headerChunk.linkSize = 0;
+    headerChunk.relSize = 0;
+    headerChunk.linkP = NULL;
+    headerChunk.relP = NULL;
     
     LOGD(">>httpCommunicate");
     if(NULL==linkP || NULL==relP || NULL==commandP || NULL==*linkP)
@@ -549,17 +583,8 @@ rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, con
     *commandP=NULL;
     *relP=NULL;
 
-    ResponseStruct responseChunk;
-
-    HeaderStruct headerChunk;     
-    headerChunk.linkSize = 0;
-    headerChunk.relSize = 0;
-    headerChunk.linkP = NULL;
-    headerChunk.relP = NULL;    
-
-    MemoryStruct chunk;
     chunk.size = 0;    /* no data at this point */ 
-    chunk.memoryP = malloc(1);  /* will be grown as needed by the realloc above */ 
+    chunk.memoryP = (char *)malloc(1);  /* will be grown as needed by the realloc above */ 
     if(NULL==chunk.memoryP)
     {
         return ROOTPA_ERROR_OUT_OF_MEMORY;
@@ -627,7 +652,11 @@ rootpaerror_t httpCommunicate(const char * const inputP, const char** linkP, con
         curlRet=curl_easy_perform(curl_handle_);
         LOGD("curl_easy_perform %ld %d", curlRet, attempts );
         if(CURLE_OK==curlRet) break;
+#ifdef WIN32
+		Sleep(SLEEPTIME_MS);
+#else
         nanosleep(&SLEEPTIME,NULL);
+#endif
         endtime=time(NULL);
         timediff=(int)ceil(difftime(endtime, begintime));
         LOGD("timediff (ceil) %d", timediff);

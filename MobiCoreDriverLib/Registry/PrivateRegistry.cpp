@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -229,6 +229,7 @@ static string getTASpidFilePath(const mcUuid_t *uuid, int registry)
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryStoreAuthToken(void *so, uint32_t size)
 {
+    int res = 0;
     if (so == NULL || size > 3 * MAX_SO_CONT_SIZE) {
         LOG_E("mcRegistry store So.Soc failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         return MC_DRV_ERR_INVALID_PARAMETER;
@@ -237,12 +238,22 @@ mcResult_t mcRegistryStoreAuthToken(void *so, uint32_t size)
     LOG_I("store AuthToken: %s", authTokenFilePath.c_str());
 
     FILE *fs = fopen(authTokenFilePath.c_str(), "wb");
-    if (!fs) {
+    if (fs==NULL) {
         LOG_E("mcRegistry store So.Soc failed: %d", MC_DRV_ERR_INVALID_DEVICE_FILE);
         return MC_DRV_ERR_INVALID_DEVICE_FILE;
     }
-    fseek(fs, 0, SEEK_SET);
+    res = fseek(fs, 0, SEEK_SET);
+    if (res!=0) {
+        LOG_E("mcRegistry store So.Soc failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        fclose(fs);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
     fwrite((char *)so, 1, size, fs);
+    if (ferror(fs)) {
+        LOG_E("mcRegistry store So.Soc failed %d", MC_DRV_ERR_OUT_OF_RESOURCES);
+        fclose(fs);
+        return MC_DRV_ERR_OUT_OF_RESOURCES;
+    }
     fflush(fs);
     fclose(fs);
 
@@ -253,6 +264,7 @@ mcResult_t mcRegistryStoreAuthToken(void *so, uint32_t size)
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryReadAuthToken(mcSoAuthTokenCont_t *so)
 {
+    int res = 0;
     if (NULL == so) {
         LOG_E("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         return MC_DRV_ERR_INVALID_PARAMETER;
@@ -261,23 +273,43 @@ mcResult_t mcRegistryReadAuthToken(mcSoAuthTokenCont_t *so)
     LOG_I("read AuthToken: %s", authTokenFilePath.c_str());
 
     FILE *fs = fopen(authTokenFilePath.c_str(), "rb");
-    if (!fs) {
+    if (fs==NULL) {
         LOG_W("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_INVALID_DEVICE_FILE);
         return MC_DRV_ERR_INVALID_DEVICE_FILE;
     }
-    fseek(fs, 0, SEEK_END);
+    res = fseek(fs, 0, SEEK_END);
+    if (res!=0) {
+        LOG_E("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        fclose(fs);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
     int32_t filesize = ftell(fs);
+    // We ensure that mcSoAuthTokenCont_t matches with filesize, as ferror (during fread operation) can't
+    // handle the case where mcSoAuthTokenCont_t < filesize
     if (sizeof(mcSoAuthTokenCont_t) != filesize) {
         fclose(fs);
         LOG_W("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_OUT_OF_RESOURCES);
         return MC_DRV_ERR_OUT_OF_RESOURCES;
     }
-    fseek(fs, 0, SEEK_SET);
-    if (fread((char *)so, 1, sizeof(mcSoAuthTokenCont_t), fs) !=
-                sizeof(mcSoAuthTokenCont_t))
-    {
+    res = fseek(fs, 0, SEEK_SET);
+    if (res!=0) {
+        LOG_E("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         fclose(fs);
-        LOG_W("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
+    res = fread((char *)so, 1, sizeof(mcSoAuthTokenCont_t), fs);
+    if (ferror(fs)) {
+        fclose(fs);
+        LOG_E("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
+    if ((unsigned)res<sizeof(mcSoAuthTokenCont_t)) {
+        //File is shorter than expected
+        if (feof(fs)) {
+            LOG_E("%s(): EOF reached: res is %u, size of mcSoAuthTokenCont_t is %u", __func__, (unsigned)res,
+            sizeof(mcSoAuthTokenCont_t));   
+        }
+        fclose(fs);
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
     fclose(fs);
@@ -288,6 +320,7 @@ mcResult_t mcRegistryReadAuthToken(mcSoAuthTokenCont_t *so)
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryReadAuthTokenBackup(mcSoAuthTokenCont_t *so)
 {
+    int res = 0;
     if (NULL == so) {
         LOG_E("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         return MC_DRV_ERR_INVALID_PARAMETER;
@@ -296,23 +329,43 @@ mcResult_t mcRegistryReadAuthTokenBackup(mcSoAuthTokenCont_t *so)
     LOG_I("read AuthToken: %s", authTokenFilePath.c_str());
 
     FILE *fs = fopen(authTokenFilePath.c_str(), "rb");
-    if (!fs) {
+    if (fs==NULL) {
         LOG_W("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_INVALID_DEVICE_FILE);
         return MC_DRV_ERR_INVALID_DEVICE_FILE;
     }
-    fseek(fs, 0, SEEK_END);
+    res = fseek(fs, 0, SEEK_END);
+    if (res!=0) {
+        LOG_E("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        fclose(fs);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
     int32_t filesize = ftell(fs);
+    // We ensure that mcSoAuthTokenCont_t matches with filesize, as ferror (during fread operation) can't
+    // handle the case where mcSoAuthTokenCont_t < filesize
     if (sizeof(mcSoAuthTokenCont_t) != filesize) {
         fclose(fs);
         LOG_W("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_OUT_OF_RESOURCES);
         return MC_DRV_ERR_OUT_OF_RESOURCES;
     }
-    fseek(fs, 0, SEEK_SET);
-    if (fread((char *)so, 1, sizeof(mcSoAuthTokenCont_t), fs) !=
-                sizeof(mcSoAuthTokenCont_t))
-    {
+    res = fseek(fs, 0, SEEK_SET);
+    if (res!=0) {
+        LOG_E("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         fclose(fs);
-        LOG_W("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
+    res = fread((char *)so, 1, sizeof(mcSoAuthTokenCont_t), fs);
+    if (ferror(fs)) {
+        fclose(fs);
+        LOG_E("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
+    if ((unsigned)res<sizeof(mcSoAuthTokenCont_t)) {
+        //File is shorter than expected
+        if (feof(fs)) {
+            LOG_E("%s(): EOF reached: res is %u, size of mcSoAuthTokenCont_t is %u", __func__,
+            (unsigned)res, sizeof(mcSoAuthTokenCont_t));
+        }
+        fclose(fs);
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
     fclose(fs);
@@ -334,6 +387,7 @@ mcResult_t mcRegistryDeleteAuthToken(void)
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryStoreRoot(void *so, uint32_t size)
 {
+    int res = 0;
     if (so == NULL || size > 3 * MAX_SO_CONT_SIZE) {
         LOG_E("mcRegistry store So.Root failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         return MC_DRV_ERR_INVALID_PARAMETER;
@@ -343,12 +397,22 @@ mcResult_t mcRegistryStoreRoot(void *so, uint32_t size)
     LOG_I("store Root: %s", rootContFilePath.c_str());
 
     FILE *fs = fopen(rootContFilePath.c_str(), "wb");
-    if (!fs) {
+    if (fs==NULL) {
         LOG_E("mcRegistry store So.Root failed: %d", MC_DRV_ERR_INVALID_DEVICE_FILE);
         return MC_DRV_ERR_INVALID_DEVICE_FILE;
     }
-    fseek(fs, 0, SEEK_SET);
+    res = fseek(fs, 0, SEEK_SET);
+    if (res!=0) {
+        LOG_E("mcRegistry store So.Root failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        fclose(fs);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
     fwrite((char *)so, 1, size, fs);
+    if (ferror(fs)) {
+        LOG_E("mcRegistry store So.Root failed: %d", MC_DRV_ERR_OUT_OF_RESOURCES);
+        fclose(fs);
+        return MC_DRV_ERR_OUT_OF_RESOURCES;
+    }
     fflush(fs);
     fclose(fs);
 
@@ -369,11 +433,16 @@ mcResult_t mcRegistryReadRoot(void *so, uint32_t *size)
     LOG_I(" Opening %s", rootContFilePath.c_str());
 
     FILE *fs = fopen(rootContFilePath.c_str(), "rb");
-    if (!fs) {
+    if (fs==NULL) {
         LOG_W("mcRegistry read So.Root failed: %d", MC_DRV_ERR_INVALID_DEVICE_FILE);
         return MC_DRV_ERR_INVALID_DEVICE_FILE;
     }
     readBytes = fread((char *)so, 1, *size, fs);
+    if (ferror(fs)) {
+        fclose(fs);
+        LOG_E("mcRegistry read So.Root failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
     fclose(fs);
 
     if (readBytes > 0) {
@@ -389,6 +458,7 @@ mcResult_t mcRegistryReadRoot(void *so, uint32_t *size)
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryStoreSp(mcSpid_t spid, void *so, uint32_t size)
 {
+    int res = 0;
     if ((spid == 0) || (so == NULL) || size > 3 * MAX_SO_CONT_SIZE) {
         LOG_E("mcRegistry store So.Sp(SpId) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         return MC_DRV_ERR_INVALID_PARAMETER;
@@ -398,12 +468,22 @@ mcResult_t mcRegistryStoreSp(mcSpid_t spid, void *so, uint32_t size)
     LOG_I("store SP: %s", spContFilePath.c_str());
 
     FILE *fs = fopen(spContFilePath.c_str(), "wb");
-    if (!fs) {
+    if (fs==NULL) {
         LOG_E("mcRegistry store So.Sp(SpId) failed: %d", MC_DRV_ERR_INVALID_DEVICE_FILE);
         return MC_DRV_ERR_INVALID_DEVICE_FILE;
     }
-    fseek(fs, 0, SEEK_SET);
+    res = fseek(fs, 0, SEEK_SET);
+    if (res!=0) {
+        LOG_E("mcRegistry store So.Sp(SpId) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        fclose(fs);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
     fwrite((char *)so, 1, size, fs);
+    if (ferror(fs)) {
+        LOG_E("mcRegistry store So.Sp(SpId) failed: %d", MC_DRV_ERR_OUT_OF_RESOURCES);
+        fclose(fs);
+        return MC_DRV_ERR_OUT_OF_RESOURCES;
+    }
     fflush(fs);
     fclose(fs);
 
@@ -423,11 +503,16 @@ mcResult_t mcRegistryReadSp(mcSpid_t spid, void *so, uint32_t *size)
     LOG_I(" Reading %s", spContFilePath.c_str());
 
     FILE *fs = fopen(spContFilePath.c_str(), "rb");
-    if (!fs) {
+    if (fs==NULL) {
         LOG_E("mcRegistry read So.Sp(SpId) failed: %d", MC_DRV_ERR_INVALID_DEVICE_FILE);
         return MC_DRV_ERR_INVALID_DEVICE_FILE;
     }
     readBytes = fread((char *)so, 1, *size, fs);
+    if (ferror(fs)) {
+        fclose(fs);
+        LOG_E("mcRegistry read So.Sp(SpId) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
     fclose(fs);
 
     if (readBytes > 0) {
@@ -443,6 +528,7 @@ mcResult_t mcRegistryReadSp(mcSpid_t spid, void *so, uint32_t *size)
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, const mcSpid_t spid, void *so, uint32_t size)
 {
+    int res = 0;
     if ((uuid == NULL) || (so == NULL) || size > 3 * MAX_SO_CONT_SIZE) {
         LOG_E("mcRegistry store So.TrustletCont(uuid) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         return MC_DRV_ERR_INVALID_PARAMETER;
@@ -452,12 +538,22 @@ mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, const mcSpid_t spid,
     LOG_I("store TLc: %s", tlContFilePath.c_str());
 
     FILE *fs = fopen(tlContFilePath.c_str(), "wb");
-    if (!fs) {
+    if (fs==NULL) {
         LOG_E("mcRegistry store So.TrustletCont(uuid) failed: %d", MC_DRV_ERR_INVALID_DEVICE_FILE);
         return MC_DRV_ERR_INVALID_DEVICE_FILE;
     }
-    fseek(fs, 0, SEEK_SET);
+    res = fseek(fs, 0, SEEK_SET);
+    if (res!=0) {
+        LOG_E("mcRegistry store So.TrustletCont(uuid) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        fclose(fs);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
     fwrite((char *)so, 1, size, fs);
+    if (ferror(fs)) {
+        LOG_E("mcRegistry store So.TrustletCont(uuid) failed: %d", MC_DRV_ERR_OUT_OF_RESOURCES);
+        fclose(fs);
+        return MC_DRV_ERR_OUT_OF_RESOURCES;
+    }
     fflush(fs);
     fclose(fs);
 
@@ -475,7 +571,7 @@ static uint32_t getAsUint32BE(
 
 mcResult_t mcRegistryStoreTABlob(mcSpid_t spid, void *blob, uint32_t size)
 {
-
+    int res = 0;
     LOG_I("mcRegistryStoreTABlob started");
 
     // Check blob size
@@ -554,12 +650,22 @@ mcResult_t mcRegistryStoreTABlob(mcSpid_t spid, void *blob, uint32_t size)
     LOG_I("Store TA blob at: %s", taBinFilePath.c_str());
 
     FILE *fs = fopen(taBinFilePath.c_str(), "wb");
-    if (!fs) {
+    if (fs==NULL) {
         LOG_E("RegistryStoreTABlob failed - TA blob file open error: %d", MC_DRV_ERR_INVALID_DEVICE_FILE);
         return MC_DRV_ERR_INVALID_DEVICE_FILE;
     }
-    fseek(fs, 0, SEEK_SET);
+    res = fseek(fs, 0, SEEK_SET);
+    if (res!=0) {
+        LOG_E("RegistryStoreTABlob failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        fclose(fs);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
     fwrite(blob, 1, size, fs);
+    if (ferror(fs)) {
+        LOG_E("RegistryStoreTABlob failed: %d", MC_DRV_ERR_OUT_OF_RESOURCES);
+        fclose(fs);
+        return MC_DRV_ERR_OUT_OF_RESOURCES;
+    }
     fflush(fs);
     fclose(fs);
 
@@ -569,13 +675,23 @@ mcResult_t mcRegistryStoreTABlob(mcSpid_t spid, void *blob, uint32_t size)
         LOG_I("Store spid file at: %s", taspidFilePath.c_str());
 
         FILE *fs = fopen(taspidFilePath.c_str(), "wb");
-        if (!fs) {
+        if (fs==NULL) {
             //TODO: shouldn't we delete TA blob file ?
             LOG_E("RegistryStoreTABlob failed - TA blob file open error: %d", MC_DRV_ERR_INVALID_DEVICE_FILE);
             return MC_DRV_ERR_INVALID_DEVICE_FILE;
         }
-        fseek(fs, 0, SEEK_SET);
+        res = fseek(fs, 0, SEEK_SET);
+        if (res!=0) {
+            LOG_E("RegistryStoreTABlob failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+            fclose(fs);
+            return MC_DRV_ERR_INVALID_PARAMETER;
+        }
         fwrite(&spid, 1, sizeof(mcSpid_t), fs);
+        if (ferror(fs)) {
+            LOG_E("RegistryStoreTABlob failed: %d", MC_DRV_ERR_OUT_OF_RESOURCES);
+            fclose(fs);
+            return MC_DRV_ERR_OUT_OF_RESOURCES;
+        }
         fflush(fs);
         fclose(fs);
     }
@@ -585,6 +701,7 @@ mcResult_t mcRegistryStoreTABlob(mcSpid_t spid, void *blob, uint32_t size)
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryReadTrustletCon(const mcUuid_t *uuid, const mcSpid_t spid, void *so, uint32_t *size)
 {
+    int res = 0;
     if ((uuid == NULL) || (so == NULL)) {
         LOG_E("mcRegistry read So.TrustletCont(uuid) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         return MC_DRV_ERR_INVALID_PARAMETER;
@@ -594,12 +711,22 @@ mcResult_t mcRegistryReadTrustletCon(const mcUuid_t *uuid, const mcSpid_t spid, 
     LOG_I("read TLc: %s", tlContFilePath.c_str());
 
     FILE *fs = fopen(tlContFilePath.c_str(), "rb");
-    if (!fs) {
+    if (fs==NULL) {
         LOG_E("mcRegistry read So.TrustletCont(uuid) failed: %d", MC_DRV_ERR_INVALID_DEVICE_FILE);
         return MC_DRV_ERR_INVALID_DEVICE_FILE;
     }
-    fseek(fs, 0, SEEK_SET);
+    res = fseek(fs, 0, SEEK_SET);
+    if (res!=0) {
+        LOG_E("mcRegistry read So.TrustletCont(uuid) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        fclose(fs);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
     readBytes = fread((char *)so, 1, *size, fs);
+    if (ferror(fs)) {
+        fclose(fs);
+        LOG_E("mcRegistry read So.TrustletCont(uuid) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
     fclose(fs);
 
     if (readBytes > 0) {
@@ -616,6 +743,7 @@ mcResult_t mcRegistryReadTrustletCon(const mcUuid_t *uuid, const mcSpid_t spid, 
 mcResult_t mcRegistryStoreData(void *so, uint32_t size)
 {
     mcSoDataCont_t *dataCont = (mcSoDataCont_t *)so;
+    int res = 0;
 
     if (dataCont == NULL || size != sizeof(mcSoDataCont_t)) {
         LOG_E("mcRegistry store So.Data failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
@@ -645,12 +773,22 @@ mcResult_t mcRegistryStoreData(void *so, uint32_t size)
     LOG_I("store DT: %s", filename.c_str());
 
     FILE *fs = fopen(filename.c_str(), "wb");
-    if (!fs) {
+    if (fs==NULL) {
         LOG_E("mcRegistry store So.Data(cid/pid) failed: %d", MC_DRV_ERR_INVALID_DEVICE_FILE);
         return MC_DRV_ERR_INVALID_DEVICE_FILE;
     }
-    fseek(fs, 0, SEEK_SET);
+    res = fseek(fs, 0, SEEK_SET);
+    if (res!=0) {
+        LOG_E("mcRegistry store So.Data(cid/pid) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        fclose(fs);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
     fwrite((char *)dataCont, 1, MC_SO_SIZE(dataCont->soHeader.plainLen, dataCont->soHeader.encryptedLen), fs);
+    if (ferror(fs)) {
+        LOG_E("mcRegistry store So.Data(cid/pid) failed: %d", MC_DRV_ERR_OUT_OF_RESOURCES);
+        fclose(fs);
+        return MC_DRV_ERR_OUT_OF_RESOURCES;
+    }
     fflush(fs);
     fclose(fs);
 
@@ -662,6 +800,7 @@ mcResult_t mcRegistryStoreData(void *so, uint32_t size)
 mcResult_t mcRegistryReadData(uint32_t context, const mcCid_t *cid, mcPid_t pid,
                               mcSoDataCont_t *so, uint32_t maxLen)
 {
+    int res = 0;
 
     if ((NULL == cid) || (NULL == so)) {
         LOG_E("mcRegistry read So.Data failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
@@ -683,34 +822,59 @@ mcResult_t mcRegistryReadData(uint32_t context, const mcCid_t *cid, mcPid_t pid,
     LOG_I("read DT: %s", filename.c_str());
 
     FILE *fs = fopen(filename.c_str(), "rb");
-    if (!fs) {
+    if (fs==NULL) {
         LOG_E("mcRegistry read So.Data(cid/pid) failed: %d", MC_DRV_ERR_INVALID_DEVICE_FILE);
         return MC_DRV_ERR_INVALID_DEVICE_FILE;
     }
-    fseek(fs, 0, SEEK_END);
+    res = fseek(fs, 0, SEEK_END);
+    if (res!=0) {
+        LOG_E("mcRegistry read So.Data(cid/pid) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        fclose(fs);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
     uint32_t filesize = ftell(fs);
     if (maxLen < filesize) {
         fclose(fs);
         LOG_E("mcRegistry read So.Data(cid/pid) failed: %d", MC_DRV_ERR_OUT_OF_RESOURCES);
         return MC_DRV_ERR_OUT_OF_RESOURCES;
     }
-    fseek(fs, 0, SEEK_SET);
+    res = fseek(fs, 0, SEEK_SET);
+    if (res!=0) {
+        LOG_E("mcRegistry read So.Data(cid/pid) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        fclose(fs);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
     char *p = (char *) so;
-    if (fread(p, 1, sizeof(mcSoHeader_t), fs) != sizeof(mcSoHeader_t))
-    {
+    res = fread(p, 1, sizeof(mcSoHeader_t), fs);
+    if (ferror(fs)) {
         fclose(fs);
         LOG_E("mcRegistry read So.Data(cid/pid) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
+    if ((unsigned)res<sizeof(mcSoHeader_t)) {
+        //File is shorter than expected
+        if (feof(fs)) {
+            LOG_E("%s(): EOF reached: res is %u, size of mcSoHeader_t is %u", __func__, (unsigned)res, sizeof(mcSoHeader_t));
+        }
+        fclose(fs);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
     p += sizeof(mcSoHeader_t);
-    if (fread(p, 1, MC_SO_SIZE(so->soHeader.plainLen,
+    res = fread(p, 1, MC_SO_SIZE(so->soHeader.plainLen,
                 so->soHeader.encryptedLen)
-                - sizeof(mcSoHeader_t), fs) !=
-                MC_SO_SIZE(so->soHeader.plainLen, so->soHeader.encryptedLen)
-                - sizeof(mcSoHeader_t))
-    {
+                - sizeof(mcSoHeader_t), fs);
+    if (ferror(fs)) {
         fclose(fs);
         LOG_E("mcRegistry read So.Data(cid/pid) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+        return MC_DRV_ERR_INVALID_PARAMETER;
+    }
+    if ((unsigned)res<(MC_SO_SIZE(so->soHeader.plainLen, so->soHeader.encryptedLen) - sizeof(mcSoHeader_t))) {
+        //File is shorter than expected
+        if (feof(fs)) {
+            LOG_E("%s(): EOF reached: res is %u, size of secure object is %u", __func__, (unsigned)res,
+            MC_SO_SIZE(so->soHeader.plainLen, so->soHeader.encryptedLen) - sizeof(mcSoHeader_t));
+        }
+        fclose(fs);
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
     fclose(fs);
@@ -727,6 +891,7 @@ static size_t getFileContent(
     FILE   *pStream;
     long    filesize;
     uint8_t *content = NULL;
+    int res = 0;
 
     /* Open the file */
     pStream = fopen(pPath, "rb");
@@ -765,8 +930,16 @@ static size_t getFileContent(
     }
 
     /* Read data from the file into the buffer */
-    if (fread(content, (size_t)filesize, 1, pStream) != 1) {
+    res = fread(content, (size_t)filesize, 1, pStream);
+    if (ferror(pStream)) {
         LOG_E("Error: Cannot read file: %s.", pPath);
+        goto error;
+    }
+    if ((unsigned)res<1) {
+        //File is shorter than expected
+        if (feof(pStream)) {
+            LOG_E("Error: EOF reached: %s.", pPath);
+        }
         goto error;
     }
 

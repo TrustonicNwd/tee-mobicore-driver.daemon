@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -51,7 +51,7 @@ public:
          uint32_t  len,
          uint32_t  handle,
          // this may be unknown, so is can be omitted.
-         uint64_t    physAddr = NULL) :
+         uint64_t    physAddr = 0x0) :
         virtAddr(virtAddr),
         len(len),
         handle(handle),

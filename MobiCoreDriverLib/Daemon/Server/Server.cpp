@@ -118,7 +118,7 @@ void Server::run(
 
             if (!isFSDStarted) {
                 // Create the <t-base File Storage Daemon
-                FSD *FileStorageDaemon = new FSD();
+                FileStorageDaemon = new FSD();
                 // Start File Storage Daemon
                 FileStorageDaemon->start("McDaemon.FSD");
 

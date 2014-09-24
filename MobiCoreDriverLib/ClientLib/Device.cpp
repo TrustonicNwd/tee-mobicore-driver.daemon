@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -154,11 +154,9 @@ Session *Device::resolveSessionId(uint32_t sessionId)
 mcResult_t Device::allocateContiguousWsm(uint32_t len, CWsm **wsm)
 {
     // Allocate shared memory
-    addr_t    virtAddr;
-    uint32_t  handle;
+    addr_t    virtAddr = NULL;
+    uint32_t  handle = 0;
     mcResult_t  ret;
-
-    assert(wsm != NULL);
 
     if (!len) {
         return MC_DRV_ERR_INVALID_LENGTH;
@@ -239,7 +237,7 @@ CWsm_ptr Device::findContiguousWsm(addr_t  virtAddr)
 mcResult_t Device::mapBulkBuf(addr_t buf, uint32_t len, BulkBufferDescriptor **blkBuf)
 {
     uint64_t PhysWsmL2;
-    uint32_t handle;
+    uint32_t handle = 0;
 
     *blkBuf = NULL;
 

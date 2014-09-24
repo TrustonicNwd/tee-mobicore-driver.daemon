@@ -31,7 +31,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string.h>
 #include <stdlib.h>
-#include <stdbool.h>
+#include <wrapper.h>
 #include <TlCm/3.0/cmpMap.h>
 #include <TlCm/tlCmApiCommon.h>
 
@@ -111,7 +111,7 @@ rootpaerror_t allocateResponseBuffer(CmpMessage* responseP, CMTHANDLE handle )
         return ROOTPA_ERROR_INTERNAL;
     }
     LOGD("allocateResponseBuffer, size %d", responseP->length);
-    responseP->contentP=malloc(responseP->length);
+    responseP->contentP=(uint8_t*)malloc(responseP->length);
     if(responseP->contentP==NULL) return ROOTPA_ERROR_OUT_OF_MEMORY;
     return ROOTPA_OK;
 }
@@ -120,7 +120,7 @@ bool ensureMappedBufferSize(CMTHANDLE handle, uint32_t neededSize)
 {
     if( neededSize > handle->mappedSize)
     {
-        uint8_t* newMappedP = realloc(handle->mappedP, neededSize);
+        uint8_t* newMappedP = (uint8_t*)realloc(handle->mappedP, neededSize);
         if(!newMappedP)
         {
             LOGE("ensureMappedBufferSize, unable to allocate more memory %d", neededSize);
@@ -244,14 +244,13 @@ rootpaerror_t addTltContainer(uint32_t* indexP, uint32_t* offsetP, const mcUuid_
 
 rootpaerror_t prepareCommand(cmpCommandId_t commandId, CmpMessage* inCommandP,  CMTHANDLE handle, CmpMessage* responseP)
 {
-    LOGI("prepareCommand command id %d length %d", commandId, inCommandP->length);  // this is LOGI level on purpose to indicate that CMP command has reached RootPA
-    
     uint8_t* outCommandP =handle->mappedP;
 
     uint32_t offset=0;
     uint32_t elementIndex=1;
     rootpaerror_t ret=ROOTPA_OK;
     mcResult_t mcRet=MC_DRV_OK;
+    LOGI("prepareCommand command id %d length %d", commandId, inCommandP->length);  // this is LOGI level on purpose to indicate that CMP command has reached RootPA
     
     memset(handle->wsmP,0,sizeOfCmp());
 
@@ -368,9 +367,9 @@ rootpaerror_t prepareCommand(cmpCommandId_t commandId, CmpMessage* inCommandP,  
 
 mcResult_t storeContainers(cmpCommandId_t commandId, CMTHANDLE handle, uint32_t elementIndex, uint32_t  offset)
 {
-    LOGD(">>pacmp3 storeContainers for %d element %d offset %d", commandId, elementIndex, offset);
     mcResult_t mcRet=MC_DRV_OK;
     uint32_t length=0;
+    LOGD(">>pacmp3 storeContainers for %d element %d offset %d", commandId, elementIndex, offset);
     
 // store the containers when needed
     switch(commandId)
@@ -609,10 +608,13 @@ returned to the client.
 */
 rootpaerror_t handleResponse(cmpCommandId_t commandId, CmpMessage* outResponseP, CMTHANDLE handle)
 {
-    LOGD(">>handleResponse for command %d ", commandId);
     mcResult_t mcRet=MC_DRV_OK;
     rootpaerror_t ret=ROOTPA_OK;
-
+    uint32_t elementIndex=1;
+    uint32_t offset=0;
+    uint32_t length=0;
+    
+    LOGD(">>handleResponse for command %d ", commandId);
 
     if(isValidResponseTo(commandId, handle->wsmP)==false)
     {
@@ -620,10 +622,6 @@ rootpaerror_t handleResponse(cmpCommandId_t commandId, CmpMessage* outResponseP,
         outResponseP->hdr.ret=ROOTPA_ERROR_COMMAND_EXECUTION;
         return ROOTPA_ERROR_COMMAND_EXECUTION;
     }
-
-    uint32_t elementIndex=1;
-    uint32_t offset=0;
-    uint32_t length=0;
 
     ret=allocateResponseBuffer(outResponseP, handle);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -148,7 +148,7 @@ bool removeDevice(uint32_t deviceId)
 #define CHECK_SESSION(S,SID) \
     if (NULL == S) \
     { \
-        LOG_E("Session %i not found", SID); \
+        LOG_E("Session %03x not found", SID); \
         mcResult = MC_DRV_ERR_UNKNOWN_SESSION; \
         break; \
     }
@@ -395,8 +395,8 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenSession(
         SEND_TO_DAEMON(devCon, MC_DRV_CMD_OPEN_SESSION,
                        session->deviceId,
                        *uuid,
-                       (uint32_t)(tci) & 0xFFF,
-                       (uint32_t)handle,
+                       (uint32_t)((uintptr_t)tci & 0xFFF),
+                       handle,
                        len);
 
         // Read command response
@@ -496,7 +496,7 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenSession(
         if (bulkBuf)
             sessionObj->addBulkBuf(bulkBuf);
 
-        LOG_I(" Successfully opened session %d.", session->sessionId);
+        LOG_I(" Successfully opened session %03x.", session->sessionId);
 
     } while (false);
 
@@ -577,8 +577,8 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenTrustlet(
                        session->deviceId,
                        spid,
                        (uint32_t)tlen,
-                       (uint32_t)(tci) & 0xFFF,
-                       (uint32_t)handle,
+                       (uint32_t)((uintptr_t)tci & 0xFFF),
+                       handle,
                        len);
 
         // Send the full trustlet data
@@ -689,7 +689,7 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenTrustlet(
         if (bulkBuf)
             sessionObj->addBulkBuf(bulkBuf);
 
-        LOG_I(" Successfully opened session %d.", session->sessionId);
+        LOG_I(" Successfully opened session %03x.", session->sessionId);
 
     } while (false);
 
@@ -772,8 +772,8 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenGPTA(
         SEND_TO_DAEMON(devCon, MC_DRV_CMD_OPEN_TRUSTED_APP,
                        session->deviceId,
                        *uuid,
-                       (uint32_t)(tci) & 0xFFF,
-                       (uint32_t)handle,
+                       (uint32_t)((uintptr_t)tci & 0xFFF),
+                       handle,
                        len);
 
         // Read command response
@@ -873,7 +873,7 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenGPTA(
         if (bulkBuf)
             sessionObj->addBulkBuf(bulkBuf);
 
-        LOG_I(" Successfully opened session %d.", session->sessionId);
+        LOG_I(" Successfully opened session %03x.", session->sessionId);
 
     } while (false);
 
@@ -903,7 +903,7 @@ __MC_CLIENT_LIB_API mcResult_t mcCloseSession(mcSessionHandle_t *session)
     devMutex.lock();
     do {
         CHECK_NOT_NULL(session);
-        LOG_I(" Closing session %d.", session->sessionId);
+        LOG_I(" Closing session %03x.", session->sessionId);
 
         Device *device = resolveDeviceId(session->deviceId);
         CHECK_DEVICE(device);
@@ -961,7 +961,7 @@ __MC_CLIENT_LIB_API mcResult_t mcNotify(
 
     do {
         CHECK_NOT_NULL(session);
-        LOG_I(" Notifying session %d.", session->sessionId);
+        LOG_I(" Notifying session %03x.", session->sessionId);
 
         Device *device = resolveDeviceId(session->deviceId);
         CHECK_DEVICE(device);
@@ -1006,7 +1006,7 @@ __MC_CLIENT_LIB_API mcResult_t mcWaitNotification(
 
     do {
         CHECK_NOT_NULL(session);
-        LOG_I(" Waiting for notification of session %d.", session->sessionId);
+        LOG_I(" Waiting for notification of session %03x.", session->sessionId);
 
         Device *device = resolveDeviceId(session->deviceId);
         CHECK_DEVICE(device);
@@ -1056,7 +1056,7 @@ __MC_CLIENT_LIB_API mcResult_t mcWaitNotification(
             }
 
             count++;
-            LOG_I(" Received notification %d for session %d, payload=%d",
+            LOG_I(" Received notification %d for session %03x, payload=%d",
                   count, notification.sessionId, notification.payload);
 
             if (notification.payload != 0) {
@@ -1208,7 +1208,7 @@ __MC_CLIENT_LIB_API mcResult_t mcMap(
         Session *session = device->resolveSessionId(sessionHandle->sessionId);
         CHECK_SESSION(session, sessionHandle->sessionId);
 
-        LOG_I(" Mapping %p to session %d.", buf, sessionHandle->sessionId);
+        LOG_I(" Mapping %p to session %03x.", buf, sessionHandle->sessionId);
 
         // Register mapped bulk buffer to Kernel Module and keep mapped bulk buffer in mind
         BulkBufferDescriptor *bulkBuf;
@@ -1220,9 +1220,9 @@ __MC_CLIENT_LIB_API mcResult_t mcMap(
 
         SEND_TO_DAEMON(devCon, MC_DRV_CMD_MAP_BULK_BUF,
                        session->sessionId,
-                       (uint32_t)bulkBuf->handle,
-                       (uint32_t)0,
-                       (uint32_t)(bulkBuf->virtAddr) & 0xFFF,
+                       bulkBuf->handle,
+                       0,
+                       (uint32_t)((uintptr_t)bulkBuf->virtAddr & 0xFFF),
                        bulkBuf->len);
 
         // Read command response
@@ -1246,9 +1246,12 @@ __MC_CLIENT_LIB_API mcResult_t mcMap(
         RECV_FROM_DAEMON(devCon, &rspMapBulkMemPayload);
 
         // Set mapping info for internal structures
-        bulkBuf->sVirtualAddr = (void *)rspMapBulkMemPayload.secureVirtualAdr;
+        bulkBuf->sVirtualAddr = (uint32_t)rspMapBulkMemPayload.secureVirtualAdr;
         // Set mapping info for Trustlet
-        mapInfo->sVirtualAddr = bulkBuf->sVirtualAddr;
+        // NOTE: The "nice" piece of code is needed because sVirtualAddr has 2 different
+        // types to accomodate backward compatibility but also keep the length to 32bits
+        // so on 32 bit systems it's void* but on 64 bit systems it's uint32_t
+        *(uint32_t*)&mapInfo->sVirtualAddr = bulkBuf->sVirtualAddr;
         mapInfo->sVirtualLen = bufLen;
         mcResult = MC_DRV_OK;
 
@@ -1285,8 +1288,12 @@ __MC_CLIENT_LIB_API mcResult_t mcUnmap(
     do {
         CHECK_NOT_NULL(sessionHandle);
         CHECK_NOT_NULL(mapInfo);
-        CHECK_NOT_NULL(mapInfo->sVirtualAddr);
         CHECK_NOT_NULL(buf);
+        if (mapInfo->sVirtualAddr == 0) {
+            LOG_E("Invalid secure virtual address %u.", (uintptr_t)mapInfo->sVirtualAddr);
+            mcResult = MC_DRV_ERR_NULL_POINTER;
+            break;
+        }
 
         // Determine device the session belongs to
         Device *device = resolveDeviceId(sessionHandle->deviceId);
@@ -1302,19 +1309,19 @@ __MC_CLIENT_LIB_API mcResult_t mcUnmap(
         Session *session = device->resolveSessionId(sessionHandle->sessionId);
         CHECK_SESSION(session, sessionHandle->sessionId);
 
-        uint32_t handle = session->getBufHandle(mapInfo->sVirtualAddr, mapInfo->sVirtualLen);
+        uint32_t handle = session->getBufHandle((uint32_t)mapInfo->sVirtualAddr, mapInfo->sVirtualLen);
         if (handle == 0) {
-            LOG_E("Unable to find internal handle for buffer %p.", mapInfo->sVirtualAddr);
+            LOG_E("Unable to find internal handle for buffer %u.", (uintptr_t)mapInfo->sVirtualAddr);
             mcResult = MC_DRV_ERR_BLK_BUFF_NOT_FOUND;
             break;
         }
 
-        LOG_I(" Unmapping %p(handle=%u) from session %d.", buf, handle, sessionHandle->sessionId);
+        LOG_I(" Unmapping %p(handle=%u) from session %03x.", buf, handle, sessionHandle->sessionId);
 
         SEND_TO_DAEMON(devCon, MC_DRV_CMD_UNMAP_BULK_BUF,
                        session->sessionId,
                        handle,
-                       (uint32_t)(mapInfo->sVirtualAddr),
+                       (uint32_t)mapInfo->sVirtualAddr,
                        mapInfo->sVirtualLen);
 
         RECV_FROM_DAEMON(devCon, &mcResult);
@@ -1447,8 +1454,6 @@ __MC_CLIENT_LIB_API mcResult_t mcGetMobiCoreVersion(
 // Must be taken with devMutex locked.
 uint32_t getDaemonVersion(Connection *devCon, uint32_t *version)
 {
-    assert(devCon != NULL);
-    assert(version != NULL);
     mcResult_t mcResult = MC_DRV_OK;
     uint32_t v = 0;
 

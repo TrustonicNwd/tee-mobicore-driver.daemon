@@ -36,7 +36,7 @@ package com.gd.mobicore.pa.ifc;
 
 public class IfcVersion{
 
-    public final static int ROOTPA_ANDROID_API_VERSION_MAJOR = 1;
+    public final static int ROOTPA_ANDROID_API_VERSION_MAJOR=1;
     public final static int ROOTPA_ANDROID_API_VERSION_MINOR=1;
 };
 

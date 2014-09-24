@@ -31,6 +31,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string.h>
 #include "logging.h"
+
 #include "pacmp3.h"
 #include "registry.h" 
 #include "pacmtl.h"
@@ -41,6 +42,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 
 void setCmdElementInfo(uint32_t* elementNbrP, uint8_t* wsmP, uint32_t* elementOffsetP, uint32_t elementLength)
 {
+    cmpMapOffsetInfo_t* elementP;
     if(NULL==elementNbrP || NULL == elementOffsetP || NULL == wsmP)
     {
         LOGE("pacmtl setCmdElementInfo NULL's in input, not setting the element %ld %ld", (long int) elementNbrP, (long int) elementOffsetP);
@@ -53,7 +55,7 @@ void setCmdElementInfo(uint32_t* elementNbrP, uint8_t* wsmP, uint32_t* elementOf
         return;
     }
 
-    cmpMapOffsetInfo_t* elementP=(&((cmpCommandHeaderTci_t*)wsmP)->cmpCmdMapOffsetInfo);
+    elementP=(&((cmpCommandHeaderTci_t*)wsmP)->cmpCmdMapOffsetInfo);
     elementP+=((*elementNbrP)-1);
 
     elementP->offset=*elementOffsetP;
@@ -89,20 +91,19 @@ bool getRspElementInfo(uint32_t* elementNbrP, CMTHANDLE handle, uint32_t* elemen
         return false;
     }
     wsmP=handle->wsmP;
-
-    if(NULL==elementNbrP || NULL == elementOffsetP || NULL == elementLengthP || NULL == handle->wsmP)
-    {
-        LOGE("pacmtl getRspElementInfo NULL's in input, not setting the element %ld %ld", (long int) elementNbrP, (long int) elementOffsetP);
-        return false;
-    }
-
     LOGD(">>pacmtl getRspElementInfo %x %x %d %d %d %d", ((cmpResponseHeaderTci_t*)wsmP)->version, 
                                                          ((cmpResponseHeaderTci_t*)wsmP)->responseId, 
                                                          ((cmpResponseHeaderTci_t*)wsmP)->len, 
                                                          *((uint32_t*)(wsmP+12)), 
                                                          *((uint32_t*)(wsmP+16)),                                                   
                                                          *((uint32_t*)(wsmP+20)));
-   
+    if(NULL==elementNbrP || NULL == elementOffsetP || NULL == elementLengthP || NULL == handle->wsmP)
+    {
+        LOGE("pacmtl getRspElementInfo NULL's in input, not setting the element %ld %ld", (long int) elementNbrP, (long int) elementOffsetP);
+        return false;
+    }
+
+
     if(ILLEGAL_ELEMENT==*elementNbrP)
     {
         LOGE("pacmtl getRspElementInfo error in input (illegal element), not getting the element %d", *elementNbrP);
@@ -379,10 +380,12 @@ uint32_t bigger(uint32_t first, uint32_t second)
 
 uint32_t getTotalMappedBufferSize(CmpMessage* commandP)
 {
+    uint32_t commandSize;
+    uint32_t containerSize;
     const cmpSizes_t* sizesP=getCmpSizeInfo(getCmpCommandId(commandP->contentP));
     if(NULL==sizesP) return 0;
-    uint32_t commandSize=bigger(sizesP->cmdRspSize, commandP->length);
-    uint32_t containerSize=bigger(sizesP->cmdContainerSize, sizesP->rspContainerSize);
+    commandSize=bigger(sizesP->cmdRspSize, commandP->length);
+    containerSize=bigger(sizesP->cmdContainerSize, sizesP->rspContainerSize);
     LOGD("pacmtl getTotalMappedBufferSize %d returning %d (%d (%d %d) %d (%d %d))", sizesP->cmdId, commandSize+containerSize, 
                                                                                     commandSize, sizesP->cmdRspSize, commandP->length, 
                                                                                     containerSize, sizesP->cmdContainerSize, sizesP->rspContainerSize);

@@ -32,7 +32,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdbool.h>
+#include <wrapper.h>
 
 
 #include "rootpaErrors.h"
@@ -65,18 +65,19 @@ static CallbackFunctionP callbackP_=NULL;
 
 void addSlashToUri(char* uriP)
 {
+    int uriidx;
     LOGD(">>addSlashToUri");
-    int uriidx=strlen(uriP);
+    uriidx=strlen(uriP);
     uriP[uriidx]='/';
     LOGD("<<addSlashToUri %s", uriP);    
 }
 
 void addBytesToUri(char* uriP, uint8_t* bytes, uint32_t length, bool uuid )
 {
-    LOGD(">>addBytesToUri %d", length);
     int uriidx=strlen(uriP);
-    int i;
+    uint32_t i;
     uint8_t singleNumber=0;
+    LOGD(">>addBytesToUri %d", length);
     for(i=0; i<length; i++)
     {
         singleNumber=(bytes[i]>>4);
@@ -153,7 +154,7 @@ char* createBasicLink(mcSuid_t suid)
     size_t urlLength=0;
     
     urlLength=strlen(initialUrl_) + (sizeof(mcSuid_t)*2) + (sizeof(mcSpid_t)*2) + (sizeof(mcUuid_t)*2)+6; //possible slash and end zero and four dashes
-    tmpLinkP=malloc(urlLength);
+    tmpLinkP=(char*)malloc(urlLength);
     if(tmpLinkP != NULL)
     {
         memset(tmpLinkP,0,urlLength);
@@ -177,8 +178,6 @@ void doProvisioningWithSe(
     initialRel_t initialRel,
     trustletInstallationData_t* tltDataP)
 {
-    LOGD(">>doProvisioningWithSe");
-
     rootpaerror_t ret=ROOTPA_OK;
     rootpaerror_t tmpRet=ROOTPA_OK;
     bool workToDo = true;
@@ -193,7 +192,9 @@ void doProvisioningWithSe(
     const char* usedRelP=NULL;
     const char* usedCommandP=NULL;
 
-    callbackP_=callbackP;
+    LOGD(">>doProvisioningWithSe");
+
+    callbackP_=callbackP;    
 
     if(empty(initialUrl_))
     {
@@ -204,10 +205,14 @@ void doProvisioningWithSe(
     linkP=createBasicLink(suid);
     if(NULL==linkP)
     {
-        callbackP(ERROR, ROOTPA_ERROR_OUT_OF_MEMORY, NULL);
+        callbackP(ERROR_STATE, ROOTPA_ERROR_OUT_OF_MEMORY, NULL);
         return;
     }
-    
+    else
+    {
+        LOGD("SE_ADDRESS %s", linkP);
+    }
+
     if (initialRel == initialRel_DELETE)
     {
     	relP = RELATION_INITIAL_DELETE;
@@ -227,7 +232,7 @@ void doProvisioningWithSe(
     ret=openSeClientAndInit();
     if(ROOTPA_OK!=ret)
     {
-        callbackP(ERROR, ret, NULL);
+        callbackP(ERROR_STATE, ret, NULL);
         workToDo=false;
     }
     
@@ -237,7 +242,7 @@ void doProvisioningWithSe(
         if(ROOTPA_OK!=ret || NULL==responseP)
         {
             if(ROOTPA_OK==ret) ret=ROOTPA_ERROR_XML;  
-            callbackP(ERROR, ret, NULL);
+            callbackP(ERROR_STATE, ret, NULL);
             workToDo=false;
         }
         else
@@ -313,6 +318,17 @@ void doProvisioningWithSe(
                 int mcVersionTag=0;
                 mcVersionInfo_t mcVersion;
 
+#ifdef WIN32
+// TODO- remove the memory allocation from here and handle it properly on C# code
+
+                osSpecificInfo.brandP = (char*)calloc(64, sizeof(char));
+                osSpecificInfo.mnoP = (char*)calloc(64, sizeof(char));
+                osSpecificInfo.imeiEsnP = (char*)calloc(64, sizeof(char));
+                osSpecificInfo.manufacturerP = (char*)calloc(64, sizeof(char));
+                osSpecificInfo.hardwareP = (char*)calloc(64, sizeof(char));
+                osSpecificInfo.modelP = (char*)calloc(64, sizeof(char));
+                osSpecificInfo.versionP = (char*)calloc(64, sizeof(char));
+#endif
                 tmpRet=getSysInfoP(&osSpecificInfo);
                 if(tmpRet!=ROOTPA_OK) ret=tmpRet;                
 
@@ -321,7 +337,7 @@ void doProvisioningWithSe(
                 
                 tmpRet=buildXmlSystemInfo(&responseP, mcVersionTag, &mcVersion, &osSpecificInfo);
                 if(tmpRet!=ROOTPA_OK) ret=tmpRet;
-                
+
                 free(osSpecificInfo.imeiEsnP);
                 free(osSpecificInfo.mnoP);
                 free(osSpecificInfo.brandP);
@@ -329,6 +345,7 @@ void doProvisioningWithSe(
                 free(osSpecificInfo.hardwareP);
                 free(osSpecificInfo.modelP);
                 free(osSpecificInfo.versionP);
+
                 if(responseP!=NULL)
                 {
                     tmpRet=httpPutAndReceiveCommand(responseP, &linkP, &relP, &commandP);
@@ -336,13 +353,14 @@ void doProvisioningWithSe(
                 }
                 else if(ROOTPA_OK==ret)
                 {
+                    workToDo=false;
                     ret=ROOTPA_ERROR_OUT_OF_MEMORY;
                 }
                 
                 if(ret!=ROOTPA_OK)
                 {
                     LOGE("getSysInfoP, getVersionP or buildXmlSystemInfo or httpPutAndReceiveCommand returned an error %d", ret);
-                    callbackP(ERROR, ret, NULL);
+                    callbackP(ERROR_STATE, ret, NULL);
                     if(tmpRet!=ROOTPA_OK) workToDo=false; // if sending response succeeded, we rely on "relP" to tell whether we should continue or not
                 }
             }
@@ -353,7 +371,7 @@ void doProvisioningWithSe(
                 if(ret!=ROOTPA_OK)
                 {
                     LOGE("httpDeleteAndReceiveCommand returned an error %d", ret);
-                    callbackP(ERROR, ret, NULL);
+                    callbackP(ERROR_STATE, ret, NULL);
                     workToDo=false;
                 }
             }
@@ -365,7 +383,7 @@ void doProvisioningWithSe(
                 if(ret!=ROOTPA_OK)
                 {
                     LOGE("httpPostAndReceiveCommand returned an error %d", ret);
-                    callbackP(ERROR, ret, NULL);
+                    callbackP(ERROR_STATE, ret, NULL);
                     workToDo=false;
                 }
             }
@@ -394,7 +412,7 @@ void doProvisioningWithSe(
                 if(ret!=ROOTPA_OK && ret!=ROOTPA_ERROR_REGISTRY_OBJECT_NOT_AVAILABLE) // if container is not found, not sending error intent to SP.PA since it is possible that SE can recover. 
                 {                                                                     // If it can not, it will return an error code anyway.
                     LOGE("httpPostAndReceiveCommand or handleXmlMessage returned an error %d %d", ret, tmpRet);
-                    callbackP(ERROR, ret, NULL);
+                    callbackP(ERROR_STATE, ret, NULL);
                     if(tmpRet!=ROOTPA_OK) workToDo=false; // if sending response succeeded, we rely on "relP" to tell whether we should continue or not
                 }
             
@@ -405,7 +423,7 @@ void doProvisioningWithSe(
                 if(ret!=ROOTPA_OK)
                 {
                     LOGE("httpGetAndReceiveCommand returned an error %d", ret);
-                    callbackP(ERROR, ret, NULL);
+                    callbackP(ERROR_STATE, ret, NULL);
                     workToDo=false;    
                 }
             }
@@ -413,7 +431,7 @@ void doProvisioningWithSe(
             {
                 LOGE("DO NOT UNDERSTAND REL %s", relP);
                 ret=ROOTPA_ERROR_ILLEGAL_ARGUMENT;
-                callbackP(ERROR, ret, NULL);
+                callbackP(ERROR_STATE, ret, NULL);
                 workToDo=false;
             }
 

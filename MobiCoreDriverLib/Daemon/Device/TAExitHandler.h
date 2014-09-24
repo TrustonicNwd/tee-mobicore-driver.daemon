@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,8 +39,6 @@
 class TAExitHandler: public CThread
 {
 public:
-    CSemaphore taExitNotification;
-
     virtual void handleTaExit() = 0;
 
     void run();

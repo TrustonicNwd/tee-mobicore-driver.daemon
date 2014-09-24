@@ -78,10 +78,11 @@ rootpaerror_t executeOneCmpCommand(CMTHANDLE handle, CmpMessage* commandP, CmpMe
 
 rootpaerror_t executeContentManagementCommands(int numberOfCommands, CmpMessage* commandsP, CmpMessage* responsesP, uint32_t* internalError)
 {    
-    LOGD(">>executeContentManagementCommands");
     rootpaerror_t ret=ROOTPA_OK ;
     rootpaerror_t iRet=ROOTPA_OK ;
     bool selfOpened=false;
+    CMTHANDLE handle;
+    LOGD(">>executeContentManagementCommands");
     
     *internalError=0;
 
@@ -93,7 +94,7 @@ rootpaerror_t executeContentManagementCommands(int numberOfCommands, CmpMessage*
         ret=openCmtlSession();
         selfOpened=true;
     }
-    CMTHANDLE handle=handle_; 
+    handle=handle_; 
     
     if (handle)
     {
@@ -158,18 +159,22 @@ rootpaerror_t executeContentManagementCommands(int numberOfCommands, CmpMessage*
 */
 rootpaerror_t executeOneCmpCommand(CMTHANDLE handle, CmpMessage* commandP, CmpMessage* responseP)
 {
+    mcResult_t mcRet;
+    cmpCommandId_t commandId;
+    rootpaerror_t ret;
+    uint32_t neededBytes;
     LOGD(">>executeOneCmpCommand");
     if (unlikely( bad_write_ptr(handle,sizeof(CMTSTRUCT)))) 
     {
         return ROOTPA_ERROR_INTERNAL;
     }
-    if(unlikely (commandP->contentP==NULL || commandP->length< sizeof(cmpCommandId_t)))
+    if(unlikely(commandP->contentP==NULL || commandP->length< sizeof(cmpCommandId_t)))
     {
         return ROOTPA_ERROR_INTERNAL;
     }
 
-    mcResult_t mcRet=MC_DRV_OK;
-    cmpCommandId_t commandId=getCmpCommandId(commandP->contentP);
+    mcRet=MC_DRV_OK;
+    commandId=getCmpCommandId(commandP->contentP);
         
     handle->mappedSize=getTotalMappedBufferSize(commandP);
     if(0==handle->mappedSize)
@@ -178,10 +183,10 @@ rootpaerror_t executeOneCmpCommand(CMTHANDLE handle, CmpMessage* commandP, CmpMe
         return ROOTPA_COMMAND_NOT_SUPPORTED;
     }
 
-    rootpaerror_t ret=ROOTPA_OK;
+    ret=ROOTPA_OK;
     while(true) 
     {
-        handle->mappedP=malloc((size_t) handle->mappedSize);
+        handle->mappedP=(uint8_t*)malloc((size_t) handle->mappedSize);
         if(NULL==handle->mappedP)
         {
             ret=ROOTPA_ERROR_OUT_OF_MEMORY;
@@ -212,7 +217,7 @@ rootpaerror_t executeOneCmpCommand(CMTHANDLE handle, CmpMessage* commandP, CmpMe
             break;
         }
 
-        uint32_t neededBytes=getNeededBytesFromResponse(handle->wsmP);
+        neededBytes=getNeededBytesFromResponse(handle->wsmP);
 
         if(0==neededBytes)
         {

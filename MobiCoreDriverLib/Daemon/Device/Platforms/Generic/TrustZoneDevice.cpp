@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -56,6 +56,9 @@
 
 //------------------------------------------------------------------------------
 MC_CHECK_VERSION(MCI, 0, 2);
+
+//------------------------------------------------------------------------------
+#define LOG_I_RELEASE(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 
 //------------------------------------------------------------------------------
 __attribute__ ((weak)) MobiCoreDevice *getDeviceInstance(
@@ -260,7 +263,7 @@ bool TrustZoneDevice::nsiq(
         return false;
     }
     // now we have to wake the scheduler, so <t-base gets CPU time.
-    schedSync.signal();
+    DeviceScheduler::wakeup();
     return true;
 }
 
@@ -275,10 +278,10 @@ void TrustZoneDevice::notify(
 //        // Check if session ID exists to avoid flooding of nq by clients
 //        TrustletSession *ts = getTrustletSession(sessionId);
 //        if (ts == NULL) {
-//            LOG_E("no session with id=%d", sessionId);
+//            LOG_E("no session with id %03x", sessionId);
 //            return;
 //        }
-        LOG_I(" Sending notification for session %d to <t-base", sessionId);
+        LOG_I(" Sending notification for session %03x to <t-base", sessionId);
     } else {
         LOG_I(" Sending MCP notification to <t-base");
     }
@@ -292,13 +295,13 @@ void TrustZoneDevice::notify(
     //where it was handled, some server(sock or Netlink). In that case
     //the server would just die but never actually signaled to the client
     //any error condition
-    nsiq();
+    (void)nsiq();
 }
 
 //------------------------------------------------------------------------------
 uint32_t TrustZoneDevice::getMobicoreStatus(void)
 {
-    uint32_t status;
+    uint32_t status = MC_STATUS_NOT_INITIALIZED;
     //IMPROVEMENT-2012-03-07-maneaval Can fcInfo ever fail? Before it threw an
     //exception but the handler depended on the context.
     pMcKMod->fcInfo(0, &status, NULL);
@@ -332,50 +335,51 @@ bool TrustZoneDevice::checkMciVersion(void)
 void TrustZoneDevice::dumpMobicoreStatus(
     void
 ) {
-    uint32_t status, info;
+    uint32_t status = MC_STATUS_NOT_INITIALIZED;
+    uint32_t info = 0;
 
     // read additional info about exception-point and print
     LOG_E("<t-base halted. Status dump:");
     pMcKMod->fcInfo(1, &status, &info);
-    LOG_W("  flags               = 0x%08x", info);
+    LOG_I_RELEASE("  flags               = 0x%08x", info);
     pMcKMod->fcInfo(2, &status, &info);
-    LOG_W("  haltCode            = 0x%08x", info);
+    LOG_I_RELEASE("  haltCode            = 0x%08x", info);
     pMcKMod->fcInfo(3, &status, &info);
-    LOG_W("  haltIp              = 0x%08x", info);
+    LOG_I_RELEASE("  haltIp              = 0x%08x", info);
     pMcKMod->fcInfo(4, &status, &info);
-    LOG_W("  faultRec.cnt        = 0x%08x", info);
+    LOG_I_RELEASE("  faultRec.cnt        = 0x%08x", info);
     pMcKMod->fcInfo(5, &status, &info);
-    LOG_W("  faultRec.cause      = 0x%08x", info);
+    LOG_I_RELEASE("  faultRec.cause      = 0x%08x", info);
     pMcKMod->fcInfo(6, &status, &info);
-    LOG_W("  faultRec.meta       = 0x%08x", info);
+    LOG_I_RELEASE("  faultRec.meta       = 0x%08x", info);
     pMcKMod->fcInfo(7, &status, &info);
-    LOG_W("  faultRec.thread     = 0x%08x", info);
+    LOG_I_RELEASE("  faultRec.thread     = 0x%08x", info);
     pMcKMod->fcInfo(8, &status, &info);
-    LOG_W("  faultRec.ip         = 0x%08x", info);
+    LOG_I_RELEASE("  faultRec.ip         = 0x%08x", info);
     pMcKMod->fcInfo(9, &status, &info);
-    LOG_W("  faultRec.sp         = 0x%08x", info);
+    LOG_I_RELEASE("  faultRec.sp         = 0x%08x", info);
     pMcKMod->fcInfo(10, &status, &info);
-    LOG_W("  faultRec.arch.dfsr  = 0x%08x", info);
+    LOG_I_RELEASE("  faultRec.arch.dfsr  = 0x%08x", info);
     pMcKMod->fcInfo(11, &status, &info);
-    LOG_W("  faultRec.arch.adfsr = 0x%08x", info);
+    LOG_I_RELEASE("  faultRec.arch.adfsr = 0x%08x", info);
     pMcKMod->fcInfo(12, &status, &info);
-    LOG_W("  faultRec.arch.dfar  = 0x%08x", info);
+    LOG_I_RELEASE("  faultRec.arch.dfar  = 0x%08x", info);
     pMcKMod->fcInfo(13, &status, &info);
-    LOG_W("  faultRec.arch.ifsr  = 0x%08x", info);
+    LOG_I_RELEASE("  faultRec.arch.ifsr  = 0x%08x", info);
     pMcKMod->fcInfo(14, &status, &info);
-    LOG_W("  faultRec.arch.aifsr = 0x%08x", info);
+    LOG_I_RELEASE("  faultRec.arch.aifsr = 0x%08x", info);
     pMcKMod->fcInfo(15, &status, &info);
-    LOG_W("  faultRec.arch.ifar  = 0x%08x", info);
+    LOG_I_RELEASE("  faultRec.arch.ifar  = 0x%08x", info);
     pMcKMod->fcInfo(16, &status, &info);
-    LOG_W("  mcData.flags        = 0x%08x", info);
+    LOG_I_RELEASE("  mcData.flags        = 0x%08x", info);
     pMcKMod->fcInfo(19, &status, &info);
-    LOG_W("  mcExcep.partner     = 0x%08x", info);
+    LOG_I_RELEASE("  mcExcep.partner     = 0x%08x", info);
     pMcKMod->fcInfo(20, &status, &info);
-    LOG_W("  mcExcep.peer        = 0x%08x", info);
+    LOG_I_RELEASE("  mcExcep.peer        = 0x%08x", info);
     pMcKMod->fcInfo(21, &status, &info);
-    LOG_W("  mcExcep.message     = 0x%08x", info);
+    LOG_I_RELEASE("  mcExcep.cause       = 0x%08x", info);
     pMcKMod->fcInfo(22, &status, &info);
-    LOG_W("  mcExcep.data        = 0x%08x", info);
+    LOG_I_RELEASE("  mcExcep.meta        = 0x%08x", info);
 }
 
 //------------------------------------------------------------------------------
@@ -394,21 +398,20 @@ bool TrustZoneDevice::waitSsiq(void)
 //------------------------------------------------------------------------------
 bool TrustZoneDevice::getMciInstance(uint32_t len, CWsm_ptr *mci, bool *reused)
 {
-    addr_t virtAddr;
-    uint32_t handle;
+    addr_t virtAddr = NULL;
     bool isReused = true;
     if (len == 0) {
         LOG_E("allocateWsm() length is 0");
         return false;
     }
 
-    mcResult_t ret = pMcKMod->mapMCI(len, &handle, &virtAddr, &isReused);
+    mcResult_t ret = pMcKMod->mapMCI(len, &virtAddr, &isReused);
     if (ret != MC_DRV_OK) {
         LOG_E("pMcKMod->mmap() failed: %x", ret);
         return false;
     }
 
-    *mci = new CWsm(virtAddr, len, handle, 0);
+    *mci = new CWsm(virtAddr, len, 0, 0);
     *reused = isReused;
     return true;
 }
@@ -430,8 +433,8 @@ bool TrustZoneDevice::getMciInstance(uint32_t len, CWsm_ptr *mci, bool *reused)
 //------------------------------------------------------------------------------
 CWsm_ptr TrustZoneDevice::registerWsmL2(addr_t buffer, uint32_t len, uint32_t pid)
 {
-    uint64_t physAddr;
-    uint32_t handle;
+    uint64_t physAddr = 0;
+    uint32_t handle = 0;
 
     int ret = pMcKMod->registerWsmL2(
                   buffer,
@@ -453,8 +456,8 @@ CWsm_ptr TrustZoneDevice::allocateContiguousPersistentWsm(uint32_t len)
 {
     CWsm_ptr pWsm = NULL;
     // Allocate shared memory
-    addr_t virtAddr;
-    uint32_t handle;
+    addr_t virtAddr = NULL;
+    uint32_t handle = 0;
 
     if (len == 0 )
         return NULL;
@@ -474,12 +477,13 @@ CWsm_ptr TrustZoneDevice::allocateContiguousPersistentWsm(uint32_t len)
 bool TrustZoneDevice::unregisterWsmL2(CWsm_ptr pWsm)
 {
     int ret = pMcKMod->unregisterWsmL2(pWsm->handle);
+    /* Free pWsm in all the cases */
+    delete pWsm;
+
     if (ret != 0) {
         LOG_E("pMcKMod->unregisterWsmL2 failed: %d", ret);
-        //IMPROVEMENT-2012-03-07 maneaval Make sure we don't leak objects
         return false;
     }
-    delete pWsm;
     return true;
 }
 
@@ -571,7 +575,9 @@ void TrustZoneDevice::schedule(void)
         {
             // <t-base is IDLE. Prevent unnecessary consumption of CPU cycles
             // and wait for S-SIQ
-            schedSync.wait(); // check return code?
+            DeviceScheduler::sleep();
+            if (DeviceScheduler::shouldTerminate())
+                break;
             continue;
         }
 
@@ -607,7 +613,9 @@ void TrustZoneDevice::handleTaExit(void)
     LOG_I("Starting Trusted Application Exit handler...");
     for (;;) {
         // Wait until we get a notification without CA
-        taExitNotification.wait();
+        TAExitHandler::sleep();
+        if (TAExitHandler::shouldTerminate())
+            break;
 
         // Wait until socket server frees MCP
         // Make sure we don't interfere with handleConnection/dropConnection
@@ -622,7 +630,7 @@ void TrustZoneDevice::handleTaExit(void)
             TrustletSession *ts = *iterator;
 
             if (ts->sessionState == TrustletSession::TS_TA_DEAD) {
-                LOG_I("Cleaning up session %i", ts->sessionId);
+                LOG_I("Cleaning up session %03x", ts->sessionId);
 
                 // Tell t-base to close the session
                 mcResult_t mcRet = closeSessionInternal(ts);
@@ -631,12 +639,12 @@ void TrustZoneDevice::handleTaExit(void)
                 if (mcRet == MC_DRV_OK) {
                     mutex_tslist.lock();
                     iterator = trustletSessions.erase(iterator);
-                    LOG_I("TA session %i finally closed", ts->sessionId);
+                    LOG_I("TA session %03x finally closed", ts->sessionId);
                     delete ts;
                     mutex_tslist.unlock();
                     continue;
                 } else {
-                    LOG_I("TA session %i could not be closed yet.", ts->sessionId);
+                    LOG_I("TA session %03x could not be closed yet.", ts->sessionId);
                 }
             }
             ++iterator;
@@ -691,7 +699,7 @@ void TrustZoneDevice::handleIrq(
                 continue;
             }
 
-            LOG_I(" Notification for session %d, payload=%d",
+            LOG_I(" Notification for session %03x, payload=%d",
                 notification->sessionId, notification->payload);
 
             // Get the Trustlet session for the session ID
@@ -716,7 +724,7 @@ void TrustZoneDevice::handleIrq(
                     ts->queueNotification(notification);
                     if (ts->deviceConnection == NULL) {
                         LOG_I("  Notification for disconnected client, scheduling cleanup of sessions.");
-                        taExitNotification.signal();
+                        TAExitHandler::wakeup();
                     }
                 } else {
                     LOG_I(" Forward notification to McClient.");
@@ -734,7 +742,7 @@ void TrustZoneDevice::handleIrq(
         // any notification or not. S-SIQs can also be triggered by an SWd
         // driver which was waiting for a FIQ. In this case the S-SIQ tells
         // NWd that SWd is no longer idle an will need scheduling again
-        schedSync.signal();
+        DeviceScheduler::wakeup();
 
     } //for (;;)
 

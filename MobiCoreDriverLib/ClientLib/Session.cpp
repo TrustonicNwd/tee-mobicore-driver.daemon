@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -107,7 +107,7 @@ int32_t Session::getLastErr(
 mcResult_t Session::addBulkBuf(addr_t buf, uint32_t len, BulkBufferDescriptor **blkBuf)
 {
     uint64_t pPhysWsmL2;
-    uint32_t handle;
+    uint32_t handle = 0;
 
     assert(blkBuf != NULL);
 
@@ -150,9 +150,9 @@ void Session::addBulkBuf(BulkBufferDescriptor *blkBuf)
 }
 
 //------------------------------------------------------------------------------
-uint32_t Session::getBufHandle(addr_t sVirtAddr, uint32_t sVirtualLen)
+uint32_t Session::getBufHandle(uint32_t sVirtAddr, uint32_t sVirtualLen)
 {
-    LOG_V("getBufHandle(): Virtual Address = 0x%X", (unsigned int) virtAddr);
+    LOG_V("getBufHandle(): Virtual Address = 0x%X", sVirtAddr);
 
     // Search and remove bulk buffer descriptor
     for ( bulkBufferDescrIterator_t iterator = bulkBufferDescriptors.begin();
@@ -186,7 +186,7 @@ mcResult_t Session::removeBulkBuf(addr_t virtAddr)
     }
 
     if (pBlkBufDescr == NULL) {
-        LOG_E("%p not registered in session %d.", virtAddr, sessionId);
+        LOG_E("%p not registered in session %03x.", virtAddr, sessionId);
         return MC_DRV_ERR_BLK_BUFF_NOT_FOUND;
     }
     LOG_V("removeBulkBuf():handle=%u", pBlkBufDescr->handle);

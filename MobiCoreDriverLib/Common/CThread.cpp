@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -86,7 +86,7 @@ void CThread::exit(
 )
 {
     setExiting();
-    pthread_exit((void *)exitcode);
+    pthread_exit((void*)(uintptr_t)exitcode);
 }
 
 

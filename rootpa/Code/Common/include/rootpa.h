@@ -35,7 +35,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 extern "C" {
 #endif
 
-#include <stdbool.h>
+#include <wrapper.h>
 #include <mcUuid.h>
 #include <mcContainer.h>
 
@@ -50,7 +50,7 @@ typedef enum {
     AUTHENTICATING_ROOT=4,
     CREATING_SP_CONTAINER=5,
     FINISHED_PROVISIONING=6,
-    ERROR=7,
+    ERROR_STATE=7,
     UNREGISTERING_ROOT_CONTAINER=8,
     PROVISIONING_STATE_INSTALL_TRUSTLET=0xFEED,
     PROVISIONING_STATE_THREAD_EXITING=0xDEAD

@@ -32,7 +32,8 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef TRUSTLETCHANNEL_H
 #define TRUSTLETCHANNEL_H
 
-#include<stdbool.h>
+#include<wrapper.h>
+
 #include<MobiCoreDriverApi.h>
 
 typedef struct cmtstruct CMTSTRUCT;
@@ -58,7 +59,7 @@ CMTHANDLE tltChannelOpen(int sizeOfWsmBuffer, mcResult_t* result);
 Open session to TA and allocate enough memory for communication. There are two way to do this, give TA uuid or TA binary, binary length and spid. 
 The former works with system TA's the latter with SP TA's.
 */
-CMTHANDLE taChannelOpen(int sizeOfWsmBuffer,  mcResult_t* result, mcUuid_t* uuidP, uint8_t* taBinaryP, uint32_t taLength, mcSpid_t spid);
+CMTHANDLE taChannelOpen(int sizeOfWsmBuffer,  mcResult_t* result, const mcUuid_t* uuidP, uint8_t* taBinaryP, uint32_t taLength, mcSpid_t spid);
 /**
 */
 void tltChannelClose(CMTHANDLE handle);

@@ -30,6 +30,11 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <string.h>
+#ifdef WIN32
+	#include <cstring>
+	#include <sys/stat.h>	
+#endif
+#include <wrapper.h>
 #include <stdlib.h>
 #include <TlCm/tlCmUuid.h>
 #include "tools.h"
@@ -42,18 +47,94 @@ start using other than default device id if need arises */
 
 static uint32_t tltChannelDeviceId=MC_DEVICE_ID_DEFAULT;
 
+#ifdef WIN32
+
+#define MAX_TL_FILENAME 1024
+
+/**
+Since Windows version of "mcDaemon" does not access registry, this function is used to load system TA and open session to it.
+*/
+mcResult_t OpenSysTaFromRegistry(
+               mcSessionHandle_t * session,
+               const mcUuid_t * uuid,
+               uint8_t  * tci,
+               uint32_t   tciLen)
+  {
+    
+    
+    size_t      taSize;
+    int         result;
+    struct stat fstat;
+    mcResult_t  status = MC_DRV_ERR_UNKNOWN;
+    uint8_t *   taBlob;
+    int lastErr;
+	
+ 
+    // get registry path
+    // TODO-2013-07-17-jearig01 import registry from global variable
+
+	char registryPath[MAX_TL_FILENAME] = "C:\\Windows\\tbaseregistry\\";
+	char trustedAppPath[MAX_TL_FILENAME];
+	char hx[MAX_TL_FILENAME];
+
+	 for (size_t i = 0; i < sizeof(*uuid); i++) {
+        sprintf(&hx[i * 2], "%02x", ((uint8_t *)uuid)[i]);
+    }
+
+	 snprintf(trustedAppPath, sizeof(trustedAppPath), "%s%s%s", registryPath,hx, ".tlbin");
+
+	 printf("app path--> %s\n",trustedAppPath);
+     printf("registryPath path--> %s\n",registryPath);
+	 printf("hx--> %s\n",hx);
+	
+    //check file
+    result = stat(trustedAppPath, &fstat);
+	if (result!=0) return  MC_DRV_ERR_TRUSTLET_NOT_FOUND;
+    taSize = fstat.st_size;
+
+    // import file in a blob
+    FILE *infile = fopen(trustedAppPath, "rb");
+
+    if (infile == NULL) return MC_DRV_ERR_TRUSTLET_NOT_FOUND;
+    
+    taBlob = (uint8_t *) malloc(taSize);
+	if (taBlob == NULL)
+    { 
+      fclose(infile);
+      return MC_DRV_ERR_NO_FREE_MEMORY; 
+    } 
+
+    result = fread (taBlob, 1, taSize, infile);
+
+	printf("FREAD--> %d - %d\n",result, taSize);
+    if (result == taSize)
+    {
+      // Call OpenTrustlet
+		printf("app path--> %d - %d\n",tciLen, taSize);
+      status = mcOpenTrustlet(session, 0, taBlob, taSize, tci, tciLen); 
+    }
+    
+    // free blobs, necessary data are supposed to have been sent to SWd and are now useless in NWd
+    fclose(infile);
+    free(taBlob);
+	
+    return status;
+  }
+#endif
+
 /*
 Open session to content management trustlet and allocate enough memory for communication
 */
 CMTHANDLE tltChannelOpen(int sizeOfWsmBuffer,  mcResult_t* result)
 {
-    mcUuid_t      UUID = TL_CM_UUID;
+    const mcUuid_t      UUID = TL_CM_UUID;
     return taChannelOpen(sizeOfWsmBuffer, result, &UUID, NULL, 0,0);
 }
 
+
 /*
 */
-CMTHANDLE taChannelOpen(int sizeOfWsmBuffer,  mcResult_t* result, mcUuid_t* uuidP, uint8_t* taBinaryP, uint32_t taLength, mcSpid_t spid)
+CMTHANDLE taChannelOpen(int sizeOfWsmBuffer,  mcResult_t* result, const mcUuid_t* uuidP, uint8_t* taBinaryP, uint32_t taLength, mcSpid_t spid)
 {
     CMTHANDLE           handle = (CMTHANDLE)malloc(sizeof(CMTSTRUCT));
 
@@ -65,8 +146,6 @@ CMTHANDLE taChannelOpen(int sizeOfWsmBuffer,  mcResult_t* result, mcUuid_t* uuid
 
     memset(handle,0,sizeof(CMTSTRUCT));
 
-#if ! ( defined(LINUX) || (defined(WIN32) && defined(_TEST_SUITE)) )
-
     *result = mcOpenDevice(tltChannelDeviceId);
 
     if (MC_DRV_OK != *result) 
@@ -77,7 +156,6 @@ CMTHANDLE taChannelOpen(int sizeOfWsmBuffer,  mcResult_t* result, mcUuid_t* uuid
       return NULL;
     }
 
-#endif
 
     *result = mcMallocWsm(tltChannelDeviceId, 0, sizeOfWsmBuffer, &handle->wsmP, 0);
     if (MC_DRV_OK != *result) 
@@ -94,7 +172,11 @@ CMTHANDLE taChannelOpen(int sizeOfWsmBuffer,  mcResult_t* result, mcUuid_t* uuid
     }
     else
     {
+#ifdef WIN32
+        *result = OpenSysTaFromRegistry(&handle->session,uuidP,handle->wsmP,(uint32_t)sizeOfWsmBuffer);
+#else
         *result = mcOpenSession(&handle->session,uuidP, handle->wsmP,(uint32_t)sizeOfWsmBuffer);
+#endif
     }
     
     if (MC_DRV_OK != *result)
@@ -125,13 +207,11 @@ void tltChannelClose(CMTHANDLE handle){
 
         if (NULL!=handle->wsmP) mcFreeWsm(tltChannelDeviceId, handle->wsmP);
 
-#if ! ( defined(LINUX) || (defined(WIN32) && defined(_TEST_SUITE)) )
         result = mcCloseDevice(tltChannelDeviceId);
         if (MC_DRV_OK != result) 
         {
             LOGE("tltChannelClose: Closing MobiCore device failed, error: %d", result);
         }
-#endif
         free(handle);
     }
 }

@@ -127,7 +127,7 @@ mcDrvResponseHeader_t rsp = { responseId :
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryStoreAuthToken(void *so, uint32_t size)
 {
-    typedef struct {
+    typedef struct __attribute ((packed)) {
         uint32_t commandId;
         uint32_t soSize;
         uint8_t so;
@@ -178,7 +178,7 @@ mcDrvCommandHeader_t cmd = { commandId :
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryStoreRoot(void *so, uint32_t size)
 {
-    typedef struct {
+    typedef struct __attribute ((packed)) {
         uint32_t commandId;
         uint32_t soSize;
         uint8_t so;
@@ -226,7 +226,7 @@ mcDrvCommandHeader_t cmd = { commandId :
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryStoreSp(mcSpid_t spid, void *so, uint32_t size)
 {
-    typedef struct {
+    typedef struct __attribute ((packed)) {
         uint32_t commandId;
         uint32_t soSize;
         mcSpid_t spid;
@@ -287,7 +287,7 @@ mcResult_t mcRegistryCleanupSp(mcSpid_t spid)
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, mcSpid_t spid, void *so, uint32_t size)
 {
-    typedef struct {
+    typedef struct __attribute ((packed)) {
         uint32_t commandId;
         uint32_t soSize;
         mcUuid_t uuid;

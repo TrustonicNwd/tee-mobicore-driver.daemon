@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,13 +44,13 @@ class BulkBufferDescriptor
 {
 public:
     addr_t    virtAddr; /**< The virtual address of the Bulk buffer*/
-    addr_t    sVirtualAddr; /**< The secure virtual address of the Bulk buffer*/
+    uint32_t  sVirtualAddr; /**< The secure virtual address of the Bulk buffer*/
     uint32_t  len; /**< Length of the Bulk buffer*/
     uint32_t  handle;
 
     BulkBufferDescriptor(
         addr_t    virtAddr,
-        addr_t    sVirtAddr,
+        uint32_t  sVirtAddr,
         uint32_t  len,
         uint32_t  handle
     ) :
@@ -144,7 +144,7 @@ public:
      *
      * @return the Handle or 0 for failure
      */
-    uint32_t getBufHandle(addr_t sVirtAddr, uint32_t sVirtualLen);
+    uint32_t getBufHandle(uint32_t sVirtAddr, uint32_t sVirtualLen);
 
     /**
      * Set additional error information of the last error that occured.

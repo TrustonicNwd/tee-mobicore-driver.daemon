@@ -96,27 +96,31 @@ Decode base64 encoded NULL terminated string. If the string is not NULL terminat
 */
 size_t base64DecodeStringRemoveEndZero(const char* toBeDecoded, char** resultP)
 {
+    size_t inSize;
+    size_t outSize;
+    
+    unsigned char in[ENCODEDSIZE];
+    unsigned char out[PLAINSIZE];
+    int v;
+    int i, len;
+    int inIndex=0;
+    int outIndex=0;
+
     LOGD(">> base64DecodeStringRemoveEndZero");
     if(NULL==toBeDecoded) return 0;
 
-    size_t inSize=strlen(toBeDecoded); 
-    size_t outSize=((inSize*PLAINSIZE)/ENCODEDSIZE)+((inSize*PLAINSIZE)%ENCODEDSIZE);
-    *resultP=malloc(outSize);
+    inSize=strlen(toBeDecoded); 
+    outSize=((inSize*PLAINSIZE)/ENCODEDSIZE)+((inSize*PLAINSIZE)%ENCODEDSIZE);
+    *resultP=(char *)malloc(outSize);
 
     if((*resultP)==NULL) return 0;
     
     LOGD("in %d out %d", (int) inSize, (int) outSize);
 
-    unsigned char in[ENCODEDSIZE];
-    unsigned char out[PLAINSIZE];
-    int v;
-    int i, len;
-
 	*in = (unsigned char) 0;
 	*out = (unsigned char) 0;
     
-    int inIndex=0;
-    int outIndex=0;
+
     while( inIndex < inSize ) 
     {
         for( len = 0, i = 0; i < ENCODEDSIZE && inIndex < inSize; i++ ) 
@@ -180,29 +184,32 @@ base64encode data to a NULL terminated string.
 */
 char* base64EncodeAddEndZero(const char* toBeEncoded, size_t length)
 {
-    LOGD(">> base64EncodeAddEndZero %d %s", (int) length, ((toBeEncoded!=NULL)?"ptr ok":"NULL"));
-    if(NULL==toBeEncoded) return NULL;
-
-    size_t outSize=(length/PLAINSIZE + ((length%PLAINSIZE>0)?1:0))*ENCODEDSIZE+1;
-
-//    outSize+=(outsize/LINESIZE)*2; // crlf after each full line
-
-    char* resultP=malloc(outSize);
-
-    if(resultP==NULL) return NULL;
-    resultP[outSize-1]=0;
-
+    size_t outSize;
+    char* resultP;
+    
     unsigned char in[PLAINSIZE];
 	unsigned char out[ENCODEDSIZE];
     int i, len;
+    int inIndex=0;
+    int outIndex=0;
+
+    LOGD(">> base64EncodeAddEndZero %d %s", (int) length, ((toBeEncoded!=NULL)?"ptr ok":"NULL"));
+    if(NULL==toBeEncoded) return NULL;
+
+    outSize=(length/PLAINSIZE + ((length%PLAINSIZE>0)?1:0))*ENCODEDSIZE+1;
+
+//    outSize+=(outsize/LINESIZE)*2; // crlf after each full line
+
+    resultP=(char *) malloc(outSize);
+
+    if(resultP==NULL) return NULL;
+    resultP[outSize-1]=0;
 
     LOGD("in %d out %d", (int) length, (int) outSize);
     
 	*in = (unsigned char) 0;
 	*out = (unsigned char) 0;
 
-    int inIndex=0;
-    int outIndex=0;
     while( inIndex < length ) 
     {
         len = 0;

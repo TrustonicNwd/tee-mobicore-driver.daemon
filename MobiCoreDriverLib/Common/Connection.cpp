@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -62,7 +62,6 @@ Connection::Connection(void)
 //------------------------------------------------------------------------------
 Connection::Connection(int socketDescriptor, sockaddr_un *remote)
 {
-    assert(NULL != remote);
     assert(-1 != socketDescriptor);
 
     this->socketDescriptor = socketDescriptor;
@@ -91,7 +90,6 @@ bool Connection::connect(const char *dest)
 {
     int32_t len;
 
-    assert(NULL != dest);
     if (sizeof(remote.sun_path) - 1 < strlen(dest)) {
         LOG_E("Invalid destination socket %s", dest);
         return false;
@@ -132,7 +130,6 @@ ssize_t Connection::readData(void *buffer, uint32_t len, int32_t timeout)
     struct timeval *ptv = NULL;
     fd_set readfds;
 
-    assert(NULL != buffer);
     assert(socketDescriptor != -1);
 
     if (timeout >= 0) {
@@ -178,7 +175,6 @@ ssize_t Connection::readData(void *buffer, uint32_t len, int32_t timeout)
 //------------------------------------------------------------------------------
 ssize_t Connection::writeData(void *buffer, uint32_t len)
 {
-    assert(buffer != NULL);
     assert(socketDescriptor != -1);
 
     ssize_t ret = send(socketDescriptor, buffer, len, 0);
@@ -246,7 +242,7 @@ bool Connection::isConnectionAlive(void)
 bool Connection::getPeerCredentials(struct ucred &cr)
 {
     struct ucred cred;
-    int len = sizeof (cred);
+    socklen_t len = sizeof (cred);
     assert(socketDescriptor != -1);
     int ret = getsockopt(socketDescriptor, SOL_SOCKET, SO_PEERCRED, &cred,
                          &len);

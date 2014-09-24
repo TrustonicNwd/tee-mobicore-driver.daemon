@@ -31,7 +31,13 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string.h>
 #include <stdlib.h>
-#include <pthread.h>
+
+#include <wrapper.h>
+#ifdef WIN32
+	#include <windows.h>
+#else
+	#include <pthread.h>
+#endif
 #include <TlCm/3.0/tlCmApi.h>
 #include <MobiCoreDriverApi.h>
 
@@ -53,9 +59,8 @@ See provisioningagent.h for description of this function.
 */
 rootpaerror_t executeCmpCommands(int numberOfCommands, CmpMessage* commandsP, CmpMessage* responsesP, uint32_t* internalError)
 {    
-    LOGD(">>executeCmpCommands");
+    LOGD("executeCmpCommands");
     return executeContentManagementCommands(numberOfCommands, commandsP, responsesP, internalError);
-    LOGD("<<executeCmpCommands");
 }
 
 rootpaerror_t openSessionToCmtl()
@@ -70,17 +75,17 @@ void closeSessionToCmtl()
 
 rootpaerror_t getVersion(int* tag, mcVersionInfo_t* versionP)
 {
-    LOGD(">>getVersion");
     rootpaerror_t ret=ROOTPA_OK;
     uint32_t internalError=0;          
     CmpMessage command; 
     CmpMessage response;
 
+    LOGD(">>getVersion");
     memset(&command,0,sizeof(CmpMessage));
     memset(&response,0,sizeof(CmpMessage));
     
     command.length=GET_VERSION_COMMAND_LENGTH;
-    command.contentP=malloc(GET_VERSION_COMMAND_LENGTH);
+    command.contentP=(uint8_t*)malloc(GET_VERSION_COMMAND_LENGTH);
     if(!command.contentP)
     {
         return ROOTPA_ERROR_OUT_OF_MEMORY;
@@ -124,17 +129,17 @@ rootpaerror_t getVersion(int* tag, mcVersionInfo_t* versionP)
 
 rootpaerror_t getSuid(mcSuid_t* suidP)
 {
-    LOGD(">>getSuid");
     rootpaerror_t  ret=ROOTPA_OK;
     uint32_t internalError=0;          
     CmpMessage command; 
     CmpMessage response;
-    
+        
+    LOGD(">>getSuid");
     memset(&command,0,sizeof(CmpMessage));
     memset(&response,0,sizeof(CmpMessage));
     
     command.length=GET_SUID_COMMAND_LENGTH;
-    command.contentP=malloc(GET_SUID_COMMAND_LENGTH);
+    command.contentP=(uint8_t*)malloc(GET_SUID_COMMAND_LENGTH);
     if(!command.contentP)
     {
         return ROOTPA_ERROR_OUT_OF_MEMORY;
@@ -164,14 +169,14 @@ rootpaerror_t getSuid(mcSuid_t* suidP)
 
 rootpaerror_t  isRootContainerRegistered(bool* isRegisteredP)
 {
-    LOGD(">>isRootContainerRegistered");
     rootpaerror_t ret=ROOTPA_OK;
-
-    if(NULL==isRegisteredP) return ROOTPA_ERROR_ILLEGAL_ARGUMENT;
-    
     ROOTCONTAINERP rootContP=NULL;
     uint32_t rootContSize=0;
-    mcResult_t result=regReadRoot(&rootContP, &rootContSize);  
+    mcResult_t result;
+    LOGD(">>isRootContainerRegistered");
+    if(NULL==isRegisteredP) return ROOTPA_ERROR_ILLEGAL_ARGUMENT;
+    
+    result=regReadRoot(&rootContP, &rootContSize);  
 
     if(MC_DRV_OK == result)
     {
@@ -202,13 +207,13 @@ rootpaerror_t  isRootContainerRegistered(bool* isRegisteredP)
 
 rootpaerror_t  isSpContainerRegistered(mcSpid_t spid, bool* isRegisteredP)
 {
-    LOGD(">>isSpContainerRegistered");
     rootpaerror_t ret=ROOTPA_OK;
+    int state;
+    LOGD(">>isSpContainerRegistered");
 
     if(NULL==isRegisteredP) return ROOTPA_ERROR_ILLEGAL_ARGUMENT;
 
-    int state;
-    ret=getSpContainerState(spid, &state);
+    ret=getSpContainerState(spid, (mcContainerState_t*)&state);
     
     if(ROOTPA_OK == ret)
     {
@@ -234,12 +239,13 @@ rootpaerror_t  isSpContainerRegistered(mcSpid_t spid, bool* isRegisteredP)
 
 rootpaerror_t getSpContainerState(mcSpid_t spid, mcContainerState_t* stateP)
 {
-    LOGD(">>getSpContainerState");
     rootpaerror_t ret=ROOTPA_OK;
+     mcResult_t result;
 
+    LOGD(">>getSpContainerState");
     if(NULL==stateP) return ROOTPA_ERROR_ILLEGAL_ARGUMENT;
 
-    mcResult_t result=regGetSpState(spid, stateP);
+    result=regGetSpState(spid, stateP);
     
     if(MC_DRV_ERR_INVALID_DEVICE_FILE == result)
     {
@@ -261,29 +267,30 @@ bool containerExists(mcUuid_t uuid)
 
 rootpaerror_t  getSpContainerStructure(mcSpid_t spid, SpContainerStructure* spContainerStructure)
 {
-    LOGD(">>getSpContainerStructure");
     rootpaerror_t ret=ROOTPA_OK;
-
+    SPCONTAINERP spP=NULL;    
+    uint32_t spContSize=0;
+    mcResult_t result;
+    int i;
+    TLTCONTAINERP tltP=NULL;
+    LOGD(">>getSpContainerStructure");
+    
     if(NULL==spContainerStructure) return ROOTPA_ERROR_ILLEGAL_ARGUMENT;
     memset(spContainerStructure, 0xFF, sizeof(SpContainerStructure));
     spContainerStructure->nbrOfTlts=0;    
 
-    SPCONTAINERP spP=NULL;    
-    uint32_t spContSize=0;
-    mcResult_t result=regReadSp(spid, &spP, &spContSize);
+    result=regReadSp(spid, &spP, &spContSize);
     
     if(MC_DRV_OK == result)
     {
         spContainerStructure->state=spP->cont.attribs.state;
-        
-        int i;
 
         for(i=0; i<MC_CONT_CHILDREN_COUNT; i++)
         {
             if(containerExists(spP->cont.children[i]))
             {
                 memcpy(&spContainerStructure->tltContainers[spContainerStructure->nbrOfTlts].uuid, &(spP->cont.children[i]), sizeof(mcUuid_t));
-                TLTCONTAINERP tltP=NULL;
+
                 if(ROOTPA_OK == ret)
                 {
                     uint32_t tltContSize=0;
@@ -371,12 +378,14 @@ typedef struct{
     initialRel_t      initialRel;
 	trustletInstallationData_t* tltInstallationDataP;
 } provisioningparams_t;
-
-void* provisioningThreadFunction(void* paramsP)
+#ifdef WIN32
+	void* WINAPI provisioningThreadFunction(void* paramsP)
+#else
+    void* provisioningThreadFunction(void* paramsP)
+#endif
 {
-    LOGD(">>provisioningThreadFunction %ld", (long int)((provisioningparams_t*)paramsP)->callbackP);
-
     rootpaerror_t ret=ROOTPA_OK;
+    LOGD(">>provisioningThreadFunction %ld", (long int)((provisioningparams_t*)paramsP)->callbackP);
     if((ret=openCmtlSession())==ROOTPA_OK)
     {
         doProvisioningWithSe(((provisioningparams_t*)paramsP)->spid, 
@@ -390,7 +399,7 @@ void* provisioningThreadFunction(void* paramsP)
     }
     else
     {
-        ((provisioningparams_t*)paramsP)->callbackP(ERROR, ret, NULL);
+        ((provisioningparams_t*)paramsP)->callbackP(ERROR_STATE, ret, NULL);
         LOGE("provisioningThreadFunction: was not able to open session %d", ret);
     }
 
@@ -404,18 +413,28 @@ void* provisioningThreadFunction(void* paramsP)
     free(paramsP);  // Coverity complains that paramsP allocated in "provisioning" is not freed. It is done here.
 
     LOGD("<<provisioningThreadFunction");
+#ifdef WIN32
+	ExitThread(NULL);
+#else
     pthread_exit(NULL);
+#endif	
     return NULL; // this is required by some compilers with some settings in order to avoid errors.
 }
 
 rootpaerror_t provision(mcSpid_t spid, CallbackFunctionP callbackP, SystemInfoCallbackFunctionP systemInfoCallbackP, trustletInstallationData_t* tltDataP, initialRel_t initialRel)
 {
+    provisioningparams_t* paramsP;
+    rootpaerror_t ret;
+#ifdef WIN32
+    HANDLE provisioningThread;
+    DWORD threadID;
+#endif
     LOGD(">>provision %ld %ld", (long int) callbackP, (long int) dummyCallback);
 
     if(NULL==callbackP) callbackP=dummyCallback;
     if(NULL==systemInfoCallbackP) systemInfoCallbackP=dummySysInfoCallback;
 
-    provisioningparams_t* paramsP=malloc(sizeof(provisioningparams_t));
+    paramsP=(provisioningparams_t*)malloc(sizeof(provisioningparams_t));
     if(!paramsP) return ROOTPA_ERROR_OUT_OF_MEMORY;
     
     memset(paramsP,0,sizeof(provisioningparams_t)); // initialize in order to satisfy valgrind
@@ -425,8 +444,8 @@ rootpaerror_t provision(mcSpid_t spid, CallbackFunctionP callbackP, SystemInfoCa
     paramsP->spid=spid;
     if(tltDataP)
     {
-        // Coverity complains that paramsP allocated here is not freed. It is done in "provisioningThreadFunction"
-        paramsP->tltInstallationDataP=malloc(sizeof(trustletInstallationData_t));
+		// Coverity complains that paramsP allocated here is not freed. It is done in "provisioningThreadFunction"
+        paramsP->tltInstallationDataP=(trustletInstallationData_t*)malloc(sizeof(trustletInstallationData_t));
         if(!paramsP->tltInstallationDataP)
         {
             free(paramsP);
@@ -440,7 +459,7 @@ rootpaerror_t provision(mcSpid_t spid, CallbackFunctionP callbackP, SystemInfoCa
 
     // malloc and copy data from/to the pointers
         
-        paramsP->tltInstallationDataP->dataP=malloc(tltDataP->dataLength);
+        paramsP->tltInstallationDataP->dataP=(const uint8_t *)malloc(tltDataP->dataLength);
         if(!paramsP->tltInstallationDataP->dataP)
         {
             free(paramsP->tltInstallationDataP);
@@ -450,7 +469,7 @@ rootpaerror_t provision(mcSpid_t spid, CallbackFunctionP callbackP, SystemInfoCa
         memset((char*)paramsP->tltInstallationDataP->dataP,0,tltDataP->dataLength); // initialize in order to satisfy valgrind
         memcpy((char*)paramsP->tltInstallationDataP->dataP, tltDataP->dataP, tltDataP->dataLength);
 
-        paramsP->tltInstallationDataP->tltPukHashP=malloc(tltDataP->tltPukHashLength);
+        paramsP->tltInstallationDataP->tltPukHashP=(const uint8_t *)malloc(tltDataP->tltPukHashLength);
         if(!paramsP->tltInstallationDataP->tltPukHashP)
         {
             free((void*) paramsP->tltInstallationDataP->dataP);
@@ -468,12 +487,21 @@ rootpaerror_t provision(mcSpid_t spid, CallbackFunctionP callbackP, SystemInfoCa
 
 	paramsP->initialRel = initialRel;
     
-    rootpaerror_t ret=ROOTPA_OK;
+    ret=ROOTPA_OK;
     ret=getSuid(&paramsP->suid);
 
     if(ROOTPA_OK==ret)
     {
 
+#ifdef WIN32
+        provisioningThread = CreateThread( NULL, 0, (LPTHREAD_START_ROUTINE)provisioningThreadFunction, (void*) paramsP, 0, &threadID);
+
+        if (provisioningThread == NULL)
+        {
+            LOGE("unable to create thread");
+            ret=ROOTPA_ERROR_INTERNAL;
+        }
+#else
         pthread_t provisioningThread;
         pthread_attr_t attributes;
         int r=0;
@@ -500,6 +528,7 @@ rootpaerror_t provision(mcSpid_t spid, CallbackFunctionP callbackP, SystemInfoCa
             }
             pthread_attr_destroy(&attributes);
         }
+#endif
     }
     else
     {
@@ -536,9 +565,8 @@ void setPaths(const char* storageDirP, const char* certDirP)
 
 rootpaerror_t unregisterRootContainer(CallbackFunctionP callbackP, SystemInfoCallbackFunctionP systemInfoCallbackP)
 {
-    LOGD("unregisterRootContainer");
-
 	mcSpid_t spid;
+    LOGD("unregisterRootContainer");
 	memset(&spid, 0x0, sizeof(mcSpid_t));
 	return provision(spid, callbackP, systemInfoCallbackP, NULL, initialRel_DELETE);
 }
