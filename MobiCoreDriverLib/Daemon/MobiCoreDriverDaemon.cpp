@@ -1374,26 +1374,13 @@ int main(int argc, char *args[])
 
         /* ignore terminal has been closed signal */
         signal(SIGHUP, SIG_IGN);
-
-        int i = fork();
-        if (i < 0) {
-            exit(1);
-        }
-        // Parent
-        else if (i > 0) {
-            exit(0);
+        
+         /* become a daemon */
+        if (daemon(0, 0) < 0) {
+            fprintf(stderr, "Fork failed, exiting.\n");
+            return 1;
         }
 
-        // obtain a new process group */
-        setsid();
-        /* close all descriptors */
-        for (i = getdtablesize(); i >= 0; --i) {
-            close(i);
-        }
-        // STDIN, STDOUT and STDERR should all point to /dev/null */
-        i = open("/dev/null", O_RDWR);
-        dup(i);
-        dup(i);
         /* ignore tty signals */
         signal(SIGTSTP, SIG_IGN);
         signal(SIGTTOU, SIG_IGN);
