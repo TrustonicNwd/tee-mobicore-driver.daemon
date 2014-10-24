@@ -48,11 +48,6 @@
 #define MC_SERVICE_HEADER_FLAGS_NO_CONTROL_INTERFACE    (1U << 1) /**< Service has no WSM control interface. */
 #define MC_SERVICE_HEADER_FLAGS_DEBUGGABLE              (1U << 2) /**< Service can be debugged. */
 
-#if !defined(ADDR_T_DEFINED)
-#define ADDR_T_DEFINED
-typedef void*    addr_t;                /**< an address, can be physical or virtual */
-#endif // !defined(ADDR_T_DEFINED)
-
 /** Service type.
  * The service type defines the type of executable.
  */
@@ -61,7 +56,6 @@ typedef enum {
     SERVICE_TYPE_DRIVER     = 1,        /**< Service is a driver. */
     SERVICE_TYPE_SP_TRUSTLET   = 2,     /**< Service is a Trustlet. */
     SERVICE_TYPE_SYSTEM_TRUSTLET = 3,   /**< Service is a system Trustlet. */
-//    SERVICE_TYPE_SP_TA = 4,             /**< Service is a Trusted Application for t-base 300. */
 } serviceType_t;
 
 /**
@@ -77,7 +71,7 @@ typedef enum {
  * Descriptor for a memory segment.
  */
 typedef struct {
-    addr_t      start;  /**< Virtual start address. */
+    uint32_t    start;  /**< Virtual start address. */
     uint32_t    len;    /**< Length of the segment in bytes. */
 } segmentDescriptor_t, *segmentDescriptor_ptr;
 
@@ -123,7 +117,7 @@ typedef struct {
     segmentDescriptor_t     text;           /**< Virtual text segment. */
     segmentDescriptor_t     data;           /**< Virtual data segment. */
     uint32_t                bssLen;         /**< Length of the BSS segment in bytes. MUST be at least 8 byte. */
-    addr_t                  entry;          /**< Virtual start address of service code. */
+    uint32_t                entry;          /**< Virtual start address of service code. */
     uint32_t                serviceVersion; /**< Version of the interface the driver exports. */
 
 // These should be put on next MCLF update:
@@ -164,16 +158,16 @@ typedef struct {
 typedef struct {
     uint32_t                version;        /**< Version of the TextHeader structure. */
     uint32_t                textHeaderLen;  /**< Size of this structure (fixed at compile time) */
-    uint32_t                requiredFeat;   /**< Flags to indicate features that Mobicore must understand/interprete when loading.
+    uint32_t                requiredFeat;   /**< Flags to indicate features that Mobicore must understand/interpret when loading.
                                                  Initial value set at compile time.
                                                  Required always. */
-    addr_t                  mcLibEntry;     /**< Address for McLib entry.
+    uint32_t                mcLibEntry;     /**< Address for McLib entry.
                                                  Mobicore sets at load time for trustlets / drivers.
                                                  Required always. */
     segmentDescriptor_t     mcLibData;      /**< Segment for McLib data.
                                                  Set at compile time.
                                                  Required always. */
-    addr_t                  mcLibBase;      /**< McLib base address.
+    uint32_t                mcLibBase;      /**< McLib base address.
                                                  Mobicore sets at load time for trustlets / drivers.
                                                  Required always. */
     uint32_t                tlApiVers;      /**< TlApi version used when building trustlet.
@@ -182,7 +176,7 @@ typedef struct {
     uint32_t                drApiVers;      /**< DrApi version used when building trustlet.
                                                  Value set at compile time for drivers. 0 for trustlets.
                                                  Required always. */
-    addr_t                  ta_properties;  /**< address of _TA_Properties in the TA. */
+    uint32_t                ta_properties;  /**< address of _TA_Properties in the TA. */
 } mclfTextHeader_t, *mclfTextHeader_ptr;
 
 // Version 2 ///////////////////////////////////////////////////////////////////////////////////////////////////
