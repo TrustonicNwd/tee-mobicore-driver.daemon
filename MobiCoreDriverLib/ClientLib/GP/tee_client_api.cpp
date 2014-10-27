@@ -234,7 +234,7 @@ static TEEC_Result _TEEC_SetupOperation(
     }
 
     //Copy version indicator field
-    strcpy(tci->header, "TCIGP000");
+    memcpy(tci->header, "TCIGP000", sizeof(tci->header));
 
     // Fill in invalid values for secure world to overwrite
     tci->returnStatus = 0;
