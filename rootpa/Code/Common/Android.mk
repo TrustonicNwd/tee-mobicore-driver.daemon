@@ -49,16 +49,18 @@ ifeq ($(DEBUG), 1)
     LOCAL_CFLAGS += -D__DEBUG=1
 endif    
 
-LOCAL_SRC_FILES += ../../../../Common/commandhandler.c
-LOCAL_SRC_FILES += ../../../../Common/pacmp3.c
-LOCAL_SRC_FILES += ../../../../Common/pacmtl.c
-LOCAL_SRC_FILES += ../../../../Common/trustletchannel.c
-LOCAL_SRC_FILES += ../../../../Common/registry.c
-LOCAL_SRC_FILES += ../../../../Common/seclient.c
-LOCAL_SRC_FILES += ../../../../Common/base64.c
-LOCAL_SRC_FILES += ../../../../Common/xmlmessagehandler.c
-LOCAL_SRC_FILES += ../../../../Common/provisioningengine.c
-LOCAL_SRC_FILES += ../../../../Common/contentmanager.c
+
+LOCAL_SRC_FILES += pacmp3.c
+LOCAL_SRC_FILES += pacmtl.c
+LOCAL_SRC_FILES += trustletchannel.c
+LOCAL_SRC_FILES += registry.c
+LOCAL_SRC_FILES += seclient.c
+LOCAL_SRC_FILES += base64.c
+LOCAL_SRC_FILES += xmlmessagehandler.c
+LOCAL_SRC_FILES += provisioningengine.c
+LOCAL_SRC_FILES += contentmanager.c
+LOCAL_SRC_FILES += commandhandler.c
+
 
 LOCAL_C_INCLUDES +=  $(MOBICORE_DIR_INC)
 LOCAL_C_INCLUDES +=  $(MOBICORE_DIR_INC)/TlCm
@@ -66,9 +68,10 @@ LOCAL_C_INCLUDES +=  $(MOBICOREDRIVER_DIR_INC)
 LOCAL_C_INCLUDES +=  $(MOBICOREDRIVER_DIR_INC2)
 LOCAL_C_INCLUDES +=  external/curl/include
 LOCAL_C_INCLUDES +=  external/libxml2/include
+LOCAL_C_INCLUDES +=  external/icu/icu4c/source/common
 LOCAL_C_INCLUDES +=  external/icu4c/common
-LOCAL_C_INCLUDES +=  $(LOCAL_PATH)/../../../../Common
-LOCAL_C_INCLUDES +=  $(LOCAL_PATH)/../../../../Common/include
+LOCAL_C_INCLUDES +=  .
+LOCAL_C_INCLUDES +=  $(LOCAL_PATH)/include
 
 ifeq ($(ROOTPA_MODULE_TEST), 1)
     LOCAL_STATIC_LIBRARIES +=  McStub
@@ -78,5 +81,8 @@ else
 endif
 
 LOCAL_MODULE_TAGS := debug eng optional
+
+LOCAL_32_BIT_ONLY := true
+LOCAL_STATIC_LIBRARIES += libxml2
 
 include $(BUILD_STATIC_LIBRARY)
