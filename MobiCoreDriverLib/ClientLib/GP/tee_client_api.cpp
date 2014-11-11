@@ -230,7 +230,7 @@ static TEEC_Result _TEEC_SetupOperation(
             uint32_t retOrigIgnored;
             _TEEC_UnwindOperation(tci, handle, operation, false, &retOrigIgnored);
             //Zeroing out tci->operation
-            memset(&tci->operation, 0, sizeof(TEEC_Operation));
+            memset(&tci->operation, 0, sizeof(tci->operation));
             if (teecResult != TEEC_SUCCESS) return teecResult;
             return TEEC_ERROR_GENERIC;
         }

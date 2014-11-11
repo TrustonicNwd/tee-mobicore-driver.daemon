@@ -138,6 +138,8 @@ typedef uint32_t mcResult_t;
 #define MC_DRV_ERR_TA_ATTESTATION_ERROR             0x00000022 /**< TA blob attestation is incorrect. */
 #endif /* TBASE_API_LEVEL */
 
+#define MC_DRV_ERR_INTERRUPTED_BY_SIGNAL            0x00000023 /**< Interrupted system call. */
+
 #define MAKE_MC_DRV_MCP_ERROR(mcpCode)              (MC_DRV_ERR_MCP_ERROR | ((mcpCode&0x000FFFFF)<<8))
 #define MAKE_MC_DRV_KMOD_WITH_ERRNO(theErrno)       (MC_DRV_ERR_KERNEL_MODULE| (((theErrno)&0x0000FFFF)<<16))
 
@@ -169,6 +171,7 @@ typedef struct {
 
 #define MC_DEVICE_ID_DEFAULT       0 /**< The default device ID */
 #define MC_INFINITE_TIMEOUT        ((int32_t)(-1)) /**< Wait infinite for a response of the MC. */
+#define MC_INFINITE_TIMEOUT_INTERRUPTIBLE ((int32_t)(-2)) /**< Wait infinite for a response of the MC, exit on signal. */
 #define MC_NO_TIMEOUT              0   /**< Do not wait for a response of the MC. */
 #define MC_MAX_TCI_LEN             0x100000 /**< TCI/DCI must not exceed 1MiB */
 
@@ -321,7 +324,7 @@ __MC_CLIENT_LIB_API mcResult_t mcNotify(
  * Caller has to trust the other side to send a notification to wake him up again.
  *
  * @param [in] session The session the notification should correspond to.
- * @param [in] timeout Time in milliseconds to wait (MC_NO_TIMEOUT : direct return, > 0 : milliseconds, MC_INFINITE_TIMEOUT : wait infinitely)
+ * @param [in] timeout Time in milliseconds to wait (MC_NO_TIMEOUT : direct return, > 0 : milliseconds, MC_INFINITE_TIMEOUT : wait indefinitely, MC_INFINITE_TIMEOUT_INTERRUPTIBLE : wait indefinitely except if signal received)
  *
  * @return MC_DRV_OK if notification is available.
  * @return MC_DRV_ERR_TIMEOUT if no notification arrived in time.

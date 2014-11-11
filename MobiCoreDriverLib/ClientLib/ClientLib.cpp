@@ -38,6 +38,7 @@
 #ifndef WIN32
 #include <stdbool.h>
 #include <list>
+#include <errno.h>
 #include "assert.h"
 #endif
 
@@ -1024,6 +1025,15 @@ __MC_CLIENT_LIB_API mcResult_t mcWaitNotification(
                                   &notification,
                                   sizeof(notification_t),
                                   timeout);
+            // Check for interrupted system call and loop, but only if timeout is infinite
+            if ((numRead == -1) && (errno == EINTR)) {
+                if (timeout == MC_INFINITE_TIMEOUT) {
+                    continue;
+                } else if (timeout == MC_INFINITE_TIMEOUT_INTERRUPTIBLE) {
+                    mcResult = MC_DRV_ERR_INTERRUPTED_BY_SIGNAL;
+                    break;
+                }
+            }
             //Exit on timeout in first run
             //Later runs have timeout set to 0. -2 means, there is no more data.
             if (count == 0 && numRead == -2 ) {
