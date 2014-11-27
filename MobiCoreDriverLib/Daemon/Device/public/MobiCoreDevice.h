@@ -165,6 +165,8 @@ public:
             MC_DRV_CMD_NQ_CONNECT_struct  *cmdNqConnect);
 
 
+    void freeSession(TrustletSession *session);
+
     mcResult_t closeSession(Connection *deviceConnection, uint32_t sessionId);
 
     virtual mcResult_t notify(Connection *deviceConnection, uint32_t  sessionId);

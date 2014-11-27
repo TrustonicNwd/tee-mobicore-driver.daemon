@@ -623,31 +623,32 @@ void TrustZoneDevice::handleTaExit(void)
 
         // Check all sessions
         // Socket server might have closed already and removed the session we were waken up for
-        for (trustletSessionIterator_t iterator = trustletSessions.begin();
-                iterator != trustletSessions.end();
-                )
-        {
-            TrustletSession *ts = *iterator;
-
-            if (ts->sessionState == TrustletSession::TS_TA_DEAD) {
-                LOG_I("Cleaning up session %03x", ts->sessionId);
-
-                // Tell t-base to close the session
-                mcResult_t mcRet = closeSessionInternal(ts);
-
-                // If ok, remove objects
-                if (mcRet == MC_DRV_OK) {
-                    mutex_tslist.lock();
-                    iterator = trustletSessions.erase(iterator);
-                    LOG_I("TA session %03x finally closed", ts->sessionId);
-                    delete ts;
-                    mutex_tslist.unlock();
-                    continue;
-                } else {
-                    LOG_I("TA session %03x could not be closed yet.", ts->sessionId);
+        for (;;) {
+            mutex_tslist.lock();
+            TrustletSession* ts = NULL;
+            for (trustletSessionList_t::iterator it = trustletSessions.begin(); it != trustletSessions.end(); it++) {
+                if ((*it)->sessionState == TrustletSession::TS_TA_DEAD) {
+                    ts = *it;
+                    break;
                 }
             }
-            ++iterator;
+            mutex_tslist.unlock();
+            if (!ts) {
+                break;
+            }
+#ifndef NDEBUG
+            uint32_t sessionId = ts->sessionId;
+#endif
+            LOG_I("Cleaning up session %03x", sessionId);
+            // Tell t-base to close the session (list gets locked in handleIrq() when MCP replies)
+            mcResult_t mcRet = closeSessionInternal(ts);
+            // If ok, remove objects
+            if (mcRet == MC_DRV_OK) {
+                freeSession(ts);
+                LOG_I("TA session %03x finally closed", sessionId);
+            } else {
+                LOG_I("TA session %03x could not be closed yet.", sessionId);
+            }
         }
         mutex_mcp.unlock();
     }

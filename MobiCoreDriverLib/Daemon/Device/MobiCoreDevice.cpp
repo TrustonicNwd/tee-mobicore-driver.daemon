@@ -274,7 +274,7 @@ void MobiCoreDevice::close(
 
     // After the trustlet is done make sure to tell the driver to cleanup
     // all the orphaned drivers
-    cleanupWsmL2();
+    //cleanupWsmL2();
 
 
 
@@ -701,7 +701,15 @@ mcResult_t MobiCoreDevice::closeSession(
         return MAKE_MC_DRV_MCP_ERROR(mcRet);
     }
 
+    freeSession(session);
 
+    return MC_MCP_RET_OK;
+}
+
+
+void MobiCoreDevice::freeSession(
+        TrustletSession *session
+) {
     // clean session WSM
     LOG_I("unlocking session buffers!");
     CWsm_ptr pWsm = session->popBulkBuff();
@@ -712,22 +720,11 @@ mcResult_t MobiCoreDevice::closeSession(
         pWsm = session->popBulkBuff();
     }
 
-    // remove sesson from list.
+    // remove session from list.
     mutex_tslist.lock();
-    for (trustletSessionIterator_t iterator = trustletSessions.begin();
-         iterator != trustletSessions.end();
-         ++iterator)
-    {
-        if (session == *iterator)
-        {
-            trustletSessions.erase(iterator);
-            delete session;
-            break;
-        }
-    }
+    trustletSessions.remove(session);
     mutex_tslist.unlock();
-
-    return MC_MCP_RET_OK;
+    delete session;
 }
 
 
