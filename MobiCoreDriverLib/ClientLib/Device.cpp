@@ -51,6 +51,7 @@ Device::Device(uint32_t deviceId, Connection *connection)
 {
     this->deviceId = deviceId;
     this->connection = connection;
+    this->openCount = 0;
 
     pMcKMod = new CMcKMod();
 }
@@ -158,7 +159,6 @@ mcResult_t Device::allocateContiguousWsm(uint32_t len, CWsm **wsm)
     // Allocate shared memory
     addr_t    virtAddr;
     uint32_t  handle;
-    uint64_t    physAddr;
     mcResult_t  ret;
 
     assert(wsm != NULL);
@@ -167,15 +167,15 @@ mcResult_t Device::allocateContiguousWsm(uint32_t len, CWsm **wsm)
         return MC_DRV_ERR_INVALID_LENGTH;
     }
 
-    ret = pMcKMod->mapWsm(len, &handle, &virtAddr, &physAddr);
+    ret = pMcKMod->mapWsm(len, &handle, &virtAddr);
     if (ret) {
         return ret;
     }
 
-    LOG_I(" mapped handle %d to %p, phys=%#llx  ", handle, virtAddr, physAddr);
+    LOG_I(" mapped handle %d to %p", handle, virtAddr);
 
     // Register (vaddr,paddr) with device
-    *wsm = new CWsm(virtAddr, len, handle, physAddr);
+    *wsm = new CWsm(virtAddr, len, handle, 0);
 
     wsmL2List.push_back(*wsm);
 

@@ -59,6 +59,7 @@ public:
     uint32_t     deviceId; /**< Device identifier */
     Connection   *connection; /**< The device connection */
     CMcKMod_ptr  pMcKMod;
+    uint32_t     openCount;
 
     Device(
         uint32_t    deviceId,

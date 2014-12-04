@@ -30,7 +30,6 @@ MC_INCLUDE_DIR := $(COMP_PATH_MobiCore)/inc \
 MC_DEBUG := _DEBUG
 SYSTEM_LIB_DIR=/system/lib
 
-
 MOBICORE_DIR_INC := $(MC_INCLUDE_DIR)
 include $(MOBICORE_PROJECT_PATH)/rootpa/Code/Android/app/jni/Android.mk
 include $(MOBICORE_PROJECT_PATH)/rootpa/Code/Android/lib/Android.mk

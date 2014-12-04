@@ -1,17 +1,15 @@
 /*
- * The MobiCore Driver Kernel Module is a Linux device driver, which represents
+ * The <t-base Driver Kernel Module is a Linux device driver, which represents
  * the command proxy on the lowest layer to the secure world (Swd). Additional
  * services like memory allocation via mmap and generation of a MMU tables for
  * given virtual memory are also supported. IRQ functionality receives
  * information from the SWd in the non secure world (NWd).
- * As customary the driver is handled as linux device driver with "open",
+ * As customary the driver is handled as Linux device driver with "open",
  * "close" and "ioctl" commands. Access to the driver is possible after the
- * device "/dev/mobicore" has been opened.
- * The MobiCore Driver Kernel Module must be installed via
- * "insmod mcDrvModule.ko".
+ * devices "/dev/mobicore" and "/dev/mobicore-user" have been created.
  *
  * <-- Copyright Giesecke & Devrient GmbH 2010-2012 -->
- * <-- Copyright Trustonic Limited 2013 -->
+ * <-- Copyright Trustonic Limited 2013-2014 -->
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -86,7 +84,7 @@ struct mc_ioctl_map {
 	size_t		len;	/* Buffer length */
 	uint32_t	handle;	/* WSM handle */
 	uint64_t	phys_addr; /* physical address of WSM (or 0) */
-	unsigned long	addr;	/* Virtual address */
+	unsigned long	rfu;
 	bool		reused;	/* if WSM memory was reused, or new allocated */
 };
 

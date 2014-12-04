@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,9 +41,6 @@
 // Macros
 #define _TEEC_GET_PARAM_TYPE(t, i) (((t) >> (4*i)) & 0xF)
 
-// Max. session number
-#define _TEEC_SESSION_NUMBER        50
-
 //Parameter number
 #define _TEEC_PARAMETER_NUMBER      4
 
@@ -67,11 +64,6 @@ static TEEC_Result _TEEC_SetupOperation(
     mcSessionHandle_t   *handle,
     TEEC_Operation      *operation,
     uint32_t            *returnOrigin);
-
-static TEEC_Result _TEEC_CallTA(
-    TEEC_Session    *session,
-    TEEC_Operation  *operation,
-    uint32_t        *returnOrigin);
 
 //------------------------------------------------------------------------------
 static void _libUuidToArray(
@@ -112,25 +104,29 @@ static TEEC_Result _TEEC_SetupOperation(
     mcResult_t                  mcRet = MC_DRV_OK;
     TEEC_Result                 teecResult = TEEC_SUCCESS;
 
-    //operation can be NULL
-    tci->operation.isCancelled = false;
-    if (operation != NULL) {
-        LOG_I(" %s()", __func__);
+    LOG_I(" %s()", __func__);
 
-        tci->operation.paramTypes = operation->paramTypes;
+    tci->operation.isCancelled = false;
+    tci->operation.paramTypes = 0;
+
+    //operation can be NULL
+    if (operation != NULL) {
+
         operation->started = 1;
 
-        //TODO: This design allows a non-NULL buffer with a size of 0 bytes to allow trivial integration with any
+        //This design allows a non-NULL buffer with a size of 0 bytes to allow trivial integration with any
         //implementations of the C library malloc, in which is valid to allocate a zero byte buffer and receive a non-
         //NULL pointer which may not be de-referenced in return.
 
-
         for (i = 0; i < _TEEC_PARAMETER_NUMBER; i++) {
+            uint8_t paramType = _TEEC_GET_PARAM_TYPE(operation->paramTypes, i);
+
             imp = &tci->operation.params[i];
             ext = &operation->params[i];
 
-            switch (_TEEC_GET_PARAM_TYPE(operation->paramTypes, i)) {
+            switch (paramType) {
             case TEEC_VALUE_OUTPUT:
+                LOG_I("  cycle %d, TEEC_VALUE_OUTPUT", i);
                 break;
             case TEEC_NONE:
                 LOG_I("  cycle %d, TEEC_NONE", i);
@@ -172,6 +168,9 @@ static TEEC_Result _TEEC_SetupOperation(
                         i = _TEEC_PARAMETER_NUMBER;
                     }
                 }
+                /* We don't transmit that the mem ref is the whole shared mem */
+                /* Magic number 4 means that it is a mem ref */
+                paramType = ext->memref.parent->flags | 4;
                 break;
             }
             case TEEC_MEMREF_PARTIAL_INPUT:
@@ -180,15 +179,17 @@ static TEEC_Result _TEEC_SetupOperation(
                 LOG_I("  cycle %d, TEEC_PARTIAL_IN*", i);
                 //Check data flow consistency
                 if ((((ext->memref.parent->flags & (TEEC_MEM_INPUT | TEEC_MEM_OUTPUT)) == TEEC_MEM_INPUT) &&
-                        (_TEEC_GET_PARAM_TYPE(operation->paramTypes, i) == TEEC_MEMREF_PARTIAL_OUTPUT)) ||
+                        (paramType == TEEC_MEMREF_PARTIAL_OUTPUT)) ||
                         (((ext->memref.parent->flags & (TEEC_MEM_INPUT | TEEC_MEM_OUTPUT)) == TEEC_MEM_OUTPUT) &&
-                         (_TEEC_GET_PARAM_TYPE(operation->paramTypes, i) == TEEC_MEMREF_PARTIAL_INPUT))) {
+                         (paramType == TEEC_MEMREF_PARTIAL_INPUT))) {
                     LOG_E("PARTIAL data flow inconsistency");
                     *returnOrigin = TEEC_ORIGIN_API;
                     teecResult = TEEC_ERROR_BAD_PARAMETERS;
                     i = _TEEC_PARAMETER_NUMBER;
                     break;
                 }
+                /* We don't transmit that the mem ref is partial */
+                paramType &= TEEC_MEMREF_TEMP_INOUT;
 
                 if (ext->memref.offset + ext->memref.size > ext->memref.parent->size) {
                     LOG_E("PARTIAL offset/size error");
@@ -215,6 +216,7 @@ static TEEC_Result _TEEC_SetupOperation(
                 i = _TEEC_PARAMETER_NUMBER;
                 break;
             }
+            tci->operation.paramTypes |= (paramType<<i*4);
         }
 
         if (tci->operation.isCancelled) {
@@ -237,7 +239,6 @@ static TEEC_Result _TEEC_SetupOperation(
     memcpy(tci->header, "TCIGP000", sizeof(tci->header));
 
     // Fill in invalid values for secure world to overwrite
-    tci->returnStatus = 0;
     tci->returnStatus = TEEC_ERROR_BAD_STATE;
 
     // Signal completion of request writing
@@ -257,8 +258,6 @@ static TEEC_Result _TEEC_UnwindOperation(
     uint32_t                    i;
     _TEEC_ParameterInternal     *imp;
     TEEC_Parameter              *ext;
-    //mcResult_t                  mcRet = MC_DRV_OK;
-    //bool                        doUnmap = false;
     uint8_t                     *buffer;
 
     //operation can be NULL
@@ -291,7 +290,7 @@ static TEEC_Result _TEEC_UnwindOperation(
             break;
         case TEEC_VALUE_OUTPUT:
         case TEEC_VALUE_INOUT: {
-            LOG_I("  cycle %d, TEEC_VALUE_OUT*", i);
+            LOG_I("  cycle %d, TEEC_VALUE_*OUT", i);
             if (copyValues) {
                 ext->value.a = imp->value.a;
                 ext->value.b = imp->value.b;
@@ -305,14 +304,14 @@ static TEEC_Result _TEEC_UnwindOperation(
             if ((copyValues) && (_TEEC_GET_PARAM_TYPE(operation->paramTypes, i) != TEEC_MEMREF_TEMP_INPUT)) {
                 ext->tmpref.size = imp->memref.outputSize;
             }
-            //doUnmap = true;
             buffer = (uint8_t *)ext->tmpref.buffer;
             break;
         }
         case TEEC_MEMREF_WHOLE: {
             LOG_I("  cycle %d, TEEC_MEMREF_WHOLE", i);
-            if (copyValues) ext->memref.size = imp->memref.outputSize;
-            //doUnmap = true;
+            if ((copyValues) && (ext->memref.parent->flags != TEEC_MEM_INPUT)) {
+                ext->memref.size = imp->memref.outputSize;
+            }
             buffer = (uint8_t *)ext->memref.parent->buffer;
             break;
         }
@@ -356,8 +355,6 @@ TEEC_Result TEEC_InitializeContext(
     switch (mcOpenDevice(MC_DEVICE_ID_DEFAULT)) {
     case MC_DRV_OK:
         return TEEC_SUCCESS;
-    case MC_DRV_ERR_INVALID_OPERATION:
-        return TEEC_ERROR_BAD_STATE;
     case MC_DRV_ERR_DAEMON_UNREACHABLE:
         return TEEC_ERROR_COMMUNICATION;
     case MC_DRV_ERR_UNKNOWN_DEVICE:
@@ -429,12 +426,10 @@ static TEEC_Result _TEEC_CallTA(
     // Wait for the Trusted App response
     mcRet = mcWaitNotification(&session->imp.handle, MC_INFINITE_TIMEOUT);
     if (mcRet != MC_DRV_OK) {
-        LOG_E("mcWaitNotification failed (%08x)", mcRet);
         teecError = TEEC_ERROR_COMMUNICATION;
         if (mcRet == MC_DRV_INFO_NOTIFICATION) {
             int32_t lastErr;
             mcGetSessionErrorCode(&session->imp.handle, &lastErr);
-            LOG_E("mcGetSessionErrorCode returned %d", lastErr);
             if (lastErr == TA_EXIT_CODE_FINISHED) {
                 // We may get here if the TA_OpenSessionEntryPoint returns an error and TA goes fast through DestroyEntryPoint and exits the TA.
                 teecError = TEEC_SUCCESS;
@@ -443,6 +438,9 @@ static TEEC_Result _TEEC_CallTA(
 
                 *returnOrigin = TEEC_ORIGIN_TEE;
                 teecError = TEEC_ERROR_TARGET_DEAD;
+            } else {
+                LOG_E("mcWaitNotification failed (%08x)", mcRet);
+                LOG_E("mcGetSessionErrorCode returned %d", lastErr);
             }
         }
     }
@@ -533,7 +531,7 @@ TEEC_Result TEEC_OpenSession (
     session->imp.tci = NULL;
     void *bulkBuf = (void *)mmap(0, sysconf(_SC_PAGESIZE), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (bulkBuf == MAP_FAILED) {
-        LOG_E("mmap filed on tci buffer allocation");
+        LOG_E("mmap failed on tci buffer allocation");
         if (returnOrigin != NULL) *returnOrigin = TEEC_ORIGIN_API;
         return TEEC_ERROR_OUT_OF_MEMORY;
     }
@@ -555,7 +553,7 @@ TEEC_Result TEEC_OpenSession (
                 (uint8_t *)session->imp.tci,
                 sizeof(_TEEC_TCI));
     if (mcRet != MC_DRV_OK) {
-        LOG_E("mcOpenTrustlet failed (%08x)", mcRet);
+        LOG_E("mcOpenGPTA failed (%08x)", mcRet);
         if (returnOrigin != NULL) *returnOrigin = TEEC_ORIGIN_COMMS;
         if (mcRet == MC_DRV_ERR_TRUSTED_APPLICATION_NOT_FOUND) {
             teecRes = TEEC_ERROR_ITEM_NOT_FOUND;
@@ -737,6 +735,14 @@ TEEC_Result TEEC_RegisterSharedMemory(
         LOG_E("sharedMem->buffer is NULL");
         return TEEC_ERROR_BAD_PARAMETERS;
     }
+    if ((sharedMem->flags & ~(TEEC_MEM_INPUT | TEEC_MEM_OUTPUT)) != 0) {
+        LOG_E("sharedMem->flags is incorrect");
+        return TEEC_ERROR_BAD_PARAMETERS;
+    }
+    if (sharedMem->flags == 0) {
+        LOG_E("sharedMem->flags is incorrect");
+        return TEEC_ERROR_BAD_PARAMETERS;
+    }
 
     sharedMem->imp.implementation_allocated = false;
     return TEEC_SUCCESS;
@@ -759,6 +765,14 @@ TEEC_Result TEEC_AllocateSharedMemory(
     //the memory region to register.
     if (sharedMem == NULL) {
         LOG_E("sharedMem is NULL");
+        return TEEC_ERROR_BAD_PARAMETERS;
+    }
+    if ((sharedMem->flags & ~(TEEC_MEM_INPUT | TEEC_MEM_OUTPUT)) != 0) {
+        LOG_E("sharedMem->flags is incorrect");
+        return TEEC_ERROR_BAD_PARAMETERS;
+    }
+    if (sharedMem->flags == 0) {
+        LOG_E("sharedMem->flags is incorrect");
         return TEEC_ERROR_BAD_PARAMETERS;
     }
 

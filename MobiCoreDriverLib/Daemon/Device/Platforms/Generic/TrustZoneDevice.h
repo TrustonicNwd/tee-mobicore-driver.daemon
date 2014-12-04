@@ -47,7 +47,6 @@
 #include "CMcKMod.h"
 #include "CWsm.h"
 
-#include "ExcDevice.h"
 #include "MobiCoreDevice.h"
 
 

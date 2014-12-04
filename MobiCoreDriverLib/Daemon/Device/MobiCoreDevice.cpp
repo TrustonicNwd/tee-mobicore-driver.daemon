@@ -41,7 +41,6 @@
 
 #include "DeviceScheduler.h"
 #include "DeviceIrqHandler.h"
-#include "ExcDevice.h"
 #include "Connection.h"
 #include "TrustletSession.h"
 
@@ -191,11 +190,16 @@ mcResult_t MobiCoreDevice::closeSessionInternal(
     LOG_I("closing session with id=%d", session->sessionId);
 
     mcResult_t mcRet = sendSessionCloseCmd(session->sessionId);
-    if (mcRet != MC_MCP_RET_OK) {
-        LOG_E("sendSessionCloseCmd error %d", mcRet);
-        return MAKE_MC_DRV_MCP_ERROR(mcRet);
-    }
-
+    switch(mcRet){
+        case MC_MCP_RET_OK:
+            return mcRet;
+        case MC_MCP_RET_ERR_CLOSE_TASK_FAILED:
+            LOG_I("sendSessionCloseCmd failed");
+        break;
+        default:
+            LOG_E("sendSessionCloseCmd error %d", mcRet);
+        break;
+    }        
 //    // clean session WSM
 //    LOG_I("unlocking session buffers!");
 //    CWsm_ptr pWsm = session->popBulkBuff();
@@ -206,7 +210,7 @@ mcResult_t MobiCoreDevice::closeSessionInternal(
 //        pWsm = session->popBulkBuff();
 //    }
 
-    return MC_DRV_OK;
+    return MAKE_MC_DRV_MCP_ERROR(mcRet);
 }
 
 //------------------------------------------------------------------------------

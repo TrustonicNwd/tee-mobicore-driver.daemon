@@ -66,10 +66,6 @@ static void checkMobiCoreVersion(MobiCoreDevice *mobiCoreDevice);
 
 #define LOG_I_RELEASE(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 
-pthread_mutex_t         syncMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t          syncCondition = PTHREAD_COND_INITIALIZER;
-bool 					Th_sync=false;
-
 //------------------------------------------------------------------------------
 MobiCoreDriverDaemon::MobiCoreDriverDaemon(
     bool enableScheduler,
@@ -156,38 +152,25 @@ void MobiCoreDriverDaemon::run(
     LOG_I("Looking for suitable tokens");
 
     mcSoAuthTokenCont_t authtoken;
-    mcSoAuthTokenCont_t authtokenbackup;
     mcSoRootCont_t rootcont;
     uint32_t sosize;
     uint8_t *p = NULL;
 
-    // Search order:  1. authtoken 2. authtoken backup 3. root container
-    sosize = 0;
     mcResult_t ret = mcRegistryReadAuthToken(&authtoken);
     if (ret != MC_DRV_OK) {
-        LOG_I("Failed to read AuthToken (ret=%u). Trying AuthToken backup", ret);
+        LOG_I("Failed to read AuthToken (ret=%u). Trying Root Container", ret);
 
-        ret = mcRegistryReadAuthTokenBackup(&authtokenbackup);
+        sosize = sizeof(rootcont);
+        ret = mcRegistryReadRoot(&rootcont, &sosize);
         if (ret != MC_DRV_OK) {
-            LOG_I("Failed to read AuthToken backup (ret=%u). Trying Root Cont", ret);
-
-            sosize = sizeof(rootcont);
-            ret = mcRegistryReadRoot(&rootcont, &sosize);
-            if (ret != MC_DRV_OK) {
-                LOG_I("Failed to read Root Cont, (ret=%u).", ret);
-                LOG_W("Device endorsements not supported!");
-                sosize = 0;
-            } else {
-                LOG_I("Found Root Cont.");
-                p = (uint8_t *) &rootcont;
-            }
-
-        } else {
-            LOG_I("Found AuthToken backup.");
-            p = (uint8_t *) &authtokenbackup;
-            sosize = sizeof(authtokenbackup);
+            LOG_I("Failed to read Root Cont, (ret=%u)", ret);
+            LOG_W("Device endorsements not supported!");
+            sosize = 0;
         }
-        
+        else {
+            LOG_I("Found Root Cont.");
+            p = (uint8_t *) &rootcont;
+        }
     } else {
         LOG_I("Found AuthToken.");
         p = (uint8_t *) &authtoken;
@@ -213,18 +196,10 @@ void MobiCoreDriverDaemon::run(
         servers[i]->start(i ? "McDaemon.Server" : "NetlinkServer");
     }
 
-    // Create the <t-base File Storage Daemon
-    FSD *FileStorageDaemon = new FSD();
-    // Start File Storage Daemon
-    FileStorageDaemon->start("McDaemon.FSD");
-
     // then wait for them to exit
     for (i = 0; i < MAX_SERVERS; i++) {
         servers[i]->join();
     }
-    //Wait for File Storage Daemon to exit
-	FileStorageDaemon->join();
-	delete FileStorageDaemon;
 }
 
 //------------------------------------------------------------------------------
@@ -1336,10 +1311,6 @@ int main(int argc, char *args[])
     // By default don't fork
     bool forkDaemon = false;
 
-    /* Initialize mutex and condition variable objects */
-    pthread_mutex_init(&syncMutex, NULL);
-    pthread_cond_init (&syncCondition, NULL);
-
     while ((c = getopt(argc, args, "r:sbhp:")) != -1) {
         switch (c) {
         case 'h': /* Help */
@@ -1374,8 +1345,8 @@ int main(int argc, char *args[])
 
         /* ignore terminal has been closed signal */
         signal(SIGHUP, SIG_IGN);
-        
-         /* become a daemon */
+
+        /* become a daemon */
         if (daemon(0, 0) < 0) {
             fprintf(stderr, "Fork failed, exiting.\n");
             return 1;
@@ -1406,9 +1377,6 @@ int main(int argc, char *args[])
     mobiCoreDriverDaemon->run();
 
     delete mobiCoreDriverDaemon;
-
-    pthread_mutex_destroy(&syncMutex);
-    pthread_cond_destroy(&syncCondition);
 
     // This should not happen
     LOG_E("Exiting <t-base Daemon");

@@ -71,12 +71,6 @@ extern "C" {
      */
     mcResult_t mcRegistryReadAuthToken(mcSoAuthTokenCont_t *so);
 
-    /** Reads an authentication token backup from registry.
-     * @param[out] so Authentication token secure object.
-     * @return MC_DRV_OK if successful, otherwise error code.
-     */
-    mcResult_t mcRegistryReadAuthTokenBackup(mcSoAuthTokenCont_t *so);
-
     /** Deletes the authentication token secure object from the registry.
      * @return MC_DRV_OK if successful, otherwise error code.
      */

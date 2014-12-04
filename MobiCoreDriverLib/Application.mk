@@ -7,7 +7,6 @@
 # Don't remove this - mandatory
 APP_PROJECT_PATH := $(abspath $(call my-dir))
 
-# The only STL implementation currently working with exceptions
 APP_STL := stlport_static
 
 # Don't optimize for better debugging

@@ -148,14 +148,6 @@ typedef uint32_t mcResult_t;
 #define MAKE_MC_DRV_MCP_ERROR(mcpCode)              (MC_DRV_ERR_MCP_ERROR | ((mcpCode&0x000FFFFF)<<8))
 #define MAKE_MC_DRV_KMOD_WITH_ERRNO(theErrno)       (MC_DRV_ERR_KERNEL_MODULE| (((theErrno)&0x0000FFFF)<<16))
 
-/**
- * Driver control command.
- */
-typedef enum {
-    MC_CTRL_DUMMY = 1 /**< Dummy. */
-} mcDriverCtrl_t;
-
-
 /** Structure of Session Handle, includes the Session ID and the Device ID the Session belongs to.
  * The session handle will be used for session-based t-base communication.
  * It will be passed to calls which address a communication end point in the t-base environment.
@@ -452,26 +444,6 @@ __MC_CLIENT_LIB_API mcResult_t mcUnmap(
     mcSessionHandle_t  *session,
     void               *buf,
     mcBulkMap_t        *mapInfo
-);
-
-
-/**
- * @attention: Not implemented.
- * Execute driver specific command.
- * mcDriverCtrl() can be used to execute driver specific commands.
- * Besides the control command MC_CTRL_GET_VERSION commands are implementation specific.
- * Please refer to the corresponding specification of the driver manufacturer.
- *
- * @param [in] param Command ID of the command to be executed.
- * @param [in, out] data  Command data and response depending on command.
- * @param [in] len Length of the data block.
- *
- * @return MC_DRV_ERR_NOT_IMPLEMENTED.
- */
-__MC_CLIENT_LIB_API mcResult_t mcDriverCtrl(
-    mcDriverCtrl_t  param,
-    uint8_t         *data,
-    uint32_t        len
 );
 
 /**

@@ -205,7 +205,8 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenDevice(uint32_t deviceId)
         Device *device = resolveDeviceId(deviceId);
         if (device != NULL) {
             LOG_E("Device %d already opened", deviceId);
-            mcResult = MC_DRV_ERR_DEVICE_ALREADY_OPEN;
+            mcResult = MC_DRV_OK;
+            device->openCount++;
             break;
         }
 
@@ -259,6 +260,7 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenDevice(uint32_t deviceId)
         }
 
         addDevice(device);
+        device->openCount++;
 
     } while (false);
 
@@ -288,10 +290,14 @@ __MC_CLIENT_LIB_API mcResult_t mcCloseDevice(
     LOG_I("===%s(%i)===", __FUNCTION__, deviceId);
     do {
         Device *device = resolveDeviceId(deviceId);
-        // CHECK_DEVICE(device);
         CHECK_DEVICE_CLOSED(device, deviceId);
 
         Connection *devCon = device->connection;
+
+        if (device->openCount != 1) {
+            device->openCount--;
+            break;
+        }
 
         // Check if daemon is still alive
         if (!devCon->isConnectionAlive()) {
@@ -923,7 +929,7 @@ __MC_CLIENT_LIB_API mcResult_t mcCloseSession(mcSessionHandle_t *session)
         }
 
         bool r = device->removeSession(session->sessionId);
-        if (!r) 
+        if (!r)
         {
             LOG_E("removeSession failed");
             assert(0);
@@ -1384,21 +1390,6 @@ __MC_CLIENT_LIB_API mcResult_t mcGetSessionErrorCode(
 
 #endif /* WIN32 */
 	return mcResult;
-}
-
-//------------------------------------------------------------------------------
-__MC_CLIENT_LIB_API mcResult_t mcDriverCtrl(
-    mcDriverCtrl_t  param,
-    uint8_t         *data,
-    uint32_t        len
-)
-{
-#ifndef WIN32
-
-    LOG_W("mcDriverCtrl(): not implemented");
-
-#endif /* WIN32 */
-    return MC_DRV_ERR_NOT_IMPLEMENTED;
 }
 
 //------------------------------------------------------------------------------

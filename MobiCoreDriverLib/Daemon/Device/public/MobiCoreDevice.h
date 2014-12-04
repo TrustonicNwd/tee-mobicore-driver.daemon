@@ -52,7 +52,6 @@
 #include "Connection.h"
 #include "CWsm.h"
 
-#include "ExcDevice.h"
 #include "DeviceScheduler.h"
 #include "DeviceIrqHandler.h"
 #include "TAExitHandler.h"

@@ -55,7 +55,6 @@ public:
     * @param len
     * @param pHandle
     * @param pVirtAddr
-    * @param pPhysAddr
     *
     * @return 0 if all went fine
     * @return MC_DRV_ERR_KMOD_NOT_OPEN
@@ -63,15 +62,13 @@ public:
     */
     mcResult_t mapWsm(uint32_t  len,
                       uint32_t    *pHandle,
-                      addr_t      *pVirtAddr,
-                      uint64_t      *pPhysAddr);
+                      addr_t      *pVirtAddr);
     /**
     * Map data.
     *
     * @param len
     * @param pHandle
     * @param pVirtAddr
-    * @param pPhysAddr
     * @param pMciReuse [in|out] set to true [in] for reusing MCI buffer
     *                 is set to true [out] if MCI buffer has been reused
     * @return 0 if all went fine
@@ -82,17 +79,7 @@ public:
         uint32_t    len,
         uint32_t    *pHandle,
         addr_t      *pVirtAddr,
-        uint64_t    *pPhysAddr,
         bool        *pReuse);
-
-    /**
-    * Map persistent WSM which will not be freed up once the calling process dies.
-    */
-    mcResult_t mapPersistent(
-        uint32_t    len,
-        uint32_t    *pHandle,
-        addr_t      *pVirtAddr,
-        addr_t      *pPhysAddr);
 
     int read(addr_t buffer, uint32_t len);
 

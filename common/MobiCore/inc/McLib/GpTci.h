@@ -72,16 +72,11 @@ typedef struct {
     char header[8];// = "TCIGP000"`: version indicator (to support future format changes)
     TEEC_UUID destination;
     _TEEC_OperationInternal operation; //the data of the ongoing operation (if any)
-    uint32_t ready;     
+    uint32_t ready;
     // The following fields are set by the secure world (in a future version, they may also be set by the normal world communication layer):
     uint32_t returnOrigin;
     uint32_t returnStatus;
 } _TEEC_TCI;
-
-#define TEEC_MEMREF_WHOLE             0xC
-#define TEEC_MEMREF_PARTIAL_INPUT     0xD
-#define TEEC_MEMREF_PARTIAL_OUTPUT    0xE
-#define TEEC_MEMREF_PARTIAL_INOUT     0xF
 
 /**
  * Termination codes
