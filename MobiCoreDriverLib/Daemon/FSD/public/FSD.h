@@ -39,8 +39,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <dirent.h>
-
-#include <mutex>
+#include <pthread.h>
 
 #include "MobiCoreDriverApi.h"
 #include "drSecureStorage_Api.h"
@@ -153,7 +152,7 @@ private:
 
 private:
     /** Private data */
-    std::mutex          m_close_lock;
+    pthread_mutex_t          m_close_lock;
     mcSessionHandle_t   m_sessionHandle; /**< current session */
     dciMessage_t        *m_dci; /**< dci buffer */
     size_t              m_dci_msg_size;

@@ -46,7 +46,7 @@ class MobiCoreDriverDaemon: public ConnectionHandler
             uint32_t (MobiCoreDriverDaemon:: *handler)(
         	    CommandHeader &cmd,
                     const uint8_t *rx_data,
-                    uint32_t *tx_data_size, std::unique_ptr<uint8_t> &tx_data);
+                    uint32_t *tx_data_size, std::auto_ptr<uint8_t> &tx_data);
             uint32_t min_rx_size;
     };
 
@@ -63,49 +63,49 @@ class MobiCoreDriverDaemon: public ConnectionHandler
     /* Registry commands, arrived through socket */
     uint32_t reg_store_auth_token(CommandHeader &cmd,
             const uint8_t *rx_data, uint32_t *tx_data_size,
-            std::unique_ptr<uint8_t> &tx_data);
+            std::auto_ptr<uint8_t> &tx_data);
     uint32_t reg_store_root_cont(CommandHeader &cmd,
             const uint8_t *rx_data, uint32_t *tx_data_size,
-            std::unique_ptr<uint8_t> &tx_data);
+            std::auto_ptr<uint8_t> &tx_data);
     uint32_t reg_store_sp_cont(CommandHeader &cmd,
             const uint8_t *rx_data, uint32_t *tx_data_size,
-            std::unique_ptr<uint8_t> &tx_data);
+            std::auto_ptr<uint8_t> &tx_data);
     uint32_t reg_store_tl_cont(CommandHeader &cmd,
             const uint8_t *rx_data, uint32_t *tx_data_size,
-            std::unique_ptr<uint8_t> &tx_data);
+            std::auto_ptr<uint8_t> &tx_data);
     uint32_t reg_store_so_data(CommandHeader &cmd,
             const uint8_t *rx_data, uint32_t *tx_data_size,
-            std::unique_ptr<uint8_t> &tx_data);
+            std::auto_ptr<uint8_t> &tx_data);
     uint32_t reg_store_ta_blob(CommandHeader &cmd,
             const uint8_t *rx_data, uint32_t *tx_data_size,
-            std::unique_ptr<uint8_t> &tx_data);
+            std::auto_ptr<uint8_t> &tx_data);
     uint32_t reg_read_auth_token(CommandHeader &cmd,
             const uint8_t *rx_data, uint32_t *tx_data_size,
-            std::unique_ptr<uint8_t> &tx_data);
+            std::auto_ptr<uint8_t> &tx_data);
     uint32_t reg_read_root_cont(CommandHeader &cmd,
             const uint8_t *rx_data, uint32_t *tx_data_size,
-            std::unique_ptr<uint8_t> &tx_data);
+            std::auto_ptr<uint8_t> &tx_data);
     uint32_t reg_read_sp_cont(CommandHeader &cmd,
             const uint8_t *rx_data, uint32_t *tx_data_size,
-            std::unique_ptr<uint8_t> &tx_data);
+            std::auto_ptr<uint8_t> &tx_data);
     uint32_t reg_read_tl_cont(CommandHeader &cmd,
             const uint8_t *rx_data, uint32_t *tx_data_size,
-            std::unique_ptr<uint8_t> &tx_data);
+            std::auto_ptr<uint8_t> &tx_data);
     uint32_t reg_delete_auth_token(CommandHeader &cmd,
             const uint8_t *rx_data, uint32_t *tx_data_size,
-            std::unique_ptr<uint8_t> &tx_data);
+            std::auto_ptr<uint8_t> &tx_data);
     uint32_t reg_delete_root_cont(CommandHeader &cmd,
             const uint8_t *rx_data, uint32_t *tx_data_size,
-            std::unique_ptr<uint8_t> &tx_data);
+            std::auto_ptr<uint8_t> &tx_data);
     uint32_t reg_delete_sp_cont(CommandHeader &cmd,
             const uint8_t *rx_data, uint32_t *tx_data_size,
-            std::unique_ptr<uint8_t> &tx_data);
+            std::auto_ptr<uint8_t> &tx_data);
     uint32_t reg_delete_tl_cont(CommandHeader &cmd,
             const uint8_t *rx_data, uint32_t *tx_data_size,
-            std::unique_ptr<uint8_t> &tx_data);
+            std::auto_ptr<uint8_t> &tx_data);
     uint32_t reg_delete_ta_objs(CommandHeader &cmd,
             const uint8_t *rx_data, uint32_t *tx_data_size,
-            std::unique_ptr<uint8_t> &tx_data);
+            std::auto_ptr<uint8_t> &tx_data);
 
     static const cmd_map_item_t reg_cmd_map[];
     static const uint MAX_DATA_SIZE = 512;

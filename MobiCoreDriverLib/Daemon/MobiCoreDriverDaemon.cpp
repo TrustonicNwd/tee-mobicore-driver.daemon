@@ -187,7 +187,7 @@ int MobiCoreDriverDaemon::init(const std::list<std::string>& drivers)
 
 /* TODO CPI: align return code with function prototype */
 uint32_t MobiCoreDriverDaemon::reg_store_auth_token(CommandHeader& cmd,
-        const uint8_t* rx_data, uint32_t* , unique_ptr<uint8_t>& )
+        const uint8_t* rx_data, uint32_t* , std::auto_ptr<uint8_t>& )
 {
     mcResult_t mcRet = mcRegistryStoreAuthToken(const_cast<uint8_t* >(rx_data), cmd.data_size);
     /* Load authentication token into <t-base */
@@ -200,7 +200,7 @@ uint32_t MobiCoreDriverDaemon::reg_store_auth_token(CommandHeader& cmd,
 }
 
 uint32_t MobiCoreDriverDaemon::reg_store_root_cont(CommandHeader& cmd,
-        const uint8_t* rx_data, uint32_t* , unique_ptr<uint8_t>& )
+        const uint8_t* rx_data, uint32_t* , std::auto_ptr<uint8_t>& )
 {
     mcResult_t mcRet = mcRegistryStoreRoot(const_cast<uint8_t* >(rx_data), cmd.data_size);
     /* Load root container into <t-base */
@@ -213,7 +213,7 @@ uint32_t MobiCoreDriverDaemon::reg_store_root_cont(CommandHeader& cmd,
 }
 
 uint32_t MobiCoreDriverDaemon::reg_store_sp_cont(CommandHeader& cmd,
-        const uint8_t* rx_data, uint32_t* , unique_ptr<uint8_t>& )
+        const uint8_t* rx_data, uint32_t* , std::auto_ptr<uint8_t>& )
 {
     auto blob = reinterpret_cast<const TaBlob*>(rx_data);
     uint32_t blobSize = cmd.data_size - sizeof(*blob);
@@ -221,7 +221,7 @@ uint32_t MobiCoreDriverDaemon::reg_store_sp_cont(CommandHeader& cmd,
 }
 
 uint32_t MobiCoreDriverDaemon::reg_store_tl_cont(CommandHeader& cmd,
-        const uint8_t* rx_data, uint32_t* , unique_ptr<uint8_t>& )
+        const uint8_t* rx_data, uint32_t* , std::auto_ptr<uint8_t>& )
 {
     auto blob = reinterpret_cast<const TlBlob*>(rx_data);
     uint32_t blobSize = cmd.data_size - sizeof(*blob);
@@ -230,13 +230,13 @@ uint32_t MobiCoreDriverDaemon::reg_store_tl_cont(CommandHeader& cmd,
 }
 
 uint32_t MobiCoreDriverDaemon::reg_store_so_data(CommandHeader& cmd,
-        const uint8_t* rx_data, uint32_t*, unique_ptr<uint8_t>&)
+        const uint8_t* rx_data, uint32_t*, std::auto_ptr<uint8_t>&)
 {
     return mcRegistryStoreData(const_cast<uint8_t* >(rx_data), cmd.data_size);
 }
 
 uint32_t MobiCoreDriverDaemon::reg_store_ta_blob(CommandHeader& cmd,
-        const uint8_t* rx_data, uint32_t* , unique_ptr<uint8_t>& )
+        const uint8_t* rx_data, uint32_t* , std::auto_ptr<uint8_t>& )
 {
     uint32_t blobSize;
     auto blob = reinterpret_cast<const TaBlob*>(rx_data);
@@ -252,10 +252,10 @@ uint32_t MobiCoreDriverDaemon::reg_store_ta_blob(CommandHeader& cmd,
 }
 
 uint32_t MobiCoreDriverDaemon::reg_read_auth_token(CommandHeader&,
-        const uint8_t*, uint32_t* tx_data_size, unique_ptr<uint8_t>& tx_data)
+        const uint8_t*, uint32_t* tx_data_size, std::auto_ptr<uint8_t>& tx_data)
 {
     uint32_t ret;
-    unique_ptr<mcSoAuthTokenCont_t> buf(new mcSoAuthTokenCont_t);
+    std::auto_ptr<mcSoAuthTokenCont_t> buf(new mcSoAuthTokenCont_t);
     if (buf.get() == NULL)
         return MC_DRV_ERR_NO_FREE_MEMORY;
 
@@ -269,46 +269,46 @@ uint32_t MobiCoreDriverDaemon::reg_read_auth_token(CommandHeader&,
 }
 
 uint32_t MobiCoreDriverDaemon::reg_read_root_cont(CommandHeader&,
-        const uint8_t*, uint32_t* tx_data_size, unique_ptr<uint8_t>& tx_data)
+        const uint8_t*, uint32_t* tx_data_size, std::auto_ptr<uint8_t>& tx_data)
 {
     uint32_t ret;
     uint32_t size = MAX_DATA_SIZE;
-    unique_ptr<uint8_t> buf(new uint8_t[MAX_DATA_SIZE]);
+    std::auto_ptr<uint8_t> buf(new uint8_t[MAX_DATA_SIZE]);
     if (buf.get() == NULL)
         return MC_DRV_ERR_NO_FREE_MEMORY;
 
     ret = mcRegistryReadRoot(buf.get(), &size);
     if (ret == MC_DRV_OK) {
-        tx_data = std::move(buf);
+        tx_data = buf;
         *tx_data_size = size;
     }
     return ret;
 }
 
 uint32_t MobiCoreDriverDaemon::reg_read_sp_cont(CommandHeader&,
-        const uint8_t* rx_data, uint32_t* tx_data_size, unique_ptr<uint8_t>& tx_data)
+        const uint8_t* rx_data, uint32_t* tx_data_size, std::auto_ptr<uint8_t>& tx_data)
 {
     uint32_t ret;
     uint32_t size = MAX_DATA_SIZE;
-    unique_ptr<uint8_t> buf(new uint8_t[MAX_DATA_SIZE]);
+    std::auto_ptr<uint8_t> buf(new uint8_t[MAX_DATA_SIZE]);
     if (buf.get() == NULL)
         return MC_DRV_ERR_NO_FREE_MEMORY;
 
     const mcSpid_t &spid = *reinterpret_cast<const mcSpid_t *>(rx_data);
     ret = mcRegistryReadSp(spid, buf.get(), &size);
     if (ret == MC_DRV_OK) {
-        tx_data = std::move(buf);
+        tx_data = buf;
         *tx_data_size = size;
     }
     return ret;
 }
 
 uint32_t MobiCoreDriverDaemon::reg_read_tl_cont(CommandHeader&,
-        const uint8_t* rx_data, uint32_t* tx_data_size, unique_ptr<uint8_t>& tx_data)
+        const uint8_t* rx_data, uint32_t* tx_data_size, std::auto_ptr<uint8_t>& tx_data)
 {
     uint32_t ret;
     uint32_t size = MAX_DATA_SIZE;
-    unique_ptr<uint8_t> buf(new uint8_t[MAX_DATA_SIZE]);
+    std::auto_ptr<uint8_t> buf(new uint8_t[MAX_DATA_SIZE]);
     if (buf.get() == NULL)
         return MC_DRV_ERR_NO_FREE_MEMORY;
 
@@ -318,21 +318,21 @@ uint32_t MobiCoreDriverDaemon::reg_read_tl_cont(CommandHeader&,
     ret = mcRegistryReadTrustletCon((const mcUuid_t *)&blob->uuid, blob->spid,
             buf.get(), &size);
     if (ret == MC_DRV_OK) {
-        tx_data = std::move(buf);
+        tx_data = buf;
         *tx_data_size = size;
     }
     return ret;
 }
 
 uint32_t MobiCoreDriverDaemon::reg_delete_auth_token(CommandHeader& ,
-        const uint8_t* , uint32_t* , unique_ptr<uint8_t>& )
+        const uint8_t* , uint32_t* , std::auto_ptr<uint8_t>& )
 {
     return mcRegistryDeleteAuthToken();
 }
 
 uint32_t MobiCoreDriverDaemon::reg_delete_root_cont(
         CommandHeader& , const uint8_t* ,
-        uint32_t* , unique_ptr<uint8_t>& )
+        uint32_t* , std::auto_ptr<uint8_t>& )
 {
     mcResult_t mcRet = mcRegistryCleanupRoot();
 
@@ -344,21 +344,21 @@ uint32_t MobiCoreDriverDaemon::reg_delete_root_cont(
 }
 
 uint32_t MobiCoreDriverDaemon::reg_delete_sp_cont(CommandHeader&,
-        const uint8_t* rx_data, uint32_t* , unique_ptr<uint8_t>& )
+        const uint8_t* rx_data, uint32_t* , std::auto_ptr<uint8_t>& )
 {
     const mcSpid_t &spid = *reinterpret_cast<const mcSpid_t *>(rx_data);
     return mcRegistryCleanupSp(spid);
 }
 
 uint32_t MobiCoreDriverDaemon::reg_delete_tl_cont(CommandHeader&,
-        const uint8_t* rx_data, uint32_t* , unique_ptr<uint8_t>& )
+        const uint8_t* rx_data, uint32_t* , std::auto_ptr<uint8_t>& )
 {
     auto blob = reinterpret_cast<const TlBlob*>(rx_data);
     return  mcRegistryCleanupTrustlet((const mcUuid_t *)&blob->uuid, blob->spid);
 }
 
 uint32_t MobiCoreDriverDaemon::reg_delete_ta_objs(CommandHeader&,
-        const uint8_t* rx_data, uint32_t* , unique_ptr<uint8_t>& )
+        const uint8_t* rx_data, uint32_t* , std::auto_ptr<uint8_t>& )
 {
     const mcUuid_t *uuid = reinterpret_cast<const mcUuid_t *>(rx_data);
     return  mcRegistryCleanupGPTAStorage(uuid);
@@ -373,8 +373,8 @@ bool MobiCoreDriverDaemon::handleConnection(Connection &conn)
     int count = 1;
     ssize_t write_sz = sizeof(result);
 
-    std::unique_ptr<uint8_t>   rx_data;
-    std::unique_ptr<uint8_t>   tx_data;
+    std::auto_ptr<uint8_t>   rx_data;
+    std::auto_ptr<uint8_t>   tx_data;
 
     LOG_I("handleConnection()==== %p", &conn);
 

@@ -41,6 +41,18 @@
 
 const char * const Server::m_server_name = "McDaemon.Server";
 
+class LockGuard {
+    pthread_mutex_t* mutex_;
+public:
+    LockGuard(pthread_mutex_t* mutex): mutex_(mutex) {
+        pthread_mutex_lock(mutex_);
+    }
+    ~LockGuard() {
+        pthread_mutex_unlock(mutex_);
+    }
+};
+
+
 //------------------------------------------------------------------------------
 Server::Server(ConnectionHandler *handler, const char *localAddr,
         const int listen_queue_sz) :
@@ -99,7 +111,7 @@ void Server::run()
         // Clear FD for select()
         FD_ZERO(&fdReadSockets);
 
-        std::lock_guard<std::mutex> lock(m_close_lock);
+       LockGuard lock(&m_close_lock);
 
         // Select server socket descriptor
         FD_SET(m_serverSock, &fdReadSockets);
@@ -199,7 +211,7 @@ Server::~Server()
 
 void Server::stop()
 {
-        std::lock_guard<std::mutex> lock(m_close_lock);
+        LockGuard lock(&m_close_lock);
 
 	// Destroy all client connections
 	while(!m_peerConnections.empty()) {

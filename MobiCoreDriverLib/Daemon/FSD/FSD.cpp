@@ -58,6 +58,18 @@ using namespace std;
 //------------------------------------------------------------------------------
 const char * const FSD::m_server_name = "McDaemon.FSD";
 
+class LockGuard {
+    pthread_mutex_t* mutex_;
+public:
+    LockGuard(pthread_mutex_t* mutex): mutex_(mutex) {
+        pthread_mutex_lock(mutex_);
+    }
+    ~LockGuard() {
+        pthread_mutex_unlock(mutex_);
+    }
+};
+
+
 FSD::FSD(size_t dci_msg_size):
         m_dci(NULL),
         m_dci_msg_size(dci_msg_size)
@@ -145,7 +157,7 @@ mcResult_t FSD::FSD_Open(void)
     mcRet = mcOpenSession(&sessionHandle,
                           &uuid,
                           (uint8_t *) dci,
-                          m_dci_msg_size);
+                          static_cast<uint32_t>(m_dci_msg_size)); 
     if (MC_DRV_OK != mcRet)
     {
         LOG_E("FSD_Open(): mcOpenSession returned: %d\n", mcRet);
@@ -178,7 +190,7 @@ mcResult_t FSD::FSD_Open(void)
     LOG_I("FSD_Open(): send notification  back \n");
     mcRet = mcNotify(&sessionHandle);
     if (mcRet == MC_DRV_OK) {
-        std::lock_guard<std::mutex> lock(m_close_lock);
+        LockGuard lock(&m_close_lock);
         if(!shouldTerminate()) {
             m_dci = dci;
             m_sessionHandle = sessionHandle;
@@ -205,7 +217,7 @@ mcResult_t FSD::FSD_Close(void)
 {
     mcResult_t   mcRet = MC_DRV_OK;
 
-    std::lock_guard<std::mutex> lock(m_close_lock);
+   LockGuard lock(&m_close_lock);
 
     /* Close session to the debug driver trustlet */
     if(m_dci != NULL) {
@@ -239,7 +251,7 @@ void FSD::FSD_listenDci(void)
     while (mcRet == MC_DRV_OK && !shouldTerminate()) {
         LOG_I("FSD_listenDci(): Waiting for notification\n");
 
-        std::lock_guard<std::mutex> lock(m_close_lock);
+        LockGuard lock(&m_close_lock);  
         if(m_dci == NULL)
             return;
 

@@ -36,9 +36,10 @@
 #include <sys/un.h>
 #include <string>
 #include <cstdio>
+#include <pthread.h>
+
 
 #include <list>
-#include <mutex>
 
 #include "CThread.h"
 #include "ConnectionHandler.h"
@@ -94,7 +95,7 @@ protected:
     ConnectionHandler   * const m_connectionHandler;
 
 private:
-    std::mutex          m_close_lock;
+    pthread_mutex_t     m_close_lock;
     connectionList_t    m_peerConnections; /**< Connections to devices */
     static const char * const m_server_name;
 };
