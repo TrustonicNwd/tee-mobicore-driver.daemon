@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,28 +28,18 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/**
- * MobiCore Registry Private implementation
- */
 #ifndef MOBICORE_REGISTRY_H_
 #define MOBICORE_REGISTRY_H_
 
+#include <string>
+
 #include "MobiCoreDriverApi.h"
 #include "mcContainer.h"
+#include "MobiCoreDriverCmd.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-    /**
-     * Registry object.
-     */
-    typedef struct {
-        uint32_t len;
-        uint32_t tlStartOffset;
-        uint8_t value[];
-    } regObject_t;
-
 //-----------------------------------------------------------------
 
     /** Stores an authentication token in registry.
@@ -137,6 +127,17 @@ extern "C" {
      */
     mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t *uuid, const mcSpid_t spid);
 
+    /**
+     * mcRegistryCleanupGPTAStorage()
+     *
+     * Removes all associated data of the target UUID. This function is called
+     * by FSD when cleaning up after a TA has been uninstalled.
+     *
+     * @param [in] uuid the UUID of the target TA
+     * @retval MC_DRV_OK if successful, otherwise and error code from mcResult_t
+     */
+    mcResult_t mcRegistryCleanupGPTAStorage(const mcUuid_t *uuid);
+
     /** Stores a data container secure object in the registry.
      * @param so Data container secure object.
      * @param size Data container secure object size
@@ -152,12 +153,7 @@ extern "C" {
      * @param maxLen Maximum size (in bytes) of the destination buffer (so).
      * @return MC_DRV_OK if successful, otherwise error code.
      */
-    mcResult_t mcRegistryReadData(
-        uint32_t context,
-        const mcCid_t *cid,
-        mcPid_t pid,
-        mcSoDataCont_t *so,
-        uint32_t maxLen);
+    mcResult_t mcRegistryReadData(uint32_t context, const mcCid_t *cid, mcPid_t pid, mcSoDataCont_t *so, uint32_t maxLen);
 
     /** Deletes the root container and all of its associated service provider
      * containers.
@@ -165,39 +161,14 @@ extern "C" {
      */
     mcResult_t mcRegistryCleanupRoot(void);
 
-    /** Returns a registry object for a given service from memory
-     * @param spid Service provider ID(ignored for System TLs)
-     * @param trustlet buffer with trustlet binary
-     * @param tlSize buffer size
-     * @return Registry object.
-     * @note It is the responsibility of the caller to free the registry object
-     * allocated by this function.
-     */
-    regObject_t *mcRegistryMemGetServiceBlob(mcSpid_t spid, void *trustlet, uint32_t tlSize);
-
     /** Returns a registry object for a given service.
      * @param uuid service UUID
-     * @return Registry object.
-     * @note It is the responsibility of the caller to free the registry object
-     * allocated by this function.
+     * @param isGpUuid UUID is for a GP trustlet
+     * @param[out] spid SPID for secure object.
+     * @param[out] path The trustlet file path.
+     * @return MC_DRV_OK if successful, otherwise error code.
      */
-    regObject_t *mcRegistryGetServiceBlob(const mcUuid_t  *uuid, bool isGpUuid);
-
-    /** Returns a registry object for a given service.
-     * @param uuid service GP UUID as mc uuid
-     * @return Registry object.
-     * @note It is the responsibility of the caller to free the registry object
-     * allocated by this function.
-     */
-    regObject_t *mcRegistryGetServiceBlobGP(const mcUuid_t  *uuid);
-
-    /** Returns a registry object for a given service.
-     * @param driverFilename driver filename
-     * @return Registry object.
-     * @note It is the responsibility of the caller to free the registry object
-     * allocated by this function.
-     */
-    regObject_t *mcRegistryGetDriverBlob(const char *filename);
+    mcResult_t mcRegistryGetTrustletInfo(const mcUuid_t *uuid, bool isGpUuid, mcSpid_t *spid, std::string& path);
 
     /** Stores a Trustlet Application blob in the registry.
      * @param spid SPID of the trustlet container.
@@ -205,7 +176,7 @@ extern "C" {
      * @param size Trustlet Application blob size.
      * @return MC_DRV_OK if successful, otherwise error code.
      */
-    mcResult_t mcRegistryStoreTABlob(mcSpid_t spid, void *blob, uint32_t size);
+    mcResult_t mcRegistryStoreTABlob(mcSpid_t spid, const void *blob, uint32_t size);
 
 #ifdef __cplusplus
 }

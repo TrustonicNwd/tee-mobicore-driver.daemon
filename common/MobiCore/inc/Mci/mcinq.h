@@ -88,7 +88,8 @@ typedef enum {
     ERR_SESSION_CLOSE       = -2, /**< task terminated due to session end, no exit code available */
     ERR_INVALID_OPERATION   = -3, /**< task terminated due to invalid operation */
     ERR_INVALID_SID         = -4, /**< session ID is unknown */
-    ERR_SID_NOT_ACTIVE      = -5 /**<  session is not active */
+    ERR_SID_NOT_ACTIVE      = -5, /**< session is not active */
+    ERR_SESSION_KILLED      = -6, /**< session was force-killed (due to an administrative command). */
 } notificationPayload_t;
 
 /** Declaration of the notification queue header.

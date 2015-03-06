@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2015 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,361 +36,291 @@
  * @ingroup MCD_MCDIMPL_DAEMON_REG
  */
 
-#include <stdlib.h>
-#include <dirent.h>
-#include <stdio.h>
-#include <sys/stat.h>
-#include <assert.h>
-#include <string>
-#include <cstring>
-#include <cstddef>
-#include "mcLoadFormat.h"
-#include "mcSpid.h"
-#include "mcVersionHelper.h"
-
+#include <sys/uio.h>
+#include <fcntl.h>
 #include "log.h"
 
+#include "mcSpid.h"
 #include "MobiCoreRegistry.h"
 #include "MobiCoreDriverCmd.h"
-
 #include "Connection.h"
+#include "buildTag.h"
 
-#define DAEMON_TIMEOUT 30000
+static const __attribute__((used)) char* buildtag = MOBICORE_COMPONENT_BUILD_TAG;
 
-using namespace std;
+#define DAEMON_TIMEOUT  30000
+#define ARRAY_SIZE(a)   (sizeof(a)/sizeof((a)[0]))
 
-
-static mcResult_t writeBlobData(void *buff, uint32_t len)
+struct cmd_t: public CommandHeader
 {
-    Connection con;
-mcDrvResponseHeader_t rsp = { responseId :
-                                  MC_DRV_ERR_INVALID_PARAMETER
-                                };
-    if (!con.connect(SOCK_PATH)) {
-        LOG_E("Failed to connect to daemon!");
-        return MC_DRV_ERR_DAEMON_SOCKET;
-    }
+	cmd_t(const uint32_t c)
+	{
+		id = 0;
+		cmd = c;
+		data_size = 0;
+	}
+};
 
-    if (con.writeData(buff, len) <= 0) {
-        LOG_E("Failed to send daemon to data!");
-        return MC_DRV_ERR_DAEMON_SOCKET;
-    }
+static
+mcResult_t check_iov(const struct iovec *iov, size_t iovcnt, size_t *pay_size)
+{
+    size_t sz = 0;
+    if(iov == NULL || iov[0].iov_len != sizeof(cmd_t))
+	return MC_DRV_ERR_INVALID_PARAMETER;
 
-    if (con.readData(&rsp, sizeof(rsp), DAEMON_TIMEOUT) <= 0) {
-        LOG_E("Failed to get answer from daemon!");
-        return MC_DRV_ERR_DAEMON_SOCKET;
+    for(size_t i = 0; i < iovcnt; i++) {
+	if(iov[i].iov_base == NULL || iov[i].iov_len == 0)
+	    return MC_DRV_ERR_INVALID_PARAMETER;
+	sz += iov[i].iov_len;
     }
-
-    return rsp.responseId;
+    *pay_size = sz - iov[0].iov_len;
+    return MC_DRV_OK;
 }
 
-static mcResult_t readBlobData(void *buff, uint32_t len, void *rbuff, uint32_t *rlen)
+
+static mcResult_t send_cmd_recv_data(struct iovec *out_iov,
+        size_t out_iovcnt, void *rbuff = NULL, uint32_t *rlen = NULL)
 {
-    Connection con;
-    int32_t size;
-mcDrvResponseHeader_t rsp = { responseId :
-                                  MC_DRV_ERR_INVALID_PARAMETER
-                                };
-    if (*rlen == 0) {
-        LOG_E("Invalid buffer length!");
-        return MC_DRV_ERR_DAEMON_SOCKET;
+    size_t nsegs;
+    ResponseHeader rsp;
+    size_t payload_sz;
+
+    if( (rbuff == NULL && rlen != NULL) ||
+        (rbuff != NULL && rlen == NULL) ||
+         out_iov == NULL || out_iovcnt == 0) {
+	LOG_E("Invalid buffer length!");
+	return MC_DRV_ERR_INVALID_PARAMETER;
     }
+
+    memset(&rsp, 0, sizeof(rsp));
+    rsp.result = check_iov(out_iov, out_iovcnt, &payload_sz);
+    if(rsp.result != MC_DRV_OK)
+	    return rsp.result;
+
+    struct iovec in_iov[2] = {
+            { &rsp, sizeof(rsp) }
+    };
+
+    if(rbuff != NULL) {
+	    nsegs = 2;
+	    in_iov[1].iov_base = rbuff;
+	    in_iov[1].iov_len  = *rlen;
+    } else {
+	    nsegs = 1;
+    }
+
+    cmd_t &cmd = *((cmd_t *)out_iov[0].iov_base);
+    cmd.data_size =  payload_sz;
+    LOG_V("Sending command %d", cmd.cmd);
+
+    Connection con;
 
     if (!con.connect(SOCK_PATH)) {
         LOG_E("Failed to connect to daemon!");
         return MC_DRV_ERR_DAEMON_SOCKET;
     }
 
-    if (con.writeData(buff, len) <= 0) {
-        LOG_E("Failed to send daemon to data!");
+    if (con.writeMsg(out_iov, out_iovcnt) <= 0) {
+	LOG_E("Failed to send data to daemon");
         return MC_DRV_ERR_DAEMON_SOCKET;
     }
 
-    // First read the response
-    if (con.readData(&rsp, sizeof(rsp), DAEMON_TIMEOUT) <= 0) {
+    if (con.readMsg(in_iov, nsegs, DAEMON_TIMEOUT) <= 0) {
         LOG_E("Failed to get answer from daemon!");
         return MC_DRV_ERR_DAEMON_SOCKET;
     }
 
-    //Then read the actual data
-    size = con.readData(rbuff, *rlen, DAEMON_TIMEOUT);
-    if (size <= 0) {
-        LOG_E("Failed to get answer from daemon!");
-        return MC_DRV_ERR_DAEMON_SOCKET;
-    }
-    // Return also the read buf size
-    *rlen = (uint32_t)size;
+    LOG_V("result is %x", rsp.result);
 
-    return rsp.responseId;
+    // Return also the read size
+    if(rsp.result == MC_DRV_OK && rlen != NULL)
+	*rlen = in_iov[1].iov_len;
+
+    return rsp.result;
 }
 
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryStoreAuthToken(void *so, uint32_t size)
 {
-    typedef struct __attribute ((packed)) {
-        uint32_t commandId;
-        uint32_t soSize;
-        uint8_t so;
-    } storeCmd;
-
-    mcResult_t ret;
-    storeCmd *cmd = (storeCmd *)malloc(sizeof(storeCmd) + size - 1);
-    if (cmd == NULL) {
-        LOG_E("Allocation failure");
-        return MC_DRV_ERR_NO_FREE_MEMORY;
-    }
-
-    cmd->commandId = MC_DRV_REG_STORE_AUTH_TOKEN;
-    cmd->soSize = size;
-    memcpy(&cmd->so, so, size);
-    ret = writeBlobData(cmd, sizeof(storeCmd) + size - 1);
-    free(cmd);
-    return ret;
+    cmd_t cmd(MC_DRV_REG_WRITE_AUTH_TOKEN);
+    struct iovec iov[] = {
+            {&cmd, sizeof(cmd)},
+            {so, size}
+    };
+    LOG_V("execute MC_DRV_REG_WRITE_AUTH_TOKEN");
+    return send_cmd_recv_data(iov, ARRAY_SIZE(iov));
 }
-
 
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryReadAuthToken(void *so, uint32_t *size)
 {
-mcDrvCommandHeader_t cmd = { commandId :
-                                 MC_DRV_REG_READ_AUTH_TOKEN
-                               };
-    uint32_t rsize;
-    mcResult_t ret;
-    // we expect to max read what the user has allocated
-    rsize = *size;
-    ret = readBlobData(&cmd, sizeof(cmd), so, &rsize);
-    // return the actual read size
-    *size = rsize;
-    return ret;
+    cmd_t cmd(MC_DRV_REG_READ_AUTH_TOKEN);
+    struct iovec iov[] = {
+            {&cmd, sizeof(cmd)}
+    };
+    //__android_log_print(ANDROID_LOG_INFO, LOG_TAG, "%s", MOBICORE_COMPONENT_BUILD_TAG);
+    LOG_V("execute MC_DRV_REG_READ_AUTH_TOKEN");
+    return send_cmd_recv_data(iov, ARRAY_SIZE(iov), so, size);
 }
 
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryDeleteAuthToken(void)
 {
-mcDrvCommandHeader_t cmd = { commandId :
-                                 MC_DRV_REG_DELETE_AUTH_TOKEN
-                               };
-    return writeBlobData(&cmd, sizeof(cmd));
+    cmd_t cmd(MC_DRV_REG_DELETE_AUTH_TOKEN);
+    struct iovec iov[] = {
+            {&cmd, sizeof(cmd)}
+    };
+    LOG_V("execute MC_DRV_REG_DELETE_AUTH_TOKEN");
+    return send_cmd_recv_data(iov, ARRAY_SIZE(iov));
 }
-
 
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryStoreRoot(void *so, uint32_t size)
 {
-    typedef struct __attribute ((packed)) {
-        uint32_t commandId;
-        uint32_t soSize;
-        uint8_t so;
-    } storeCmd;
-    mcResult_t ret;
-    storeCmd *cmd = (storeCmd *)malloc(sizeof(storeCmd) + size - 1);
-    if (cmd == NULL) {
-        LOG_E("Allocation failure");
-        return MC_DRV_ERR_NO_FREE_MEMORY;
-    }
-
-    cmd->commandId = MC_DRV_REG_WRITE_ROOT_CONT;
-    cmd->soSize = size;
-    memcpy(&cmd->so, so, size);
-    ret = writeBlobData(cmd, sizeof(storeCmd) + size - 1);
-    free(cmd);
-    return ret;
+    cmd_t cmd(MC_DRV_REG_WRITE_ROOT_CONT);
+    struct iovec iov[] = {
+            {&cmd, sizeof(cmd)},
+            {so, size}
+    };
+    LOG_V("execute MC_DRV_REG_WRITE_ROOT_CONT");
+    return send_cmd_recv_data(iov, ARRAY_SIZE(iov));
 }
-
 
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryReadRoot(void *so, uint32_t *size)
 {
-mcDrvCommandHeader_t cmd = { commandId :
-                                 MC_DRV_REG_READ_ROOT_CONT
-                               };
-    uint32_t rsize;
-    mcResult_t ret;
-
-    rsize = *size;
-    ret = readBlobData(&cmd, sizeof(cmd), so, &rsize);
-    *size = rsize;
-    return ret;
+    cmd_t cmd(MC_DRV_REG_READ_ROOT_CONT);
+    struct iovec iov[] = {
+            {&cmd, sizeof(cmd)}
+    };
+    LOG_V("execute MC_DRV_REG_READ_ROOT_CONT");
+    return send_cmd_recv_data(iov, ARRAY_SIZE(iov), so, size);
 }
 
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryCleanupRoot(void)
 {
-mcDrvCommandHeader_t cmd = { commandId :
-                                 MC_DRV_REG_DELETE_ROOT_CONT
-                               };
-    return writeBlobData(&cmd, sizeof(cmd));
+    cmd_t cmd(MC_DRV_REG_DELETE_ROOT_CONT);
+    struct iovec iov[] = {
+            {&cmd, sizeof(cmd)}
+    };
+    LOG_V("execute MC_DRV_REG_DELETE_ROOT_CONT");
+    return send_cmd_recv_data(iov, ARRAY_SIZE(iov));
 }
 
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryStoreSp(mcSpid_t spid, void *so, uint32_t size)
 {
-    typedef struct __attribute ((packed)) {
-        uint32_t commandId;
-        uint32_t soSize;
-        mcSpid_t spid;
-        uint8_t so;
-    } storeCmd;
-
-    mcResult_t ret;
-    storeCmd *cmd = (storeCmd *)malloc(sizeof(storeCmd) + size - 1);
-    if (cmd == NULL) {
-        LOG_E("Allocation failure");
-        return MC_DRV_ERR_NO_FREE_MEMORY;
-    }
-
-    cmd->commandId = MC_DRV_REG_WRITE_SP_CONT;
-    cmd->soSize = size;
-    cmd->spid = spid;
-    memcpy(&cmd->so, so, size);
-
-    ret = writeBlobData(cmd, sizeof(storeCmd) + size - 1);
-    free(cmd);
-    return ret;
+    cmd_t cmd(MC_DRV_REG_WRITE_SP_CONT);
+    struct iovec iov[] = {
+            {&cmd, sizeof(cmd)},
+            {&spid, sizeof(spid)},
+            {so, size}
+    };
+    LOG_V("execute MC_DRV_REG_WRITE_SP_CONT");
+    return send_cmd_recv_data(iov, ARRAY_SIZE(iov));
 }
-
 
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryReadSp(mcSpid_t spid, void *so, uint32_t *size)
 {
-    struct {
-        uint32_t commandId;
-        mcSpid_t spid;
-    } cmd;
-    uint32_t rsize;
-    mcResult_t ret;
-    cmd.commandId = MC_DRV_REG_READ_SP_CONT;
-    cmd.spid = spid;
-
-    rsize = *size;
-    ret = readBlobData(&cmd, sizeof(cmd), so, &rsize);
-    *size = rsize;
-
-    return ret;
+    cmd_t cmd(MC_DRV_REG_READ_SP_CONT);
+    struct iovec iov[] = {
+            {&cmd, sizeof(cmd)},
+            {&spid, sizeof(spid)}
+    };
+    LOG_V("execute MC_DRV_REG_READ_SP_CONT");
+    return send_cmd_recv_data(iov, ARRAY_SIZE(iov), so, size);
 }
 
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryCleanupSp(mcSpid_t spid)
 {
-    struct {
-        uint32_t commandId;
-        mcSpid_t spid;
-    } cmd;
-
-    cmd.commandId = MC_DRV_REG_DELETE_SP_CONT;
-    cmd.spid = spid;
-
-    return writeBlobData(&cmd, sizeof(cmd));
+    cmd_t cmd(MC_DRV_REG_DELETE_SP_CONT);
+    struct iovec iov[] = {
+            {&cmd, sizeof(cmd)},
+            {&spid, sizeof(spid)},
+    };
+    LOG_V("execute MC_DRV_REG_DELETE_SP_CONT");
+    return send_cmd_recv_data(iov, ARRAY_SIZE(iov));
 }
 
 //------------------------------------------------------------------------------
-mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid, mcSpid_t spid, void *so, uint32_t size)
+mcResult_t mcRegistryStoreTrustletCon(const mcUuid_t *uuid,
+        mcSpid_t spid, void *so, uint32_t size)
 {
-    typedef struct __attribute ((packed)) {
-        uint32_t commandId;
-        uint32_t soSize;
-        mcUuid_t uuid;
-        mcSpid_t spid;
-        uint8_t so;
-    } storeCmd;
-
-    mcResult_t ret;
-    storeCmd *cmd = (storeCmd *)malloc(sizeof(storeCmd) + size - 1);
-    if (cmd == NULL) {
-        LOG_E("Allocation failure");
-        return MC_DRV_ERR_NO_FREE_MEMORY;
-    }
-
-    cmd->commandId = MC_DRV_REG_WRITE_TL_CONT;
-    cmd->soSize = size;
-    cmd->spid = spid;
-    memcpy(&cmd->uuid, uuid, sizeof(mcUuid_t));
-    memcpy(&cmd->so, so, size);
-
-    ret = writeBlobData(cmd, sizeof(storeCmd) + size - 1);
-    free(cmd);
-    return ret;
+    cmd_t cmd(MC_DRV_REG_WRITE_TL_CONT);
+    struct iovec iov[] = {
+            {&cmd,  sizeof(cmd)},
+            {const_cast<mcUuid_t *>(uuid),  sizeof(*uuid)},
+            {&spid, sizeof(spid)},
+            {so,    size}
+    };
+    LOG_V("execute MC_DRV_REG_WRITE_TL_CONT");
+    return send_cmd_recv_data(iov, ARRAY_SIZE(iov));
 }
 
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryStoreTABlob(mcSpid_t spid, void *blob, uint32_t size)
 {
-    typedef struct {
-        uint32_t commandId;
-        uint32_t blobSize;
-        mcSpid_t spid;
-        uint8_t blob[];
-    } storeCmd;
-
-    mcResult_t ret;
-    storeCmd *cmd = (storeCmd *)malloc(sizeof(storeCmd) + size);
-    if (cmd == NULL) {
-        LOG_E("Allocation failure");
-        return MC_DRV_ERR_NO_FREE_MEMORY;
-    }
-
-    cmd->commandId = MC_DRV_REG_STORE_TA_BLOB;
-    cmd->blobSize = size;
-    cmd->spid = spid;
-    memcpy(&cmd->blob, blob, size);
-
-    ret = writeBlobData(cmd, sizeof(storeCmd) + size);
-    free(cmd);
-    return ret;
+    cmd_t cmd(MC_DRV_REG_STORE_TA_BLOB);
+    struct iovec iov[] = {
+            {&cmd,  sizeof(cmd)},
+            {&spid, sizeof(spid)},
+            {blob,  size}
+    };
+    LOG_V("execute MC_DRV_REG_STORE_TA_BLOB");
+    return send_cmd_recv_data(iov, ARRAY_SIZE(iov));
 }
 
 //------------------------------------------------------------------------------
-mcResult_t mcRegistryReadTrustletCon(const mcUuid_t *uuid, mcSpid_t spid, void *so, uint32_t *size)
+mcResult_t mcRegistryReadTrustletCon(const mcUuid_t *uuid, mcSpid_t spid,
+        void *so, uint32_t *size)
 {
-    struct {
-        uint32_t commandId;
-        mcUuid_t uuid;
-        mcSpid_t spid;
-    } cmd;
-    mcResult_t ret;
-    uint32_t rsize;
-    cmd.commandId = MC_DRV_REG_READ_TL_CONT;
-    cmd.spid = spid;
-    memcpy(&cmd.uuid, uuid, sizeof(mcUuid_t));
-
-    rsize = *size;
-    ret = readBlobData(&cmd, sizeof(cmd), so, &rsize);
-    *size = rsize;
-    return ret;
+    cmd_t cmd(MC_DRV_REG_READ_TL_CONT);
+    struct iovec iov[] = {
+            {&cmd, sizeof(cmd)},
+            {const_cast<mcUuid_t *>(uuid),  sizeof(*uuid)},
+            {&spid, sizeof(spid)}
+    };
+    LOG_V("execute MC_DRV_REG_READ_TL_CONT");
+    return send_cmd_recv_data(iov, ARRAY_SIZE(iov), so, size);
 }
 
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t *uuid, const mcSpid_t spid)
 {
-    struct {
-        uint32_t commandId;
-        mcUuid_t uuid;
-        mcSpid_t spid;
-    } cmd;
-
-    if (uuid == NULL) {
-        return MC_DRV_ERR_INVALID_PARAMETER;
-    }
-
-    cmd.commandId = MC_DRV_REG_DELETE_TL_CONT;
-    cmd.spid = spid;
-    memcpy(&cmd.uuid, uuid, sizeof(mcUuid_t));
-
-    return writeBlobData(&cmd, sizeof(cmd));
+    cmd_t cmd(MC_DRV_REG_DELETE_TL_CONT);
+    struct iovec iov[] = {
+            {&cmd,  sizeof(cmd)},
+            {const_cast<mcUuid_t *>(uuid),  sizeof(*uuid)},
+            {const_cast<mcSpid_t *>(&spid), sizeof(spid)},
+    };
+    LOG_V("execute MC_DRV_REG_DELETE_TL_CONT");
+    return send_cmd_recv_data(iov, ARRAY_SIZE(iov));
 }
 
 //------------------------------------------------------------------------------
-mcResult_t mcRegistryStoreData(void *so, uint32_t size)
+mcResult_t mcRegistryCleanupTA(const mcUuid_t *uuid)
+{
+    cmd_t cmd(MC_DRV_REG_DELETE_TA_OBJS);
+    struct iovec iov[] = {
+	    {&cmd,  sizeof(cmd)},
+	    {const_cast<mcUuid_t *>(uuid),  sizeof(*uuid)},
+    };
+    LOG_V("execute MC_DRV_REG_DELETE_TA_OBJS");
+    return send_cmd_recv_data(iov, ARRAY_SIZE(iov));
+}
+
+//------------------------------------------------------------------------------
+mcResult_t mcRegistryStoreData(void *, uint32_t)
 {
     return MC_DRV_ERR_INVALID_PARAMETER;
 }
 
-
 //------------------------------------------------------------------------------
-mcResult_t mcRegistryReadData(uint32_t context, const mcCid_t *cid, mcPid_t pid,
-                              mcSoDataCont_t *so, uint32_t maxLen)
+mcResult_t mcRegistryReadData(uint32_t, const mcCid_t *, mcPid_t,
+                              mcSoDataCont_t *, uint32_t)
 {
     return MC_DRV_ERR_INVALID_PARAMETER;
 }
-

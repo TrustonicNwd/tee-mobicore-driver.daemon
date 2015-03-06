@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,7 +32,7 @@
 #define DAEMON_VERSION_H_
 
 #define DAEMON_VERSION_MAJOR 0
-#define DAEMON_VERSION_MINOR 2
+#define DAEMON_VERSION_MINOR 4
 
 #endif /** DAEMON_VERSION_H_ */
 

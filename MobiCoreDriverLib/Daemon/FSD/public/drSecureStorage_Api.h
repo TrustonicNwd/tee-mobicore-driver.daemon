@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -49,10 +49,11 @@
  * FSD <--> STH
  */
 
-#define STH_MESSAGE_TYPE_LOOK		0
-#define STH_MESSAGE_TYPE_READ     	1
+#define STH_MESSAGE_TYPE_LOOK       0
+#define STH_MESSAGE_TYPE_READ       1
 #define STH_MESSAGE_TYPE_WRITE      2
 #define STH_MESSAGE_TYPE_DELETE     3
+#define STH_MESSAGE_TYPE_DELETE_ALL 4
 
 #define CMD_ST_SYNC			5
 #define NOTIFY_DCIH			6

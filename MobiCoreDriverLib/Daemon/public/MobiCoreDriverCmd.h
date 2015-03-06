@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,260 +28,83 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef MCDAEMON_H_
-#define MCDAEMON_H_
 
-#include <inttypes.h>      // ANSI C99
+#ifndef MOBICORE_REGISTRY_API_H_
+#define MOBICORE_REGISTRY_API_H_
 
 #include "mcUuid.h"
-#include "mcVersionInfo.h"
+#include "mcSpid.h"
 
 #define SOCK_PATH "#mcdaemon"
 
 typedef enum {
-    MC_DRV_CMD_PING                 = 0,
-    MC_DRV_CMD_GET_INFO             = 1,
-    MC_DRV_CMD_OPEN_DEVICE          = 2,
-    MC_DRV_CMD_CLOSE_DEVICE         = 3,
-    MC_DRV_CMD_NQ_CONNECT           = 4,
-    MC_DRV_CMD_OPEN_SESSION         = 5,
-    MC_DRV_CMD_CLOSE_SESSION        = 6,
-    MC_DRV_CMD_NOTIFY               = 7,
-    MC_DRV_CMD_MAP_BULK_BUF         = 8,
-    MC_DRV_CMD_UNMAP_BULK_BUF       = 9,
-    MC_DRV_CMD_GET_VERSION          = 10,
-    MC_DRV_CMD_GET_MOBICORE_VERSION = 11,
-    MC_DRV_CMD_OPEN_TRUSTLET        = 12,
-    MC_DRV_CMD_OPEN_TRUSTED_APP     = 13,
-
-    // Registry Commands
-
     // Auth token OPS
-    MC_DRV_REG_STORE_AUTH_TOKEN     = 0x100000,
-    MC_DRV_REG_READ_AUTH_TOKEN      = 0x100001,
-    MC_DRV_REG_DELETE_AUTH_TOKEN    = 0x100002,
+    MC_DRV_REG_READ_AUTH_TOKEN     = 0,
+    MC_DRV_REG_WRITE_AUTH_TOKEN,
+    MC_DRV_REG_DELETE_AUTH_TOKEN,
     // Root container OPS
-    MC_DRV_REG_READ_ROOT_CONT       = 0x100003,
-    MC_DRV_REG_WRITE_ROOT_CONT      = 0x100004,
-    MC_DRV_REG_DELETE_ROOT_CONT     = 0x100005,
+    MC_DRV_REG_READ_ROOT_CONT,
+    MC_DRV_REG_WRITE_ROOT_CONT,
+    MC_DRV_REG_DELETE_ROOT_CONT,
     // Service Provider Container OPS
-    MC_DRV_REG_READ_SP_CONT         = 0x100006,
-    MC_DRV_REG_WRITE_SP_CONT        = 0x100007,
-    MC_DRV_REG_DELETE_SP_CONT       = 0x100008,
+    MC_DRV_REG_READ_SP_CONT,
+    MC_DRV_REG_WRITE_SP_CONT,
+    MC_DRV_REG_DELETE_SP_CONT,
     // Trustlet Container OPS
-    MC_DRV_REG_READ_TL_CONT         = 0x100009,
-    MC_DRV_REG_WRITE_TL_CONT        = 0x10000A,
-    MC_DRV_REG_DELETE_TL_CONT       = 0x10000B,
+    MC_DRV_REG_READ_TL_CONT,
+    MC_DRV_REG_WRITE_TL_CONT,
+    MC_DRV_REG_DELETE_TL_CONT,
     // Shared Object Data write
-    MC_DRV_REG_WRITE_SO_DATA        = 0x10000C,
+    MC_DRV_REG_WRITE_SO_DATA,
     // TA Blob store
-    MC_DRV_REG_STORE_TA_BLOB        = 0x10000D,
+    MC_DRV_REG_STORE_TA_BLOB,
+    // Delete all TA objects
+    MC_DRV_REG_DELETE_TA_OBJS,
 
+    MC_DRV_REG_END
 } mcDrvCmd_t;
 
-typedef struct {
-    mcDrvCmd_t  commandId;
-} mcDrvCommandHeader_t;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct {
-    /* <t-base Daemon uses Client API return codes also in commands between Daemon and Client Library. */
-    uint32_t  responseId;
-} mcDrvResponseHeader_t;
-
-
-#define MC_DEVICE_ID_DEFAULT    0 /**< The default device ID */
-
-//--------------------------------------------------------------
-struct MC_DRV_CMD_OPEN_DEVICE_struct {
-    uint32_t  commandId;
-    uint32_t  deviceId;
-};
+	/* id - free run counter managed by driver, initialized by
+	 * initial_cmd_counter, incremented for each command.
+	 * If difference between current value and value from previous command
+	 * is greater than 1, it means daemon and driver are out of synch. */
+	uint32_t id;
+	uint32_t cmd;
+	uint32_t data_size;
+} CommandHeader;
 
 typedef struct {
-    mcDrvResponseHeader_t        header;
-} mcDrvRspOpenDevice_t;
-
-//--------------------------------------------------------------
-struct MC_DRV_CMD_CLOSE_DEVICE_struct {
-    uint32_t  commandId;
-};
-
-typedef struct {
-    mcDrvResponseHeader_t         header;
-} mcDrvRspCloseDevice_t;
-
-//--------------------------------------------------------------
-struct MC_DRV_CMD_OPEN_SESSION_struct {
-    uint32_t  commandId;
-    uint32_t  deviceId;
-    mcUuid_t  uuid;
-    uint32_t  tci;
-    uint32_t  handle;
-    uint32_t  len;
-};
+	/* id - must be same value as it was in the corresponding command,
+	 * but managed by daemon */
+	uint32_t id;
+	uint32_t result;
+	uint32_t data_size;
+} ResponseHeader;
 
 typedef struct {
-    uint32_t  sessionId;
-    uint32_t  deviceSessionId;
-    uint32_t  sessionMagic;
-} mcDrvRspOpenSessionPayload_t, *mcDrvRspOpenSessionPayload_ptr;
+	uint32_t len;
+	uint32_t tl_start_off;
+	uint8_t value[];
+} regObject_t;
 
 typedef struct {
-    mcDrvResponseHeader_t         header;
-    mcDrvRspOpenSessionPayload_t  payload;
-} mcDrvRspOpenSession_t;
-
-//--------------------------------------------------------------
-struct MC_DRV_CMD_OPEN_TRUSTLET_struct {
-    uint32_t  commandId;
-    uint32_t  deviceId;
-    mcSpid_t  spid;
-    uint32_t  trustlet_len;
-    uint32_t  tci;
-    uint32_t  handle;
-    uint32_t  len;
-};
+	mcUuid_t uuid;
+	mcSpid_t spid;
+	uint8_t blob[];
+} TlBlob;
 
 typedef struct {
-    uint32_t  sessionId;
-    uint32_t  deviceSessionId;
-    uint32_t  sessionMagic;
-} mcDrvRspOpenTrustletPayload_t, *mcDrvRspOpenTrustletPayload_ptr;
+	mcSpid_t spid;
+	uint8_t blob[];
+} TaBlob;
 
-typedef struct {
-    mcDrvResponseHeader_t          header;
-    mcDrvRspOpenTrustletPayload_t  payload;
-} mcDrvRspOpenTrustlet_t;
+#ifdef __cplusplus
+}
+#endif
 
-//--------------------------------------------------------------
-struct MC_DRV_CMD_OPEN_TRUSTED_APP_struct {
-    uint32_t  commandId;
-    uint32_t  deviceId;
-    mcUuid_t  uuid;
-    uint32_t  tci;
-    uint32_t  handle;
-    uint32_t  len;
-};
-
-//--------------------------------------------------------------
-struct MC_DRV_CMD_CLOSE_SESSION_struct {
-    uint32_t  commandId;
-    uint32_t  sessionId;
-};
-
-typedef struct {
-    mcDrvResponseHeader_t         header;
-} mcDrvRspCloseSession_t;
-
-//--------------------------------------------------------------
-struct MC_DRV_CMD_NOTIFY_struct {
-    uint32_t  commandId;
-    uint32_t  sessionId;
-};
-
-// Notify does not have a response
-
-//--------------------------------------------------------------
-struct MC_DRV_CMD_MAP_BULK_BUF_struct {
-    uint32_t  commandId;
-    uint32_t  sessionId;
-    uint32_t  handle;
-    uint32_t  rfu;
-    uint32_t  offsetPayload;
-    uint32_t  lenBulkMem;
-};
-
-typedef struct {
-    uint32_t  sessionId;
-    uint32_t  secureVirtualAdr;
-} mcDrvRspMapBulkMemPayload_t, *mcDrvRspMapBulkMemPayload_ptr;
-
-typedef struct {
-    mcDrvResponseHeader_t        header;
-    mcDrvRspMapBulkMemPayload_t  payload;
-} mcDrvRspMapBulkMem_t;
-
-
-//--------------------------------------------------------------
-struct MC_DRV_CMD_UNMAP_BULK_BUF_struct {
-    uint32_t  commandId;
-    uint32_t  sessionId;
-    uint32_t  handle;
-    uint32_t  secureVirtualAdr;
-    uint32_t  lenBulkMem;
-};
-
-typedef struct {
-    mcDrvResponseHeader_t          header;
-} mcDrvRspUnmapBulkMem_t;
-
-
-//--------------------------------------------------------------
-struct MC_DRV_CMD_NQ_CONNECT_struct {
-    uint32_t  commandId;
-    uint32_t  deviceId;
-    uint32_t  sessionId;
-    uint32_t  deviceSessionId;
-    uint32_t  sessionMagic; //Random data
-};
-
-typedef struct {
-    mcDrvResponseHeader_t       header;
-} mcDrvRspNqConnect_t;
-
-//--------------------------------------------------------------
-struct MC_DRV_CMD_GET_VERSION_struct {
-    uint32_t commandId;
-};
-
-typedef struct {
-    uint32_t responseId;
-    uint32_t version;
-} mcDrvRspGetVersion_t;
-
-//--------------------------------------------------------------
-struct MC_DRV_CMD_GET_MOBICORE_VERSION_struct {
-    uint32_t  commandId;
-};
-
-typedef struct {
-    mcVersionInfo_t versionInfo;
-} mcDrvRspGetMobiCoreVersionPayload_t, *mcDrvRspGetMobiCoreVersionPayload_ptr;
-
-typedef struct {
-    mcDrvResponseHeader_t       header;
-    mcDrvRspGetMobiCoreVersionPayload_t payload;
-} mcDrvRspGetMobiCoreVersion_t;
-
-//--------------------------------------------------------------
-typedef union {
-    mcDrvCommandHeader_t                header;
-    MC_DRV_CMD_OPEN_DEVICE_struct       mcDrvCmdOpenDevice;
-    MC_DRV_CMD_CLOSE_DEVICE_struct      mcDrvCmdCloseDevice;
-    MC_DRV_CMD_OPEN_SESSION_struct      mcDrvCmdOpenSession;
-    MC_DRV_CMD_OPEN_TRUSTLET_struct     mcDrvCmdOpenTrustlet;
-    MC_DRV_CMD_OPEN_TRUSTED_APP_struct  mcDrvCmdOpenTrustedApp;
-    MC_DRV_CMD_CLOSE_SESSION_struct     mcDrvCmdCloseSession;
-    MC_DRV_CMD_NQ_CONNECT_struct        mcDrvCmdNqConnect;
-    MC_DRV_CMD_NOTIFY_struct            mcDrvCmdNotify;
-    MC_DRV_CMD_MAP_BULK_BUF_struct      mcDrvCmdMapBulkMem;
-    MC_DRV_CMD_UNMAP_BULK_BUF_struct    mcDrvCmdUnmapBulkMem;
-    MC_DRV_CMD_GET_VERSION_struct       mcDrvCmdGetVersion;
-    MC_DRV_CMD_GET_MOBICORE_VERSION_struct  mcDrvCmdGetMobiCoreVersion;
-} mcDrvCommand_t, *mcDrvCommand_ptr;
-
-typedef union {
-    mcDrvResponseHeader_t        header;
-    mcDrvRspOpenDevice_t         mcDrvRspOpenDevice;
-    mcDrvRspCloseDevice_t        mcDrvRspCloseDevice;
-    mcDrvRspOpenSession_t        mcDrvRspOpenSession;
-    mcDrvRspCloseSession_t       mcDrvRspCloseSession;
-    mcDrvRspNqConnect_t          mcDrvRspNqConnect;
-    mcDrvRspMapBulkMem_t         mcDrvRspMapBulkMem;
-    mcDrvRspUnmapBulkMem_t       mcDrvRspUnmapBulkMem;
-    mcDrvRspGetVersion_t         mcDrvRspGetVersion;
-    mcDrvRspGetMobiCoreVersion_t mcDrvRspGetMobiCoreVersion;
-} mcDrvResponse_t, *mcDrvResponse_ptr;
-
-#endif /* MCDAEMON_H_ */
-
+#endif // MOBICORE_REGISTRY_API_H_

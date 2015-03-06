@@ -48,7 +48,7 @@
 #include "mcUuid.h"
 #include "mcLoadFormat.h"
 #include "mcVersionInfo.h"
-
+#include "stdbool.h"
 
 /** MobiCore Return Code Defines.
  * List of the possible MobiCore return codes.
@@ -83,6 +83,9 @@ typedef enum {
     MC_MCP_RET_ERR_SP_TL_HASH_CHECK_FAILED          = 26, /**< Hash check of service provider trustlet failed. */
     MC_MCP_RET_ERR_LAUNCH_TASK_FAILED               = 27, /**< Activation/starting of task failed. */
     MC_MCP_RET_ERR_CLOSE_TASK_FAILED                = 28, /**< Closing of task not yet possible, try again later. */
+    MC_MCP_RET_ERR_SERVICE_BLOCKED                  = 29, /**< Service is blocked and a session cannot be opened to it. */
+    MC_MCP_RET_ERR_SERVICE_LOCKED                   = 30, /**< Service is locked and a session cannot be opened to it. */
+    MC_MCP_RET_ERR_SERVICE_KILLED                   = 31, /**< Service was forcefully killed (due to an administrative command). */
 
     // used for command verification
     MC_MCP_RET_ERR_UNKNOWN_COMMAND                  = 50, /**< The command is unknown. */
@@ -120,6 +123,7 @@ typedef uint32_t wsmType_t;
 #define WSM_INVALID         0       /**< Invalid memory type */
 #define WSM_CONTIGUOUS      1       /**< Reference to WSM points to a contiguous region of pages. */
 #define WSM_L2              2       /**< Reference to WSM points to an L2 table describing the memory region to share */
+#define WSM_L1              3       /**< Reference to WSM points to an L1 table describing the memory region to share */
 #define WSM_WSM_UNCACHED    0x100   /**< Bitflag indicating that WSM should be uncached */
 #define WSM_L2_UNCACHED     0x100   /**< Bitflag indicating that L2 table should be uncached */
 
@@ -228,7 +232,7 @@ typedef struct {
 /** Open Command */
 typedef struct {
     commandHeader_t   cmdHeader;        /**< Command header. */
-    mcUuid_t            uuid;             /**< Byte array containing the service UUID. */
+    mcUuid_t          uuid;             /**< Byte array containing the service UUID. */
     uint64_t          adrTciBuffer;     /**< Physical address of the TCI */
     uint64_t          adrLoadData;      /**< Physical address of the data to load. */
     uint32_t          ofsTciBuffer;     /**< Offset to the data. */
@@ -238,6 +242,7 @@ typedef struct {
     uint32_t          ofsLoadData;      /**< Offset to the data. */
     uint32_t          lenLoadData;      /**< Length of the data to load. */
     mclfHeader_t      tlHeader;         /**< Service header. */
+    bool              is_gpta;          /**< true if looking for an SD/GP-TA */
 } mcpCmdOpen_t, *mcpCmdOpen_ptr;
 
 /** Open Command Response */
@@ -414,7 +419,7 @@ typedef struct {
 typedef struct {
     uint32_t      schedule;   /**< Scheduling hint: if <> MC_FLAG_SCHEDULE_IDLE, MobiCore should be scheduled by the NWd */
     mcSleepMod_t  sleepMode;  /**<  */
-    uint32_t      RFU2;       /**< Reserved for future use: Must not be interpreted */
+    uint32_t      timeout;    /**< Secure-world timeout: when t-base goes to sleep, its next deadline is written here */
     uint32_t      RFU3;       /**< Reserved for future use: Must not be interpreted */
 } mcFlags_t, *mcFlags_ptr;
 

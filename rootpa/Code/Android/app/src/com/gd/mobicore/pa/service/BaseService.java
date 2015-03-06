@@ -62,7 +62,7 @@ public abstract class BaseService extends Service {
     */
     private static final int LOCK_FREE=0;
     private static final AtomicInteger lock_= new AtomicInteger(LOCK_FREE);
-    private static final int LOCK_TIMEOUT_MS=60000;
+    private static final int LOCK_TIMEOUT_MS=300000; //30 min = 30 * 60 * 1000
     private TimerTask timerTask_=null;
     private Timer timer_=null;
 

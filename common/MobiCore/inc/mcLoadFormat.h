@@ -36,7 +36,7 @@
 #include "mcDriverId.h"
 
 #define MCLF_VERSION_MAJOR   2
-#define MCLF_VERSION_MINOR   4
+#define MCLF_VERSION_MINOR   5
 #define MCLF_VERSION_MINOR_CURRENT   3
 
 #define MC_SERVICE_HEADER_MAGIC_BE         ((uint32_t)('M'|('C'<<8)|('L'<<16)|('F'<<24))) /**< "MCLF" in big endian integer representation */
@@ -47,15 +47,19 @@
 #define MC_SERVICE_HEADER_FLAGS_PERMANENT               (1U << 0) /**< Loaded service cannot be unloaded from MobiCore. */
 #define MC_SERVICE_HEADER_FLAGS_NO_CONTROL_INTERFACE    (1U << 1) /**< Service has no WSM control interface. */
 #define MC_SERVICE_HEADER_FLAGS_DEBUGGABLE              (1U << 2) /**< Service can be debugged. */
+#define MC_SERVICE_HEADER_FLAGS_EXTENDED_LAYOUT          (1U << 3) /**< New-layout trusted application or trusted driver. */
+
 
 /** Service type.
  * The service type defines the type of executable.
  */
 typedef enum {
-    SERVICE_TYPE_ILLEGAL    = 0,        /**< Service type is invalid. */
-    SERVICE_TYPE_DRIVER     = 1,        /**< Service is a driver. */
-    SERVICE_TYPE_SP_TRUSTLET   = 2,     /**< Service is a Trustlet. */
-    SERVICE_TYPE_SYSTEM_TRUSTLET = 3,   /**< Service is a system Trustlet. */
+    SERVICE_TYPE_ILLEGAL         = 0, /**< Service type is invalid. */
+    SERVICE_TYPE_DRIVER          = 1, /**< Service is a driver. */
+    SERVICE_TYPE_SP_TRUSTLET     = 2, /**< Service is a Trustlet. */
+    SERVICE_TYPE_SYSTEM_TRUSTLET = 3, /**< Service is a system Trustlet. */
+    SERVICE_TYPE_MIDDLEWARE      = 4, /**< Service is a middleware. */
+    SERVICE_TYPE_LAST_ENTRY      = 5, /**< marker for last entry */
 } serviceType_t;
 
 /**
@@ -149,6 +153,48 @@ typedef struct {
 
 
 
+/*
+ * HEAP parameters
+ */
+
+typedef struct {
+    uint32_t    init;
+    uint32_t    max;
+} heapSize_t, *heapSize_ptr;
+
+/*
+ * McLib Internal Management Data
+ * This structure defines the parameters of a buffer used internally by McLib for each TA/TDriver
+ * and it specifies default heap parameters (for MCLF header versions >=2.5)
+ *
+ * `mcLibData` field describes McLib work buffer
+ * and it is used for MCLF header versions <=2.4
+ * In this case the buffer is a part of TA BSS section
+ *
+ * For MCLF header versions >=2.5 `mcLibData` field is not used anymore and
+ * replaced by `mcLibData` field
+ * RTM itself determines actual address in this case and sets `mcLibData` field value
+ *
+ * `heapSize` field describes default heap parameters and
+ *  it is used only for MCLF header versions >=2.5
+ *
+ */
+
+typedef struct {
+    union {
+        segmentDescriptor_t     mcLibData;  /**< Segment for McLib data.
+                                                 Set at compile time.
+                                                 Required always. */
+        heapSize_t              heapSize;   /**< Initial and maximum heap sizes.
+                                                 Set by MobiConvert for extended-layout TAs */
+    } cfg;
+    uint32_t                    mcLibBase;  /**< McLib base address.
+                                                 Mobicore sets at load time for trustlets / drivers.
+                                                 Required always. */
+} mclfIMD_t, *mclfIMD_ptr;
+
+
+
 /**
  * Version 2 MCLF text segment header.
  * Required to be present in MobiCore 1.2 components at address (0x1080).
@@ -158,18 +204,12 @@ typedef struct {
 typedef struct {
     uint32_t                version;        /**< Version of the TextHeader structure. */
     uint32_t                textHeaderLen;  /**< Size of this structure (fixed at compile time) */
-    uint32_t                requiredFeat;   /**< Flags to indicate features that Mobicore must understand/interpret when loading.
-                                                 Initial value set at compile time.
+    uint32_t                requiredFeat;   /**< Flags to indicate features that Mobicore must understand/interprete when loading.
                                                  Required always. */
     uint32_t                mcLibEntry;     /**< Address for McLib entry.
                                                  Mobicore sets at load time for trustlets / drivers.
                                                  Required always. */
-    segmentDescriptor_t     mcLibData;      /**< Segment for McLib data.
-                                                 Set at compile time.
-                                                 Required always. */
-    uint32_t                mcLibBase;      /**< McLib base address.
-                                                 Mobicore sets at load time for trustlets / drivers.
-                                                 Required always. */
+    mclfIMD_t               mcIMD;          /**< McLib Internal Management Data */
     uint32_t                tlApiVers;      /**< TlApi version used when building trustlet.
                                                  Value set at compile time.
                                                  Required always. */

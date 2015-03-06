@@ -7,23 +7,19 @@
 # Don't remove this - mandatory
 APP_PROJECT_PATH := $(abspath $(call my-dir))
 
-APP_STL := stlport_static
+APP_STL := gnustl_static
 
-# Don't optimize for better debugging
-APP_OPTIM := debug
+# Proper support for C++11
+NDK_TOOLCHAIN_VERSION := 4.8
 
 # Application wide Cflags
 GLOBAL_INCLUDES := \
-    $(COMP_PATH_MobiCoreDriverMod)/Public \
-    $(COMP_PATH_TlSdk)/Public/MobiCore/inc \
-    $(COMP_PATH_MobiCore)/inc \
-    $(COMP_PATH_TlCm)/Public \
-    $(COMP_PATH_TlCm)/Public/TlCm
+	$(DEV_DRIVER_DIR) \
+	$(DEV_MOBICORE_DIR) \
+	$(DEV_MOBICORE_DIR)/McLib \
+	$(DEP_LOGWRAPPER_DIR)
 
-# Show all warnings
-APP_CFLAGS += -Wall
-
-LOG_WRAPPER := $(COMP_PATH_Logwrapper)
+LOG_WRAPPER := $(DEP_LOGWRAPPER_DIR)
 
 APP_PLATFORM := android-9
 

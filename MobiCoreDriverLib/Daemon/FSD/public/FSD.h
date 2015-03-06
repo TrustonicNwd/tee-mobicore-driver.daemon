@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,29 +28,25 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/**
- * FSD server.
- *
- * Handles incoming storage requests from TA through STH
- */
 #ifndef FSD_H_
 #define FSD_H_
 
 #include <sys/types.h>
 #include <string>
 #include <cstdio>
-#include "CThread.h"
-#include "MobiCoreDriverApi.h"
-#include "drSecureStorage_Api.h"
+#include <cstdlib>
 #include <errno.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <dirent.h>
-#include <android/log.h>
 
+#include <mutex>
 
-#define max( a, b ) ( ((a) > (b)) ? (a) : (b) )
-#define DCI_BUFF_SIZE	1000*1024
+#include "MobiCoreDriverApi.h"
+#include "drSecureStorage_Api.h"
+#include "CThread.h"
+
+#define DCI_BUFF_SIZE           (1000*1024)
 
 #define TEE_UUID_STRING_SIZE  	32
 #define FILENAMESIZE			20
@@ -58,31 +54,34 @@
 
 #define TAG_LOG	"FSD"
 
+//located in the PrivateRegistry.cpp, don't ask why...
+extern const std::string &getTbStoragePath(void);
+
 class FSD: public CThread
 {
-
 public:
     /**
      * FSD contructor.
      *
      * @param tbstoragepath Absolute path to the secure storage
      */
-    FSD(
-        void
-    );
+    FSD(size_t dci_msg_size = DCI_BUFF_SIZE);
 
     /**
      * FSD destructor.
      * Close the current session and resources will be freed.
      */
-    virtual ~FSD(
-        void
-    );
+    virtual ~FSD(void);
+
+    void start(void)
+    {
+        CThread::start(FSD::m_server_name);
+    }
 
     /**
      * Start server and listen for incoming request from STH.
      */
-    virtual void run(void);
+    void run(void);
 
     /*
     *   FSD_Open
@@ -90,8 +89,7 @@ public:
     *   Open a session with the STH
     *
     */
-    virtual mcResult_t FSD_Open(void);
-
+    mcResult_t FSD_Open(void);
 
     /*
     *   FSD_Close
@@ -99,8 +97,7 @@ public:
     *   Close a session opened with the STH
     *
     */
-    virtual mcResult_t FSD_Close(void);
-
+    mcResult_t FSD_Close(void);
 
     /*
     *   FSD_listenDci
@@ -108,15 +105,9 @@ public:
     *   DCI listener function
     *
     */
-    virtual void FSD_listenDci(void);
-
-
+    void FSD_listenDci(void);
 
 private:
-    mcSessionHandle_t   	sessionHandle; /**< current session */
-    dciMessage_t*       	dci; /**< dci buffer */
-
-
     /** Private methods*/
 
     /*
@@ -125,16 +116,16 @@ private:
     *   Execute command received from the STH
     *
     */
-    mcResult_t FSD_ExecuteCommand(void);
+    void FSD_ExecuteCommand(void);
 
-    /****************************  File operations  *******************************/
+    /****************************  File operations  ***************************/
 
     /*
     *   FSD_LookFile
     *
     *   look for a file
     */
-    mcResult_t FSD_LookFile(void);
+    uint32_t FSD_LookFile(void);
 
 
     /*
@@ -142,7 +133,7 @@ private:
     *
     *   Read a file
     */
-    mcResult_t FSD_ReadFile(void);
+    uint32_t FSD_ReadFile(void);
 
 
     /*
@@ -150,7 +141,7 @@ private:
     *
     *   Write a file
     */
-    mcResult_t FSD_WriteFile(void);
+    uint32_t FSD_WriteFile(void);
 
 
     /*
@@ -158,7 +149,25 @@ private:
     *
     *   Delete a file
     */
-    mcResult_t FSD_DeleteFile(void);
+    uint32_t FSD_DeleteFile(void);
+
+private:
+    /** Private data */
+    std::mutex          m_close_lock;
+    mcSessionHandle_t   m_sessionHandle; /**< current session */
+    dciMessage_t        *m_dci; /**< dci buffer */
+    size_t              m_dci_msg_size;
+    static const char * const m_server_name;
+
+    /**
+     * FSD_DeleteDir()
+     *
+     * Deletes a TA directory and all files belonging to that DIR
+     * Note, this is a restricted function only available to a TA with the
+     * required capability
+     */
+    mcResult_t FSD_DeleteDir(void);
+
 };
 
 #endif /* FSD_H_ */

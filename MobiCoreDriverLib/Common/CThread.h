@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,62 +28,25 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/**
- * Thread implementation (pthread abstraction).
- */
 #ifndef CTHREAD_H_
 #define CTHREAD_H_
 
-#include <inttypes.h>
-#include "CSemaphore.h"
-#include "pthread.h"
+#include <pthread.h>
 
-using namespace std;
-
-
-class CThread
-{
-
+class CThread {
 public:
-
-    CThread(void);
-
-    virtual ~CThread(void);
-
-    virtual void run(void) = 0;
-
-    void start(void);
-
+    virtual ~CThread() {}
+    virtual void run() = 0;
     void start(const char* name);
-
-    void join(void);
-
-    void sleep(void);
-
-    void wakeup(void);
-
-    void terminate(void);
-
-    bool isExiting(void);
-
-    void setExiting(void);
-
+    void join();
+    void terminate();
+    int kill(int sig);
 protected:
-
-    bool shouldTerminate(void);
-
-    void exit(int32_t exitcode);
-
+    bool shouldTerminate();
 private:
-
-    CSemaphore *m_sem;
+    bool m_terminate = false;
     pthread_t m_thread;
-    bool m_terminate;
-    bool m_isExiting;
-
 };
-
-extern "C" void *CThreadStartup(void *);
 
 #endif /*CTHREAD_H_*/
 

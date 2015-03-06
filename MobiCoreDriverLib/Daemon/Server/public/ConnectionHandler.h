@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,14 +28,10 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/**
- * Interface for connection handlers used by Server.
- */
 #ifndef CONNECTIONHANDLER_H_
 #define CONNECTIONHANDLER_H_
 
 #include "Connection.h"
-
 
 class ConnectionHandler
 {
@@ -47,22 +43,20 @@ public:
      * Handle connection activities.
      * The connection handler shall process pending connection activities.
      *
-     * @param [in] connection Reference to the connection which has data to process.
+     * @param [in] connection Reference to the connection which
+     *             has data to process.
      */
-    virtual bool handleConnection(
-        Connection *connection
-    ) = 0;
+    virtual bool handleConnection(Connection &connection) = 0;
 
     /**
      * Connection has been closed.
-     * The connection handler shall clean up all resources associated with the given connection.
-     * After the method has been executed the connection object will be deleted.
+     * The connection handler shall clean up all resources associated with
+     * the given connection. After the method has been executed the connection
+     * object will be deleted.
      *
      * @param [in] connection Reference to the connection which will be deleted.
      */
-    virtual void dropConnection(
-        Connection *connection
-    ) = 0;
+    virtual void dropConnection(Connection &connection) = 0;
 };
 
 #endif /* CONNECTIONHANDLER_H_ */

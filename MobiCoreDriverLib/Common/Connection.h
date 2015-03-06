@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,35 +28,21 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/**
- * Connection data.
- */
 #ifndef CONNECTION_H_
 #define CONNECTION_H_
 
-#include <list>
-#include <exception>
-
 #include <inttypes.h>
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 
-
 class Connection
 {
 public:
-    struct sockaddr_un remote; /**< Remote address */
-    int32_t socketDescriptor; /**< Local socket descriptor */
-    void *connectionData; /**< reference to data related with the connection */
-    bool detached; /**< Connection state */
-
     Connection(void);
-
     Connection(int socketDescriptor, sockaddr_un *remote);
 
-    virtual ~Connection(void);
+    ~Connection(void);
 
     /**
      * Connect to destination.
@@ -64,7 +50,7 @@ public:
      * @param Destination pointer.
      * @return true on success.
      */
-    virtual bool connect(const char *dest);
+    bool connect(const char *dest);
 
     /**
      * Read bytes from the connection.
@@ -76,17 +62,8 @@ public:
      * @return -1 if select() failed (returned -1)
      * @return -2 if no data available, i.e. timeout
      */
-    virtual ssize_t readData(void *buffer, uint32_t len, int32_t timeout);
-
-    /**
-     * Read bytes from the connection.
-     *
-     * @param buffer    Pointer to destination buffer.
-     * @param len       Number of bytes to read.
-     * @return Number of bytes read.
-     */
-    virtual ssize_t readData(void *buffer, uint32_t len);
-
+    ssize_t readData(void *buffer, uint32_t len, int32_t timeout = -1);
+    ssize_t readMsg(const iovec *iov, unsigned nr_seg, int32_t timeout = -1);
     /**
      * Write bytes to the connection.
      *
@@ -95,7 +72,8 @@ public:
      * @return Number of bytes written.
      * @return -1 if written bytes not equal to len.
      */
-    virtual ssize_t writeData(void *buffer, uint32_t len);
+    ssize_t writeData(void *buffer, uint32_t len);
+    ssize_t writeMsg(const iovec *iov, unsigned nr_seg);
 
     /**
      * Wait for data to be available.
@@ -104,27 +82,31 @@ public:
      * @return 0 if data is available
      * @return error code if otherwise
      */
-    virtual int waitData(int32_t timeout);
+    int waitData(int32_t timeout);
 
     /*
      * Checks if the socket is  still connected to the daemon
      *
      * @return true if connection is still alive.
      */
-    virtual bool isConnectionAlive(void);
+    bool isConnectionAlive(void);
 
     /*
      * Retrieve the peer's credentials(uid, pid, gid)
      *
      * @return true if connection peers could be retrieved
      */
-    virtual bool getPeerCredentials(struct ucred &cr);
+    bool getPeerCredentials(struct ucred &cr);
 
+    int socket() const
+    {
+	    return m_socket;
+    }
+
+private:
+    struct sockaddr_un m_remote; /**< Remote address */
+    int m_socket; /**< Local socket descriptor */
 };
-
-typedef std::list<Connection *>         connectionList_t;
-typedef connectionList_t::iterator     connectionIterator_t;
-
 
 #endif /* CONNECTION_H_ */
 

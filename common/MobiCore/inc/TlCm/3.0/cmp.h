@@ -48,7 +48,11 @@
 /** Info of the whole mapped memory with NWd. */
 typedef struct {
     /** Address of the mapped memory. */
+#if ( __WORDSIZE == 64 )
+    uint32_t addr;         /**< The virtual address of the Bulk buffer regarding the address space of the Trusted Application, already includes a possible offset! */
+#else
     void* addr;
+#endif
     /** Size of the mapped memory. */
     uint32_t len; 
 } cmpMapInfo_t;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@
 #ifndef MCI_VERSION_H_
 #define MCI_VERSION_H_
 
-#define MCI_VERSION_MAJOR 0
-#define MCI_VERSION_MINOR 6
+#define MCI_VERSION_MAJOR 1
+#define MCI_VERSION_MINOR 0
 
 #endif /** MCI_VERSION_H_ */

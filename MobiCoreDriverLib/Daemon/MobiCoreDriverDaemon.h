@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,237 +28,27 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/**
- * <t-base driver class.
- * The <t-base driver class implements the ConnectionHandler interface.
- */
 #ifndef MOBICOREDRIVER_H_
 #define MOBICOREDRIVER_H_
 
-#include "Server/public/ConnectionHandler.h"
-#include "Server/public/Server.h"
-
-#include "MobiCoreDevice.h"
 #include <string>
 #include <list>
+#include <vector>
 
+#include "Server/public/ConnectionHandler.h"
+#include "Server/public/Server.h"
+#include "FSD.h"
+#include "SecureWorld.h"
 
-#define MAX_SERVERS 2
-
-class MobicoreDriverResources
+class MobiCoreDriverDaemon: public ConnectionHandler
 {
-public:
-    Connection *conn;
-    CWsm *pTciWsm;
-    uint32_t sessionId;
-
-    MobicoreDriverResources(
-        Connection *conn,
-        CWsm *pTciWsm,
-        uint32_t sessionId
-    ) {
-        this->conn = conn;
-        this->pTciWsm = pTciWsm;
-        this->sessionId = sessionId;
+    struct cmd_map_item_t {
+            uint32_t (MobiCoreDriverDaemon:: *handler)(
+        	    CommandHeader &cmd,
+                    const uint8_t *rx_data,
+                    uint32_t *tx_data_size, std::unique_ptr<uint8_t> &tx_data);
+            uint32_t min_rx_size;
     };
-};
-
-typedef std::list<MobicoreDriverResources *> driverResourcesList_t;
-
-class MobiCoreDriverDaemon : ConnectionHandler
-{
-
-public:
-
-    /**
-     * Create daemon object
-     *
-     * @param enableScheduler Enable NQ IRQ scheduler
-     * @param loadDriver Load driver at daemon startup
-     * @param driverPath Startup driver path
-     */
-    MobiCoreDriverDaemon(
-        bool enableScheduler,
-
-        /**< <t-base driver loading at start-up */
-        bool loadDriver,
-        std::vector<std::string> drivers
-    );
-
-    virtual ~MobiCoreDriverDaemon(
-        void
-    );
-
-    void dropConnection(
-        Connection *connection
-    );
-
-    bool handleConnection(
-        Connection *connection
-    );
-
-    void run(
-        void
-    );
-
-private:
-    MobiCoreDevice *mobiCoreDevice;
-    /**< Flag to start/stop the scheduler */
-    bool enableScheduler;
-    /**< Flag to load drivers at startup */
-    bool loadDriver;
-    std::vector<std::string> drivers;
-    /**< List of resources for the loaded drivers */
-    driverResourcesList_t driverResources;
-    /**< List of servers processing connections */
-    Server *servers[MAX_SERVERS];
-
-    bool checkPermission(Connection *connection);
-
-    size_t writeResult(
-        Connection  *connection,
-        mcResult_t  code
-    );
-
-    /**
-        * Resolve a device ID to a MobiCore device.
-        *
-        * @param deviceId Device identifier of the device.
-        * @return Reference to the device or NULL if device could not be found.
-        */
-    MobiCoreDevice *getDevice(
-        uint32_t deviceId
-    );
-
-    /**
-     * Load Device driver
-     *
-     * @param driverPath Path to the driver file
-     * @return True for success/false for failure
-     */
-    bool loadDeviceDriver(std::string driverPath);
-
-    /**
-     * Open Device command
-     *
-     * @param connection Connection object
-     */
-    void processOpenDevice(Connection *connection);
-
-    /**
-     * Open Session command
-     *
-     * @param connection Connection object
-     */
-    void processOpenSession(Connection *connection, bool isGpUuid);
-
-    /**
-     * Check Load TA command
-     *
-     * @param spid claimed
-     * @param blob TA blob pointer
-     * @param size TA blob pointer size
-     * @return true in case of success, false in case of failure
-     */
-
-    mcResult_t processLoadCheck(mcSpid_t spid, void *blob, uint32_t size);
-
-    /**
-     * Open Trustlet command
-     *
-     * @param connection Connection object
-     */
-    void processOpenTrustlet(Connection *connection);
-
-    /**
-     * NQ Connect command
-     *
-     * @param connection Connection object
-     */
-    void processNqConnect(Connection *connection);
-
-    /**
-     * Close Device command
-     *
-     * @param connection Connection object
-     */
-    void processCloseDevice(Connection *connection);
-
-    /**
-     * Notify command
-     *
-     * @param connection Connection object
-     */
-    void processNotify(Connection *connection);
-
-    /**
-     * Close Session command
-     *
-     * @param connection Connection object
-     */
-    void processCloseSession(Connection *connection);
-
-    /**
-     * Map Bulk buf command
-     *
-     * @param connection Connection object
-     */
-    void processMapBulkBuf(Connection *connection);
-
-    /**
-     * Unmap bulk buf command
-     *
-     * @param connection Connection object
-     */
-    void processUnmapBulkBuf(Connection *connection);
-
-    /**
-     * Get Version command
-     *
-     * @param connection Connection object
-     */
-    void processGetVersion(Connection *connection);
-
-    /**
-     * Get MobiCore version command
-     *
-     * @param connection Connection object
-     */
-    void processGetMobiCoreVersion(Connection *connection);
-
-    /**
-     * Generic Registry read command
-     *
-     * @param commandId Actual command id
-     * @param connection Connection object
-     */
-    void processRegistryReadData(uint32_t commandId, Connection *connection);
-
-    /**
-     * Generic Registry write command
-     *
-     * @param commandId Actual command id
-     * @param connection Connection object
-     */
-    void processRegistryWriteData(uint32_t commandId, Connection *connection);
-
-    /**
-     * Generic Registry Delete command
-     *
-     * @param commandId Actual command id
-     * @param connection Connection object
-     */
-    void processRegistryDeleteData(uint32_t commandId, Connection *connection);
-
-    /**
-     * Load Token
-     * This function loads a token (if found) from the registry and uses it as
-     * the basis for the device attestation functionality
-     *
-     * @param token the token to base the attestation on (raw format)
-     * @param sosize the size of the token
-     */
-    bool loadToken(uint8_t *token, uint32_t sosize);
 
     /**
      * installEndorsementToken
@@ -266,7 +56,68 @@ private:
      * Search order:  1. authtoken 2. authtoken backup 3. root container
      */
     void installEndorsementToken(void);
+
+    bool handleConnection(Connection &connection);
+    void dropConnection(Connection&) {}
+
+    /* Registry commands, arrived through socket */
+    uint32_t reg_store_auth_token(CommandHeader &cmd,
+            const uint8_t *rx_data, uint32_t *tx_data_size,
+            std::unique_ptr<uint8_t> &tx_data);
+    uint32_t reg_store_root_cont(CommandHeader &cmd,
+            const uint8_t *rx_data, uint32_t *tx_data_size,
+            std::unique_ptr<uint8_t> &tx_data);
+    uint32_t reg_store_sp_cont(CommandHeader &cmd,
+            const uint8_t *rx_data, uint32_t *tx_data_size,
+            std::unique_ptr<uint8_t> &tx_data);
+    uint32_t reg_store_tl_cont(CommandHeader &cmd,
+            const uint8_t *rx_data, uint32_t *tx_data_size,
+            std::unique_ptr<uint8_t> &tx_data);
+    uint32_t reg_store_so_data(CommandHeader &cmd,
+            const uint8_t *rx_data, uint32_t *tx_data_size,
+            std::unique_ptr<uint8_t> &tx_data);
+    uint32_t reg_store_ta_blob(CommandHeader &cmd,
+            const uint8_t *rx_data, uint32_t *tx_data_size,
+            std::unique_ptr<uint8_t> &tx_data);
+    uint32_t reg_read_auth_token(CommandHeader &cmd,
+            const uint8_t *rx_data, uint32_t *tx_data_size,
+            std::unique_ptr<uint8_t> &tx_data);
+    uint32_t reg_read_root_cont(CommandHeader &cmd,
+            const uint8_t *rx_data, uint32_t *tx_data_size,
+            std::unique_ptr<uint8_t> &tx_data);
+    uint32_t reg_read_sp_cont(CommandHeader &cmd,
+            const uint8_t *rx_data, uint32_t *tx_data_size,
+            std::unique_ptr<uint8_t> &tx_data);
+    uint32_t reg_read_tl_cont(CommandHeader &cmd,
+            const uint8_t *rx_data, uint32_t *tx_data_size,
+            std::unique_ptr<uint8_t> &tx_data);
+    uint32_t reg_delete_auth_token(CommandHeader &cmd,
+            const uint8_t *rx_data, uint32_t *tx_data_size,
+            std::unique_ptr<uint8_t> &tx_data);
+    uint32_t reg_delete_root_cont(CommandHeader &cmd,
+            const uint8_t *rx_data, uint32_t *tx_data_size,
+            std::unique_ptr<uint8_t> &tx_data);
+    uint32_t reg_delete_sp_cont(CommandHeader &cmd,
+            const uint8_t *rx_data, uint32_t *tx_data_size,
+            std::unique_ptr<uint8_t> &tx_data);
+    uint32_t reg_delete_tl_cont(CommandHeader &cmd,
+            const uint8_t *rx_data, uint32_t *tx_data_size,
+            std::unique_ptr<uint8_t> &tx_data);
+    uint32_t reg_delete_ta_objs(CommandHeader &cmd,
+            const uint8_t *rx_data, uint32_t *tx_data_size,
+            std::unique_ptr<uint8_t> &tx_data);
+
+    static const cmd_map_item_t reg_cmd_map[];
+    static const uint MAX_DATA_SIZE = 512;
+
+    SecureWorld m_secure_world;
+    // Create the <t-base File Storage Daemon
+    FSD m_fsd;
+    Server  m_reg_server;
+public:
+    MobiCoreDriverDaemon();
+    int init(const std::list<std::string>& drivers);
+    int run (void);
 };
 
 #endif /* MOBICOREDRIVER_H_ */
-

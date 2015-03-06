@@ -33,77 +33,98 @@
  *
  * Handles incoming storage requests from TA through STH
  */
+
 #include "public/FSD.h"
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <cstdlib>
+#include <memory>
 #include <stdio.h>
 #include <assert.h>
-//#define LOG_VERBOSE
-#include "log.h"
+#include <pthread.h>
+#include <log.h>
+
+#include "MobiCoreRegistry.h"
 
 /* The following definitions are not exported in the header files of the
    client API. */
-#define TEE_DATA_FLAG_EXCLUSIVE              0x00000400
+#define TEE_DATA_FLAG_EXCLUSIVE           0x00000400
 #define TEE_ERROR_STORAGE_NO_SPACE       ((TEEC_Result)0xFFFF3041)
 #define TEE_ERROR_CORRUPT_OBJECT         ((TEEC_Result)0xF0100001)
 
-extern string getTbStoragePath();
+using namespace std;
 
 //------------------------------------------------------------------------------
-FSD::FSD(
-		void
-)
+const char * const FSD::m_server_name = "McDaemon.FSD";
+
+FSD::FSD(size_t dci_msg_size):
+        m_dci(NULL),
+        m_dci_msg_size(dci_msg_size)
 {
-    memset(&sessionHandle, 0, sizeof(mcSessionHandle_t));
-    dci = NULL;
+    memset(&m_sessionHandle, 0, sizeof(mcSessionHandle_t));
 }
 
-FSD::~FSD(
-    void
-)
+FSD::~FSD(void)
 {
-	FSD_Close();
+    LOG_I("Destroying File Storage Daemon object");
+    FSD_Close();
 }
 
-//------------------------------------------------------------------------------
-void FSD::run(
-    void
-)
+void FSD::run(void)
 {
-	struct stat st = {0};
-	mcResult_t ret;
-	string storage = getTbStoragePath();
-	const char* tbstpath = storage.c_str();
+    struct stat st;
+    mcResult_t ret;
+    const char* tbstpath;
 
-	/*Create Tbase storage directory*/
-	if (stat(tbstpath, &st) == -1) {
-		LOG_I("%s: Creating <t-base storage Folder %s\n",TAG_LOG,tbstpath);
-		if(mkdir(tbstpath, 0700)==-1)
-		{
-			LOG_E("%s: failed creating storage folder\n",TAG_LOG);
-		}
-	}
-	do{
-		LOG_I("%s: starting File Storage Daemon", TAG_LOG);
-		ret = FSD_Open();
-		if (ret != MC_DRV_OK)
-			break;
-		LOG_I("%s: Start listening for request from STH", TAG_LOG);
-		FSD_listenDci();
-	}while(false);
-	LOG_E("Exiting File Storage Daemon 0x%08X", ret);
+    sigset_t sigmask;
+    sigemptyset(&sigmask);
+    sigaddset(&sigmask, SIGUSR1);
+    pthread_sigmask(SIG_UNBLOCK, &sigmask, (sigset_t *)0);
+
+    LOG_I("FSD::run()====");
+
+    tbstpath = getTbStoragePath().c_str();
+
+    /* Create Tbase storage directory */
+    if (stat(tbstpath, &st) == -1) {
+        LOG_I("%s: Creating <t-base storage Folder %s\n", TAG_LOG, tbstpath);
+        if (mkdir(tbstpath, 0700) == -1) {
+            LOG_E("%s: failed creating storage folder\n", TAG_LOG);
+        }
+    }
+
+    do {
+        LOG_I("%s: starting File Storage Daemon", TAG_LOG);
+        ret = FSD_Open();
+        if (ret != MC_DRV_OK)
+            break;
+        LOG_I("%s: Start listening for request from STH", TAG_LOG);
+        FSD_listenDci();
+
+        /* if we are here, something failed in the communication with the
+         * Trusted Storage driver. We'll re-start and try again. Shutting down
+         * isn't helpful here.
+         * Optionally we could count and after 5 attempt abort, but that is also
+         * not so ideal.
+         */
+
+        /* clean up first, ignore errors */
+        (void) FSD_Close();
+
+        LOG_W("Restarting communications with <t-base STH\n");
+
+    } while(true);
+    LOG_E("Exiting File Storage Daemon 0x%08X", ret);
 }
 
-
-mcResult_t FSD::FSD_Open(void) {
+mcResult_t FSD::FSD_Open(void)
+{
+    dciMessage_t *dci;
     mcResult_t   mcRet;
     const mcUuid_t uuid = DRV_STH_UUID;
 
-    memset(&sessionHandle,0, sizeof(mcSessionHandle_t));
-
-    dci = (dciMessage_t*)calloc(DCI_BUFF_SIZE,sizeof(uint8_t));
+    dci = (dciMessage_t*)new uint8_t[m_dci_msg_size];
     if (dci == NULL) {
         LOG_E("FSD_Open(): allocation failed");
         return MC_DRV_ERR_NO_FREE_MEMORY;
@@ -118,11 +139,13 @@ mcResult_t FSD::FSD_Open(void) {
     }
 
     /* Open session to the sth driver */
+    mcSessionHandle_t sessionHandle;
+    memset(&sessionHandle, 0, sizeof(sessionHandle));
     sessionHandle.deviceId = MC_DEVICE_ID_DEFAULT;
     mcRet = mcOpenSession(&sessionHandle,
                           &uuid,
                           (uint8_t *) dci,
-                          DCI_BUFF_SIZE);
+                          m_dci_msg_size);
     if (MC_DRV_OK != mcRet)
     {
         LOG_E("FSD_Open(): mcOpenSession returned: %d\n", mcRet);
@@ -132,9 +155,7 @@ mcResult_t FSD::FSD_Open(void) {
     /* Wait for notification from SWd */
     mcRet = mcWaitNotification(&sessionHandle, MC_INFINITE_TIMEOUT);
     if (MC_DRV_OK != mcRet)
-    {
         goto close_session;
-    }
 
     /**
      * The following notification is required for initial sync up
@@ -151,20 +172,22 @@ mcResult_t FSD::FSD_Open(void) {
     /* Wait for notification from SWd */
     mcRet = mcWaitNotification(&sessionHandle, MC_INFINITE_TIMEOUT);
     if (MC_DRV_OK != mcRet)
-    {
         goto close_session;
-    }
+
     LOG_I("FSD_Open(): received first notification \n");
     LOG_I("FSD_Open(): send notification  back \n");
     mcRet = mcNotify(&sessionHandle);
-    if (MC_DRV_OK != mcRet)
-    {
+    if (mcRet == MC_DRV_OK) {
+        std::lock_guard<std::mutex> lock(m_close_lock);
+        if(!shouldTerminate()) {
+            m_dci = dci;
+            m_sessionHandle = sessionHandle;
+            LOG_I("FSD_Open(): returning success");
+            return mcRet;
+        } else
+            LOG_E("FSD_Open(): thread should be terminated, bailing out\n");
+    } else
         LOG_E("FSD_Open(): mcNotify returned: %d\n", mcRet);
-        goto close_session;
-    }
-
-    LOG_I("FSD_Open(): returning success");
-    return mcRet;
 
 close_session:
     mcCloseSession(&sessionHandle);
@@ -173,70 +196,68 @@ close_device:
     mcCloseDevice(MC_DEVICE_ID_DEFAULT);
 
 error:
-    free(dci);
-    dci = NULL;
+    delete[] dci;
 
     return mcRet;
 }
 
-mcResult_t FSD::FSD_Close(void){
-    mcResult_t   mcRet;
+mcResult_t FSD::FSD_Close(void)
+{
+    mcResult_t   mcRet = MC_DRV_OK;
 
-    /* Clear DCI message buffer */
-    memset(dci, 0, sizeof(dciMessage_t));
+    std::lock_guard<std::mutex> lock(m_close_lock);
 
     /* Close session to the debug driver trustlet */
-    mcRet = mcCloseSession(&sessionHandle);
-    if (MC_DRV_OK != mcRet)
-    {
-        LOG_E("FSD_Close(): mcCloseSession returned: %d\n", mcRet);
-    }
+    if(m_dci != NULL) {
 
-    free(dci);
-    dci = NULL;
-    memset(&sessionHandle,0,sizeof(mcSessionHandle_t));
+        mcRet = mcCloseSession(&m_sessionHandle);
+        if (MC_DRV_OK != mcRet)
+            LOG_E("FSD_Close(): mcCloseSession returned: %d\n", mcRet);
 
-    /* Close <t-base device */
-    mcRet = mcCloseDevice(MC_DEVICE_ID_DEFAULT);
-    if (MC_DRV_OK != mcRet)
-    {
-        LOG_E("FSD_Close(): mcCloseDevice returned: %d\n", mcRet);
+        memset(&m_sessionHandle, 0, sizeof(mcSessionHandle_t));
+
+        /* Close <t-base device */
+        mcRet = mcCloseDevice(MC_DEVICE_ID_DEFAULT);
+        if (MC_DRV_OK != mcRet)
+            LOG_E("FSD_Close(): mcCloseDevice returned: %d\n", mcRet);
+
+        /* Clear DCI message buffer */
+        memset(m_dci, 0, m_dci_msg_size);
+        delete[] m_dci;
+        m_dci = NULL;
     }
 
     LOG_I("FSD_Close(): returning: 0x%.8x\n", mcRet);
-
     return mcRet;
 }
 
-
-void FSD::FSD_listenDci(void){
-    mcResult_t  mcRet;
+void FSD::FSD_listenDci(void)
+{
+    mcResult_t mcRet = MC_DRV_OK;
     LOG_I("FSD_listenDci(): DCI listener \n");
 
-
-    for(;;)
-    {
+    while (mcRet == MC_DRV_OK && !shouldTerminate()) {
         LOG_I("FSD_listenDci(): Waiting for notification\n");
 
+        std::lock_guard<std::mutex> lock(m_close_lock);
+        if(m_dci == NULL)
+            return;
+
         /* Wait for notification from SWd */
-        if (MC_DRV_OK != mcWaitNotification(&sessionHandle, MC_INFINITE_TIMEOUT))
-        {
+        mcRet = mcWaitNotification(&m_sessionHandle, MC_INFINITE_TIMEOUT);
+        if (mcRet != MC_DRV_OK)
             LOG_E("FSD_listenDci(): mcWaitNotification failed\n");
-            break;
+        else {
+            /* Received notification. */
+            LOG_I("FSD_listenDci(): Received Command (0x%.8x) from STH\n",
+                    m_dci->sth_request.type);
+            FSD_ExecuteCommand();
+
+            /* notify the STH */
+            mcRet = mcNotify(&m_sessionHandle);
+            if (mcRet != MC_DRV_OK)
+                LOG_E("mcNotify() returned: %d\n", mcRet);
         }
-
-		/* Received exception. */
-		LOG_I("FSD_listenDci(): Received Command (0x%.8x) from STH\n", dci->sth_request.type);
-
-		mcRet = FSD_ExecuteCommand();
-
-		/* notify the STH*/
-		mcRet = mcNotify(&sessionHandle);
-		if (MC_DRV_OK != mcRet)
-		{
-			LOG_E("FSD_executeCommand(): mcNotify returned: %d\n", mcRet);
-			break;
-		}
     }
 }
 
@@ -263,23 +284,25 @@ void FSD_HexFileName(
 
 
 // Output DirName is guaranteed to be 0 ended.
-static void FSD_CreateTaDirName(
+void FSD_CreateTaDirName(
 				TEE_UUID*			ta_uuid,
 				char*				DirName,
+				uint32_t 			uuidSize,
 				uint32_t            DirNameSize
 ){
 
-	assert (DirNameSize == sizeof(TEE_UUID) *2 +1);
-	char tmp[sizeof(TEE_UUID) * 2 + 1];
-	unsigned char* fn;
+	assert (DirNameSize == uuidSize *2 +1);
+	char tmp[uuidSize * 2 + 1];
+	unsigned char*		fn;
 	uint32_t i=0;
 
-	memset(tmp, 0, sizeof(tmp));
+	memset(tmp, 0, uuidSize * 2 + 1);
 	fn = (unsigned char*)ta_uuid;
-	for (i = 0; i < sizeof(TEE_UUID); i++) {
+	for (i = 0; i < uuidSize; i++) {
 		// the implementation of snprintf counts also the trailing "\0"
 		snprintf(&tmp[i * 2], 2 + sizeof("\0"), "%02x", fn[i]);
 	}
+	tmp[uuidSize * 2 + 1] = '\0';
 	strncpy(DirName,tmp,DirNameSize);
 }
 
@@ -287,14 +310,13 @@ void FSD_CreateTaDirPath(
 				string               storage,
 				STH_FSD_message_t    *sth_request,
 				char                 *TAdirpath,
-				size_t               TAdirpathSize   //sizeof(TAdirpathSize)
+				size_t
 ){
 	const char* tbstpath = storage.c_str();
 	size_t tbstpathSize = storage.length();
 	char tadirname[TEE_UUID_STRING_SIZE+1] = {0};
-	assert (TAdirpathSize == tbstpathSize+1+TEE_UUID_STRING_SIZE+1);
 
-	FSD_CreateTaDirName(&sth_request->uuid,tadirname,sizeof(tadirname));
+	FSD_CreateTaDirName(&sth_request->uuid,tadirname,sizeof(TEE_UUID),sizeof(tadirname));
 
 	strncpy(TAdirpath, tbstpath, tbstpathSize);
 	strncat(TAdirpath, "/", strlen(("/")));
@@ -308,13 +330,12 @@ void FSD_CreateTaDirPath(
 void FSD_CreateFilePath(
 				STH_FSD_message_t    *sth_request,
 				char                 *Filepath,
-				size_t               FilepathSize, // sizeof(FilepathSize)
+				size_t               ,
 				char                 *TAdirpath,
 				size_t               TAdirpathSize // sizeof(TAdirpath)
 
 ){
 	char filename[2*FILENAMESIZE+1] = {0};
-	assert (FilepathSize == TAdirpathSize + 2*FILENAMESIZE+1);
 	FSD_HexFileName(sth_request->filename,filename,FILENAMESIZE,sizeof(filename));
 
 	strncpy(Filepath, TAdirpath, TAdirpathSize-1);
@@ -327,47 +348,51 @@ void FSD_CreateFilePath(
 }
 
 //------------------------------------------------------------------------------
-mcResult_t FSD::FSD_ExecuteCommand(void){
-	switch(dci->sth_request.type)
-			{
-				//--------------------------------------
-				case STH_MESSAGE_TYPE_LOOK:
-					LOG_I("FSD_ExecuteCommand(): Looking for file\n");
-					dci->sth_request.status=FSD_LookFile();
+void FSD::FSD_ExecuteCommand(void)
+{
+	switch (m_dci->sth_request.type) {
 
-					break;
-				//--------------------------------------
-				case STH_MESSAGE_TYPE_READ:
-					LOG_I("FSD_ExecuteCommand(): Reading file\n");
-					dci->sth_request.status=FSD_ReadFile();
+	case STH_MESSAGE_TYPE_LOOK:
+		LOG_I("FSD_ExecuteCommand(): Looking for file\n");
+		m_dci->sth_request.status = FSD_LookFile();
+		break;
 
-					break;
-				//--------------------------------------
-				case STH_MESSAGE_TYPE_WRITE:
-					LOG_I("FSD_ExecuteCommand(): Writing file\n");
-					dci->sth_request.status=FSD_WriteFile();
+	case STH_MESSAGE_TYPE_READ:
+		LOG_I("FSD_ExecuteCommand(): Reading file\n");
+		m_dci->sth_request.status = FSD_ReadFile();
+		break;
 
-					break;
-				//--------------------------------------
-				case STH_MESSAGE_TYPE_DELETE:
-					LOG_I("FSD_ExecuteCommand(): Deleting file\n");
-					dci->sth_request.status=FSD_DeleteFile();
-					LOG_I("FSD_ExecuteCommand(): file deleted status is 0x%08x\n",dci->sth_request.status);
+	case STH_MESSAGE_TYPE_WRITE:
+		LOG_I("FSD_ExecuteCommand(): Writing file\n");
+		m_dci->sth_request.status = FSD_WriteFile();
+		break;
 
-					break;
-				//--------------------------------------
-				default:
-					LOG_E("FSD_ExecuteCommand(): Received unknown command %x. Ignoring..\n", dci->sth_request.type);
-					break;
-			}
-	return dci->sth_request.status;
+	case STH_MESSAGE_TYPE_DELETE:
+		LOG_I("FSD_ExecuteCommand(): Deleting file\n");
+		m_dci->sth_request.status = FSD_DeleteFile();
+		LOG_I("FSD_ExecuteCommand(): file deleted status is 0x%08x\n",
+			m_dci->sth_request.status);
+		break;
+
+	case STH_MESSAGE_TYPE_DELETE_ALL:
+		LOG_I("FSD_ExecuteCommand(): Deleting directory\n");
+		m_dci->sth_request.status = FSD_DeleteDir();
+		LOG_I("FSD_ExecuteCommand(): Directory deleted status is "
+		  "0x%08x\n", m_dci->sth_request.status);
+		break;
+
+	default:
+		LOG_E("FSD_ExecuteCommand(): Ignoring unknown command %x\n",
+			m_dci->sth_request.type);
+		break;
+	}
 }
 
 
 /****************************  File operations  *******************************/
 
-
-mcResult_t FSD::FSD_LookFile(void){
+uint32_t FSD::FSD_LookFile(void)
+{
 	FILE * pFile=NULL;
 	STH_FSD_message_t* sth_request=NULL;
 	size_t res;
@@ -377,7 +402,7 @@ mcResult_t FSD::FSD_LookFile(void){
 
 	memset(TAdirpath, 0, storage.length()+1+TEE_UUID_STRING_SIZE+1);
 	memset(Filepath, 0, storage.length()+1+TEE_UUID_STRING_SIZE+1+2*FILENAMESIZE+1);
-	sth_request= &dci->sth_request;
+	sth_request= &m_dci->sth_request;
 	FSD_CreateTaDirPath(
 					storage,
 					sth_request,
@@ -401,8 +426,8 @@ mcResult_t FSD::FSD_LookFile(void){
 
 	if (ferror(pFile))
 	{
-		LOG_E("%s: Error reading file res is %d and errno is %s\n",__func__,res,strerror(errno));
-        fclose(pFile);
+		LOG_E("%s: Error reading file res is %zu and errno is %s\n",__func__,res,strerror(errno));
+		fclose(pFile);
 		return TEEC_ERROR_ITEM_NOT_FOUND;
 	}
 
@@ -410,7 +435,7 @@ mcResult_t FSD::FSD_LookFile(void){
     {
         //File is shorter than expected
         if (feof(pFile)) {
-            LOG_I("%s: EOF reached: res is %d, payloadLen is %d\n",__func__,res, sth_request->payloadLen);
+            LOG_I("%s: EOF reached: res is %zu, payloadLen is %d\n",__func__,res, sth_request->payloadLen);
         }
     }
 
@@ -419,8 +444,8 @@ mcResult_t FSD::FSD_LookFile(void){
 	return TEEC_SUCCESS;
 }
 
-
-mcResult_t FSD::FSD_ReadFile(void){
+uint32_t FSD::FSD_ReadFile(void)
+{
 	FILE * pFile=NULL;
 	STH_FSD_message_t* sth_request=NULL;
 	size_t res;
@@ -430,7 +455,7 @@ mcResult_t FSD::FSD_ReadFile(void){
 
 	memset(TAdirpath, 0, storage.length()+1+TEE_UUID_STRING_SIZE+1);
 	memset(Filepath, 0, storage.length()+1+TEE_UUID_STRING_SIZE+1+2*FILENAMESIZE+1);
-	sth_request= &dci->sth_request;
+	sth_request= &m_dci->sth_request;
 	FSD_CreateTaDirPath(
 					storage,
 					sth_request,
@@ -454,7 +479,7 @@ mcResult_t FSD::FSD_ReadFile(void){
 
 	if (ferror(pFile))
 	{
-		LOG_E("%s: Error reading file res is %d and errno is %s\n",__func__,res,strerror(errno));
+		LOG_E("%s: Error reading file res is %zu and errno is %s\n",__func__,res,strerror(errno));
 		fclose(pFile);
 		return TEE_ERROR_CORRUPT_OBJECT;
 	}
@@ -463,7 +488,7 @@ mcResult_t FSD::FSD_ReadFile(void){
     {
        //File is shorter than expected
        if (feof(pFile)) {
-           LOG_I("%s: EOF reached: res is %d, payloadLen is %d\n",__func__,res, sth_request->payloadLen);
+           LOG_I("%s: EOF reached: res is %zu, payloadLen is %d\n",__func__,res, sth_request->payloadLen);
        }
     }
 
@@ -473,7 +498,8 @@ mcResult_t FSD::FSD_ReadFile(void){
 }
 
 
-mcResult_t FSD::FSD_WriteFile(void){
+uint32_t FSD::FSD_WriteFile(void)
+{
 	FILE * pFile=NULL;
 	int fd=0;
 	STH_FSD_message_t* sth_request=NULL;
@@ -487,7 +513,7 @@ mcResult_t FSD::FSD_WriteFile(void){
 	memset(TAdirpath, 0, storage.length()+1+TEE_UUID_STRING_SIZE+1);
 	memset(Filepath, 0, storage.length()+1+TEE_UUID_STRING_SIZE+1+2*FILENAMESIZE+1);
 	memset(Filepath_new, 0, storage.length()+TEE_UUID_STRING_SIZE+2*FILENAMESIZE+strlen(NEW_EXT)+1);
-	sth_request= &dci->sth_request;
+	sth_request= &m_dci->sth_request;
 	FSD_CreateTaDirPath(
 					storage,
 					sth_request,
@@ -539,7 +565,7 @@ mcResult_t FSD::FSD_WriteFile(void){
 
 	if (ferror(pFile))
 	{
-		LOG_E("%s: Error writing file res is %d and errno is %s\n",__func__,res,strerror(errno));
+		LOG_E("%s: Error writing file res is %zu and errno is %s\n",__func__,res,strerror(errno));
 		fclose(pFile);
 		if(remove(Filepath)==-1)
 		{
@@ -556,7 +582,7 @@ mcResult_t FSD::FSD_WriteFile(void){
 		res = fclose(pFile);
 		if ((int32_t) res < 0)
 		{
-			LOG_E("%s: Error closing file res is %d and errno is %s\n",__func__,res,strerror(errno));
+			LOG_E("%s: Error closing file res is %zu and errno is %s\n",__func__,res,strerror(errno));
 			if(remove(Filepath)==-1)
             {
                 LOG_E("%s: remove failed: %s\n",__func__, strerror(errno));
@@ -586,8 +612,8 @@ mcResult_t FSD::FSD_WriteFile(void){
 	return TEEC_SUCCESS;
 }
 
-
-mcResult_t FSD::FSD_DeleteFile(void){
+uint32_t FSD::FSD_DeleteFile(void)
+{
 	FILE * pFile=NULL;
 	mcResult_t ret;
 	size_t res;
@@ -598,7 +624,7 @@ mcResult_t FSD::FSD_DeleteFile(void){
 
 	memset(TAdirpath, 0, storage.length()+1+TEE_UUID_STRING_SIZE+1);
 	memset(Filepath, 0, storage.length()+1+TEE_UUID_STRING_SIZE+1+2*FILENAMESIZE+1);
-	sth_request= &dci->sth_request;
+	sth_request= &m_dci->sth_request;
 	FSD_CreateTaDirPath(
 					storage,
 					sth_request,
@@ -641,6 +667,24 @@ mcResult_t FSD::FSD_DeleteFile(void){
 	return ret;
 }
 
+/**
+ * FSD_DeleteDir()
+ *
+ * Deletes all files from a given directory and then the directory itself
+ *
+ * @retval TEE_SUCCESS everything went OK
+ * @retval TEE_ERROR_CORRUPT_OBJECT any other error reason
+ */
+mcResult_t FSD::FSD_DeleteDir(void)
+{
+	STH_FSD_message_t *sth_request = &m_dci->sth_request;
+
+    switch (mcRegistryCleanupTA((mcUuid_t *) &sth_request->uuid)) {
+    case MC_DRV_OK:
+        return TEEC_SUCCESS;
+    default:
+        return TEE_ERROR_CORRUPT_OBJECT;
+    }
+}
 
 //------------------------------------------------------------------------------
-

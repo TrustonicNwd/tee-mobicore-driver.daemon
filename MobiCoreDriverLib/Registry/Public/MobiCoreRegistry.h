@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -117,6 +117,16 @@ extern "C" {
      * @return MC_DRV_OK if successful, otherwise error code.
      */
     mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t *uuid, const mcSpid_t spid);
+
+    /**
+     * mcRegistryCleanupTA()
+     *
+     * Removes all associated data of a TA (when uninstalled)
+     *
+     * @param [in] uuid the UUID to clean up all files belonging too
+     * @retrurn MC_DRV_OK is successful, othwise an error code from mcResult_t
+     */
+    mcResult_t mcRegistryCleanupTA(const mcUuid_t *uuid);
 
     /** Deletes the root container and all of its associated service provider
      * containers.

@@ -31,133 +31,47 @@
 /**
  * Thread implementation (pthread abstraction).
  */
+
+#include <log.h>
 #include "CThread.h"
 
-#include "log.h"
-
-
 //------------------------------------------------------------------------------
-CThread::CThread(void) :
-    m_terminate(false), m_isExiting(false)
-{
-    m_sem = new CSemaphore();
-    m_thread=0;
+static void* thread_startup(void *arg) {
+    reinterpret_cast<CThread*>(arg)->run();
+    return NULL;
 }
 
 //------------------------------------------------------------------------------
-CThread::~CThread(
-    void
-)
-{
-    delete m_sem;
-}
-
-
-//------------------------------------------------------------------------------
-void CThread::terminate(
-    void
-)
-{
+void CThread::terminate() {
     m_terminate = true;
 }
 
-
 //------------------------------------------------------------------------------
-bool CThread::isExiting(
-    void
-)
-{
-    return m_isExiting;
-}
-
-
-//------------------------------------------------------------------------------
-void CThread::setExiting(
-    void
-)
-{
-    m_isExiting = true;
-}
-
-
-//------------------------------------------------------------------------------
-void CThread::exit(
-    int32_t exitcode
-)
-{
-    setExiting();
-    pthread_exit((void*)(uintptr_t)exitcode);
-}
-
-
-//------------------------------------------------------------------------------
-bool CThread::shouldTerminate(
-    void
-)
-{
+bool CThread::shouldTerminate() {
     return m_terminate;
 }
 
-
 //------------------------------------------------------------------------------
-void CThread::start(
-    void
-)
-{
+void CThread::start(const char* name) {
     int ret;
-    ret = pthread_create(&m_thread, NULL, CThreadStartup, this);
+    ret = pthread_create(&m_thread, NULL, thread_startup, this);
     if (0 != ret)
         LOG_E("pthread_create failed with error code %d", ret);
-}
 
-//------------------------------------------------------------------------------
-void CThread::start(
-    const char* name
-)
-{
-    start();
-    int ret = pthread_setname_np(m_thread, name);
+    ret = pthread_setname_np(m_thread, name);
     if (0 != ret)
         LOG_E("pthread_setname_np failed with error code %d %s", ret, name);
 }
 
 //------------------------------------------------------------------------------
-void CThread::join(
-    void
-)
-{
+void CThread::join() {
     int ret;
     ret = pthread_join(m_thread, NULL);
     if (0 != ret)
         LOG_E("pthread_join failed with error code %d", ret);
 }
 
-
 //------------------------------------------------------------------------------
-void CThread::sleep(
-    void
-)
-{
-    m_sem->wait();
+int CThread::kill(int sig) {
+    return pthread_kill(m_thread, sig);
 }
-
-
-//------------------------------------------------------------------------------
-void CThread::wakeup(
-    void
-)
-{
-    m_sem->signal();
-}
-
-
-//------------------------------------------------------------------------------
-void *CThreadStartup(
-    void *_tgtObject
-)
-{
-    CThread *tgtObject = (CThread *) _tgtObject;
-    tgtObject->run();
-    return NULL;
-}
-

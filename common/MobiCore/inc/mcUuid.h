@@ -32,6 +32,12 @@
 #ifndef MC_UUID_H_
 #define MC_UUID_H_
 
+#ifdef WIN32
+#define _UNUSED
+#else
+#define _UNUSED __attribute__((unused))
+#endif
+
 #define UUID_TYPE
 
 #define UUID_LENGTH 16
@@ -45,7 +51,7 @@ typedef struct {
     { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, \
       0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }
 
-static __attribute__((unused)) const mcUuid_t MC_UUID_FREE = {
+static _UNUSED const mcUuid_t MC_UUID_FREE = {
     MC_UUID_FREE_DEFINE
 };
 
@@ -54,7 +60,7 @@ static __attribute__((unused)) const mcUuid_t MC_UUID_FREE = {
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
 
-static __attribute__((unused)) const mcUuid_t MC_UUID_RESERVED = {
+static _UNUSED const mcUuid_t MC_UUID_RESERVED = {
     MC_UUID_RESERVED_DEFINE
 };
 
@@ -63,9 +69,24 @@ static __attribute__((unused)) const mcUuid_t MC_UUID_RESERVED = {
     { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, \
       0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE }
 
-static __attribute__((unused)) const mcUuid_t MC_UUID_SYSTEM = {
+static _UNUSED const mcUuid_t MC_UUID_SYSTEM = {
     MC_UUID_SYSTEM_DEFINE
 };
+
+#define MC_UUID_RTM_DEFINE \
+    { 0x12, 0x34, 0x12, 0x34, 0x12, 0x34, 0x12, 0x34,       \
+      0x12, 0x34, 0x12, 0x34, 0x12, 0x34, 0x12, 0x34 }
+
+static _UNUSED const mcUuid_t MC_UUID_RTM = {
+    MC_UUID_RTM_DEFINE
+};
+
+/**
+ * TODO: Replace with v5 UUID (milestone #3)
+ */
+#define LTA_UUID_DEFINE \
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,         \
+      0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11}
 
 #endif // MC_UUID_H_
 

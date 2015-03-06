@@ -53,6 +53,7 @@
 #include "mcSpid.h"
 #include "mcVersionHelper.h"
 
+#include "MobiCoreDriverApi.h"
 #include "PrivateRegistry.h"
 #include "MobiCoreRegistry.h"
 
@@ -60,8 +61,6 @@
 
 #include "log.h"
 
-/** Maximum size of a trustlet in bytes. */
-#define MAX_TL_SIZE       (1 * 1024 * 1024)
 /** Maximum size of a shared object container in bytes. */
 #define MAX_SO_CONT_SIZE  (512)
 
@@ -82,6 +81,8 @@
 #define GP_TA_SPID_FILE_EXT ".spid"
 
 using namespace std;
+
+static const string tb_storage_path(MC_REGISTRY_DATA_PATH "/TbStorage");
 
 //------------------------------------------------------------------------------
 static string byteArrayToString(const void *bytes, size_t elems)
@@ -114,9 +115,9 @@ static bool doesDirExist(const char *path)
 }
 
 //------------------------------------------------------------------------------
-string getTbStoragePath()
+const string &getTbStoragePath()
 {
-    return MC_REGISTRY_DATA_PATH "/TbStorage";
+    return tb_storage_path;
 }
 
 //------------------------------------------------------------------------------
@@ -297,17 +298,16 @@ mcResult_t mcRegistryReadAuthToken(mcSoAuthTokenCont_t *so)
         fclose(fs);
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
-    res = fread((char *)so, 1, sizeof(mcSoAuthTokenCont_t), fs);
+    size_t read_res = fread((char *)so, 1, sizeof(mcSoAuthTokenCont_t), fs);
     if (ferror(fs)) {
         fclose(fs);
         LOG_E("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
-    if ((unsigned)res<sizeof(mcSoAuthTokenCont_t)) {
+    if (read_res<sizeof(mcSoAuthTokenCont_t)) {
         //File is shorter than expected
         if (feof(fs)) {
-            LOG_E("%s(): EOF reached: res is %u, size of mcSoAuthTokenCont_t is %u", __func__, (unsigned)res,
-            sizeof(mcSoAuthTokenCont_t));   
+            LOG_E("%s(): EOF reached: res is %zu, size of mcSoAuthTokenCont_t is %zu", __func__, read_res, sizeof(mcSoAuthTokenCont_t));
         }
         fclose(fs);
         return MC_DRV_ERR_INVALID_PARAMETER;
@@ -353,17 +353,17 @@ mcResult_t mcRegistryReadAuthTokenBackup(mcSoAuthTokenCont_t *so)
         fclose(fs);
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
-    res = fread((char *)so, 1, sizeof(mcSoAuthTokenCont_t), fs);
+    size_t read_res = fread((char *)so, 1, sizeof(mcSoAuthTokenCont_t), fs);
     if (ferror(fs)) {
         fclose(fs);
         LOG_E("mcRegistry read So.Soc failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
-    if ((unsigned)res<sizeof(mcSoAuthTokenCont_t)) {
+    if (read_res<sizeof(mcSoAuthTokenCont_t)) {
         //File is shorter than expected
         if (feof(fs)) {
-            LOG_E("%s(): EOF reached: res is %u, size of mcSoAuthTokenCont_t is %u", __func__,
-            (unsigned)res, sizeof(mcSoAuthTokenCont_t));
+            LOG_E("%s(): EOF reached: res is %zu, size of mcSoAuthTokenCont_t is %zu", __func__,
+            read_res, sizeof(mcSoAuthTokenCont_t));
         }
         fclose(fs);
         return MC_DRV_ERR_INVALID_PARAMETER;
@@ -569,7 +569,7 @@ static uint32_t getAsUint32BE(
     return val;
 }
 
-mcResult_t mcRegistryStoreTABlob(mcSpid_t spid, void *blob, uint32_t size)
+mcResult_t mcRegistryStoreTABlob(mcSpid_t spid, const void *blob, uint32_t size)
 {
     int res = 0;
     LOG_I("mcRegistryStoreTABlob started");
@@ -622,7 +622,7 @@ mcResult_t mcRegistryStoreTABlob(mcSpid_t spid, void *blob, uint32_t size)
 
         // Check attestation size
         if (getAsUint32BE(&pUa->size) < sizeof(uuid_attestation)) {
-            LOG_E("RegistryStoreTABlob failed - Attestation size is equal to %d and is less then %d", getAsUint32BE(&pUa->size), sizeof(uuid_attestation));
+            LOG_E("RegistryStoreTABlob failed - Attestation size is equal to %d and is less then %zu", getAsUint32BE(&pUa->size), sizeof(uuid_attestation));
             return MC_DRV_ERR_TA_ATTESTATION_ERROR;
         }
 
@@ -797,7 +797,7 @@ mcResult_t mcRegistryStoreData(void *so, uint32_t size)
 
 
 //------------------------------------------------------------------------------
-mcResult_t mcRegistryReadData(uint32_t context, const mcCid_t *cid, mcPid_t pid,
+mcResult_t mcRegistryReadData(uint32_t context, const mcCid_t *cid, mcPid_t,
                               mcSoDataCont_t *so, uint32_t maxLen)
 {
     int res = 0;
@@ -845,22 +845,22 @@ mcResult_t mcRegistryReadData(uint32_t context, const mcCid_t *cid, mcPid_t pid,
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
     char *p = (char *) so;
-    res = fread(p, 1, sizeof(mcSoHeader_t), fs);
+    size_t read_res = fread(p, 1, sizeof(mcSoHeader_t), fs);
     if (ferror(fs)) {
         fclose(fs);
         LOG_E("mcRegistry read So.Data(cid/pid) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
-    if ((unsigned)res<sizeof(mcSoHeader_t)) {
+    if (read_res<sizeof(mcSoHeader_t)) {
         //File is shorter than expected
         if (feof(fs)) {
-            LOG_E("%s(): EOF reached: res is %u, size of mcSoHeader_t is %u", __func__, (unsigned)res, sizeof(mcSoHeader_t));
+            LOG_E("%s(): EOF reached: res is %zu, size of mcSoHeader_t is %zu", __func__, read_res, sizeof(mcSoHeader_t));
         }
         fclose(fs);
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
     p += sizeof(mcSoHeader_t);
-    res = fread(p, 1, MC_SO_SIZE(so->soHeader.plainLen,
+    read_res = fread(p, 1, MC_SO_SIZE(so->soHeader.plainLen,
                 so->soHeader.encryptedLen)
                 - sizeof(mcSoHeader_t), fs);
     if (ferror(fs)) {
@@ -868,10 +868,10 @@ mcResult_t mcRegistryReadData(uint32_t context, const mcCid_t *cid, mcPid_t pid,
         LOG_E("mcRegistry read So.Data(cid/pid) failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
         return MC_DRV_ERR_INVALID_PARAMETER;
     }
-    if ((unsigned)res<(MC_SO_SIZE(so->soHeader.plainLen, so->soHeader.encryptedLen) - sizeof(mcSoHeader_t))) {
+    if (read_res<(MC_SO_SIZE(so->soHeader.plainLen, so->soHeader.encryptedLen) - sizeof(mcSoHeader_t))) {
         //File is shorter than expected
         if (feof(fs)) {
-            LOG_E("%s(): EOF reached: res is %u, size of secure object is %u", __func__, (unsigned)res,
+            LOG_E("%s(): EOF reached: res is %zu, size of secure object is %zu", __func__, read_res,
             MC_SO_SIZE(so->soHeader.plainLen, so->soHeader.encryptedLen) - sizeof(mcSoHeader_t));
         }
         fclose(fs);
@@ -923,7 +923,7 @@ static size_t getFileContent(
     }
 
     /* Allocate a buffer for the content */
-    content = (uint8_t *)malloc(filesize);
+    content = new uint8_t[filesize];
     if (content == NULL) {
         LOG_E("Error: Cannot read file: Out of memory.");
         goto error;
@@ -951,8 +951,8 @@ static size_t getFileContent(
     return (size_t)filesize;
 
 error:
-    if (content  != NULL) {
-        free(content);
+    if (content != NULL) {
+        delete[] content;
     }
     fclose(pStream);
     return 0;
@@ -973,8 +973,8 @@ static bool mcCheckUuid(const mcUuid_t *uuid, const char *filename)
 
     // Check blob size
     if (nTASize < sizeof(mclfHeaderV24_t)) {
-        free(pTAData);
-        LOG_E("RegistryStoreTABlob failed - TA blob length is less then header size");
+        delete[] pTAData;
+        LOG_E("getFileContent failed - TA length is less than header size");
         return false;
     }
 
@@ -982,19 +982,19 @@ static bool mcCheckUuid(const mcUuid_t *uuid, const char *filename)
 
     // Check header version
     if (header20->intro.version < MC_MAKE_VERSION(2, 4)) {
-        free(pTAData);
-        LOG_E("RegistryStoreTABlob failed - TA blob header version is less than 2.4");
+        delete[] pTAData;
+        LOG_E("mcCheckUuid() - TA blob header version is less than 2.4");
         return false;
     }
 
-    // Check blob size
+    // Check uuid
     if (memcmp(uuid, &header20->uuid, sizeof(mcUuid_t)) == 0) {
         res = true;
     } else {
         res = false;
     }
 
-    free(pTAData);
+    delete[] pTAData;
 
     return res;
 }
@@ -1027,6 +1027,12 @@ static int CleanupGPTAStorage(const char *uuid)
 		}
 	}
 	return MC_DRV_OK;
+}
+
+
+mcResult_t mcRegistryCleanupGPTAStorage(const mcUuid_t *uuid)
+{
+    return CleanupGPTAStorage(byteArrayToString(uuid, sizeof(*uuid)).c_str());
 }
 
 static void deleteSPTA(const mcUuid_t *uuid, const mcSpid_t spid)
@@ -1242,251 +1248,34 @@ mcResult_t mcRegistryCleanupRoot(void)
 }
 
 //------------------------------------------------------------------------------
-regObject_t *mcRegistryMemGetServiceBlob(mcSpid_t spid, void *trustlet, uint32_t tlSize)
-{
-    regObject_t *regobj = NULL;
-
-    // Ensure that a UUID is provided.
-    if (NULL == trustlet) {
-        LOG_E("No trustlet buffer given");
-        return NULL;
-    }
-
-    // Check service blob size.
-    if (tlSize > MAX_TL_SIZE ) {
-        LOG_E("mcRegistryMemGetServiceBlob() failed: service blob too big: %d", tlSize);
-        return NULL;
-    }
-
-    mclfIntro_t *pIntro = (mclfIntro_t *)trustlet;
-    // Check TL magic value.
-    if (pIntro->magic != MC_SERVICE_HEADER_MAGIC_BE) {
-        LOG_E("mcRegistryMemGetServiceBlob() failed: wrong header magic value: %d", pIntro->magic);
-        return NULL;
-    }
-
-    // Get service type.
-    mclfHeaderV2_t *pHeader = (mclfHeaderV2_t *)trustlet;
-#ifndef NDEBUG
-    {
-        const char *service_types[] = {
-            "illegal", "Driver", "Trustlet", "System Trustlet"
-        };
-        int serviceType_safe = pHeader->serviceType > SERVICE_TYPE_SYSTEM_TRUSTLET ? SERVICE_TYPE_ILLEGAL : pHeader->serviceType;
-        LOG_I(" Service is a %s (service type %d)", service_types[serviceType_safe], pHeader->serviceType);
-    }
-#endif
-
-    LOG_I(" Trustlet text %u data %u ", pHeader->text.len, pHeader->data.len);
-
-    // If loadable driver or system trustlet.
-    if (pHeader->serviceType == SERVICE_TYPE_DRIVER  || pHeader->serviceType == SERVICE_TYPE_SYSTEM_TRUSTLET) {
-        // Take trustlet blob 'as is'.
-        if (NULL == (regobj = (regObject_t *) (malloc(sizeof(regObject_t) + tlSize)))) {
-            LOG_E("mcRegistryMemGetServiceBlob() failed: Out of memory");
-            return NULL;
-        }
-        regobj->len = tlSize;
-        regobj->tlStartOffset = 0;
-        memcpy((char *)regobj->value, trustlet, tlSize);
-        // If user trustlet.
-    } else if (pHeader->serviceType == SERVICE_TYPE_SP_TRUSTLET) {
-        // Take trustlet blob and append root, sp, and tl container.
-        size_t regObjValueSize = tlSize + sizeof(mcBlobLenInfo_t) + 3 * MAX_SO_CONT_SIZE;
-
-        // Prepare registry object.
-        if (NULL == (regobj = (regObject_t *) malloc(sizeof(regObject_t) + regObjValueSize))) {
-            LOG_E("mcRegistryMemGetServiceBlob() failed: Out of memory");
-            return NULL;
-        }
-        regobj->len = regObjValueSize;
-        regobj->tlStartOffset = sizeof(mcBlobLenInfo_t);
-        uint8_t *p = regobj->value;
-
-        // Reserve space for the blob length structure
-        mcBlobLenInfo_ptr lenInfo = (mcBlobLenInfo_ptr)p;
-        lenInfo->magic = MC_TLBLOBLEN_MAGIC;
-        p += sizeof(mcBlobLenInfo_t);
-        // Fill in trustlet blob after the len info
-        memcpy(p, trustlet, tlSize);
-        p += tlSize;
-
-        // Final registry object value looks like this:
-        //
-        //    +---------------+---------------------------+-----------+---------+---------+
-        //    | Blob Len Info | TL-Header TL-Code TL-Data | Root Cont | SP Cont | TL Cont |
-        //    +---------------+---------------------------+-----------+-------------------+
-        //                    /------ Trustlet BLOB ------/
-        //
-        //    /------------------ regobj->header.len -------------------------------------/
-
-        // start at the end of the trustlet blob
-        mcResult_t ret;
-        do {
-            uint32_t soTltContSize = MAX_SO_CONT_SIZE;
-            uint32_t len;
-
-            // Fill in root container.
-            len = sizeof(mcSoRootCont_t);
-            if (MC_DRV_OK != (ret = mcRegistryReadRoot(p, &len))) {
-                break;
-            }
-            lenInfo->rootContBlobSize = len;
-            p += len;
-
-            // Fill in SP container.
-            len = sizeof(mcSoSpCont_t);
-            if (MC_DRV_OK != (ret = mcRegistryReadSp(spid, p, &len))) {
-                break;
-            }
-            lenInfo->spContBlobSize = len;
-            p += len;
-
-            // Fill in TLT Container
-            // We know exactly how much space is left in the buffer
-            soTltContSize = regObjValueSize - tlSize + sizeof(mcBlobLenInfo_t)
-                            - lenInfo->spContBlobSize - lenInfo->rootContBlobSize;
-            if (MC_DRV_OK != (ret = mcRegistryReadTrustletCon(&pHeader->uuid, spid, p, &soTltContSize))) {
-                break;
-            }
-            lenInfo->tlContBlobSize = soTltContSize;
-            LOG_I(" Trustlet container %u bytes loaded", soTltContSize);
-            // Depending on the trustlet container size we decide which structure to use
-            // Unfortunate design but it should have to do for now
-            if (soTltContSize == sizeof(mcSoTltCont_2_0_t)) {
-                LOG_I(" Using 2.0 trustlet container");
-            } else if (soTltContSize == sizeof(mcSoTltCont_2_1_t)) {
-                LOG_I(" Using 2.1 trustlet container");
-            } else {
-                LOG_E("Trustlet container has unknown size");
-                break;
-            }
-        } while (false);
-
-        if (MC_DRV_OK != ret) {
-            LOG_E("mcRegistryMemGetServiceBlob() failed: Error code: %d", ret);
-            free(regobj);
-            return NULL;
-        }
-        // Now we know the sizes for all containers so set the correct size
-        regobj->len = sizeof(mcBlobLenInfo_t) + tlSize +
-                      lenInfo->rootContBlobSize +
-                      lenInfo->spContBlobSize +
-                      lenInfo->tlContBlobSize;
-        // Any other service type.
-    } else {
-        LOG_E("mcRegistryMemGetServiceBlob() failed: Unsupported service type %u", pHeader->serviceType);
-    }
-    return regobj;
-}
-
-
-//------------------------------------------------------------------------------
-regObject_t *mcRegistryFileGetServiceBlob(const char *trustlet, mcSpid_t spid)
-{
-    struct stat sb;
-    regObject_t *regobj = NULL;
-    void *buffer;
-
-    // Ensure that a file name is provided.
-    if (trustlet == NULL) {
-        LOG_E("No file given");
-        return NULL;
-    }
-
-    int fd = open(trustlet, O_RDONLY);
-    if (fd == -1) {
-        LOG_E("Cannot open %s", trustlet);
-        return NULL;
-    }
-
-    if (fstat(fd, &sb) == -1) {
-        LOG_E("mcRegistryFileGetServiceBlob() failed: Cound't get file size");
-        goto error;
-    }
-
-    buffer = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    if (buffer == MAP_FAILED) {
-        LOG_E("mcRegistryFileGetServiceBlob(): Failed to map file to memory");
-        goto error;
-    }
-
-    regobj = mcRegistryMemGetServiceBlob(spid, buffer, sb.st_size);
-
-    // We don't actually care if either of them fails but should still print warnings
-    if (munmap(buffer, sb.st_size)) {
-        LOG_E("mcRegistryFileGetServiceBlob(): Failed to unmap memory");
-    }
-
-error:
-    if (close(fd)) {
-        LOG_E("mcRegistryFileGetServiceBlob(): Failed to close file %s", trustlet);
-    }
-
-    return regobj;
-}
-
-
-//------------------------------------------------------------------------------
-regObject_t *mcRegistryGetServiceBlob(const mcUuid_t *uuid, bool isGpUuid)
+mcResult_t mcRegistryGetTrustletInfo(const mcUuid_t *uuid, bool isGpUuid, mcSpid_t *spid, std::string& path)
 {
     // Ensure that a UUID is provided.
     if (NULL == uuid) {
         LOG_E("No UUID given");
-        return NULL;
+        return MC_DRV_ERR_INVALID_PARAMETER;
     }
 
-    // Open service blob file.
-    string tlBinFilePath;
     if (isGpUuid) {
-        tlBinFilePath = getTABinFilePath(uuid, MC_REGISTRY_ALL);
+        path = getTABinFilePath(uuid, MC_REGISTRY_ALL);
     } else {
-        tlBinFilePath = getTlBinFilePath(uuid, MC_REGISTRY_ALL);
+        path = getTlBinFilePath(uuid, MC_REGISTRY_ALL);
     }
-    LOG_I("Loading %s", tlBinFilePath.c_str());
 
-    mcSpid_t spid = 0;
+    *spid = 0;
     if (isGpUuid) {
         string taspidFilePath = getTASpidFilePath(uuid, MC_REGISTRY_ALL);
         int fd = open(taspidFilePath.c_str(), O_RDONLY);
-        if (fd == -1) {
-            // This can be ok for System TAs
-            //LOG_ERRNO("open");
-            //LOG_E("Cannot open %s", taspidFilePath.c_str());
-            //return NULL;
-        } else {
-            if (read(fd, &spid, sizeof(mcSpid_t))!=sizeof(mcSpid_t)) {
-                close(fd);
-                return NULL;
-            }
+        if (fd >= 0) {
+            bool failed = read(fd, spid, sizeof(*spid)) != sizeof(*spid);
             close(fd);
+            if (failed) {
+                LOG_E("Could not read SPID (%d)", errno);
+                return MC_DRV_ERR_TRUSTLET_NOT_FOUND;
+            }
         }
     }
 
-    return mcRegistryFileGetServiceBlob(tlBinFilePath.c_str(), spid);
+    LOG_I("Returning %s", path.c_str());
+    return MC_DRV_OK;
 }
-
-//------------------------------------------------------------------------------
-regObject_t *mcRegistryGetDriverBlob(const char *filename)
-{
-    regObject_t *regobj = mcRegistryFileGetServiceBlob(filename, 0);
-
-    if (regobj == NULL) {
-        LOG_E("mcRegistryGetDriverBlob() failed");
-        return NULL;
-    }
-
-    // Get service type.
-    mclfHeaderV2_t *pHeader = (mclfHeaderV2_t *)regobj->value;
-
-    // If file is not a driver we are not interested
-    if (pHeader->serviceType != SERVICE_TYPE_DRIVER) {
-        LOG_E("mcRegistryGetDriverBlob() failed: Unsupported service type %u", pHeader->serviceType);
-        pHeader = NULL;
-        free(regobj);
-        regobj = NULL;
-    }
-
-    return regobj;
-}
-

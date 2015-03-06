@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2015 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,11 +27,6 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-/**
- * MobiCore Driver API.
- *
- * The MobiCore (MC) Driver API provides access functions to the t-base trusted execution environment and the contained Trusted Applications.
  */
 #ifndef MCDRIVER_H_
 #define MCDRIVER_H_
@@ -118,8 +113,8 @@ typedef uint32_t mcResult_t;
 #define MC_DRV_ERR_TCI_TOO_BIG                      MC_DRV_ERR_INVALID_PARAMETER /**< Requested TCI length is too high. */
 #define MC_DRV_ERR_WSM_NOT_FOUND                    MC_DRV_ERR_INVALID_PARAMETER /**< Requested TCI was not allocated with mallocWsm(). */
 #define MC_DRV_ERR_TCI_GREATER_THAN_WSM             MC_DRV_ERR_INVALID_PARAMETER /**< Requested TCI length is bigger than allocated WSM. */
-#define MC_DRV_ERR_TRUSTLET_NOT_FOUND               MC_DRV_ERR_INVALID_DEVICE_FILE /** < Trustlet could not be found in mcRegistry. */
-#define MC_DRV_ERR_TRUSTED_APPLICATION_NOT_FOUND    MC_DRV_ERR_TRUSTLET_NOT_FOUND /** < Trusted Application could not be found in mcRegistry. */
+#define MC_DRV_ERR_TRUSTLET_NOT_FOUND               MC_DRV_ERR_INVALID_DEVICE_FILE /** < Trustlet could not be found. */
+#define MC_DRV_ERR_TRUSTED_APPLICATION_NOT_FOUND    MC_DRV_ERR_TRUSTLET_NOT_FOUND /** < Trusted Application could not be found. */
 #define MC_DRV_ERR_DAEMON_KMOD_ERROR                MC_DRV_ERR_DAEMON_UNREACHABLE /**< Daemon cannot use Kernel module as expected. */
 #define MC_DRV_ERR_DAEMON_MCI_ERROR                 MC_DRV_ERR_DAEMON_UNREACHABLE /**< Daemon cannot use MCI as expected. */
 #define MC_DRV_ERR_MCP_ERROR                        MC_DRV_ERR_DAEMON_UNREACHABLE /**< MobiCore Control Protocol error. See MC_DRV_ERROR_MCP(). */
@@ -134,11 +129,26 @@ typedef uint32_t mcResult_t;
 
 #if TBASE_API_LEVEL >= 3
 // Installation errors
-#define MC_DRV_ERR_TA_HEADER_ERROR                  0x00000021 /**< TA blob header is incorrect. */
 #define MC_DRV_ERR_TA_ATTESTATION_ERROR             0x00000022 /**< TA blob attestation is incorrect. */
 #endif /* TBASE_API_LEVEL */
 
 #define MC_DRV_ERR_INTERRUPTED_BY_SIGNAL            0x00000023 /**< Interrupted system call. */
+
+#if TBASE_API_LEVEL >= 5
+/**
+ * Do we call these RESERVED_1, _2 etc? (as this file is public, or do we wash it?)
+ */
+#define MC_DRV_ERR_SERVICE_BLOCKED                  0x00000024 /**< Service is blocked and opensession is thus not allowed. */
+#define MC_DRV_ERR_SERVICE_LOCKED                   0x00000025 /**< Service is locked and opensession is thus not allowed. */
+#define MC_DRV_ERR_SERVICE_KILLED                   0x00000026 /**< Service was killed by the TEE (due to an administrative command). */
+#define MC_DRV_ERR_NO_FREE_INSTANCES                0x00000027 /**< All permitted instances to the service are used */
+
+#endif /* TBASE_API_LEVEL >= 5 */
+
+#if TBASE_API_LEVEL >= 3
+// Installation errors
+#define MC_DRV_ERR_TA_HEADER_ERROR                  0x00000028 /**< TA blob header is incorrect. */
+#endif /* TBASE_API_LEVEL */
 
 #define MAKE_MC_DRV_MCP_ERROR(mcpCode)              (MC_DRV_ERR_MCP_ERROR | ((mcpCode&0x000FFFFF)<<8))
 #define MAKE_MC_DRV_KMOD_WITH_ERRNO(theErrno)       (MC_DRV_ERR_KERNEL_MODULE| (((theErrno)&0x0000FFFF)<<16))

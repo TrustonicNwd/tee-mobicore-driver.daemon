@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,13 +28,6 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/**
- * Connection server.
- *
- * Handles incoming socket connections from clients using the MobiCore driver.
- *
- * Iterative socket server using UNIX domain stream protocol.
- */
 #ifndef SERVER_H_
 #define SERVER_H_
 
@@ -43,65 +36,67 @@
 #include <sys/un.h>
 #include <string>
 #include <cstdio>
-#include <vector>
+
+#include <list>
+#include <mutex>
+
 #include "CThread.h"
 #include "ConnectionHandler.h"
 
 /** Number of incoming connections that can be queued.
  * Additional clients will generate the error ECONNREFUSED. */
-#define LISTEN_QUEUE_LEN    (16)
+#define LISTEN_QUEUE_LEN    8
 
+typedef std::list<Connection *>        connectionList_t;
+typedef connectionList_t::iterator     connectionIterator_t;
 
 class Server: public CThread
 {
-
 public:
     /**
      * Server contructor.
      *
      * @param connectionHanler Connection handler to pass incoming connections to.
-     * @param localAdrerss Pointer to a zero terminated string containing the file to listen to.
+     * @param localAdrerss Pointer to a zero terminated
+     * string containing the file to listen to.
      */
-    Server(
-        ConnectionHandler *connectionHandler,
-        const char *localAddr
-    );
+    Server(ConnectionHandler *connectionHandler,
+            const char *localAddr, const int listen_queue_sz = LISTEN_QUEUE_LEN);
 
     /**
      * Server destructor.
      * All available connections will be terminated. Resources will be freed.
      */
-    virtual ~Server(
-        void
-    );
+    virtual ~Server();
 
     /**
      * Start server and listen for incoming connections.
-     * Implements the central socket server loop. Incoming connections will be stored.
+     * Implements the central socket server loop.
+     * Incoming connections will be stored.
      */
-    virtual void run(
-    );
+    virtual void run();
 
-    /**
-     * Remove a connection object from the list of available connections.
-     * Detaching is required for notification connections wich are never used to transfer command
-     * data from TLCs to the driver. If the function succeeds, the connection object will no longer
-     * be handled by the server.
-     *
-     * @param connection The connection object to remove.
-     */
-    virtual void detachConnection(
-        Connection *connection
-    );
+    void start()
+    {
+        CThread::start(Server::m_server_name);
+    }
 
+    void stop();
+
+    bool valid() const
+    {
+        return m_serverSock != -1;
+    }
 protected:
-    int serverSock;
-    string socketAddr;
-    ConnectionHandler   *connectionHandler; /**< Connection handler registered to the server */
+
+    int m_serverSock;
+    /**< Connection handler registered to the server */
+    ConnectionHandler   * const m_connectionHandler;
 
 private:
-    connectionList_t    peerConnections; /**< Connections to devices */
-
+    std::mutex          m_close_lock;
+    connectionList_t    m_peerConnections; /**< Connections to devices */
+    static const char * const m_server_name;
 };
 
 #endif /* SERVER_H_ */

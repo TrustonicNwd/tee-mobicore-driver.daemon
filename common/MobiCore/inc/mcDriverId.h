@@ -43,8 +43,8 @@ typedef enum {
 
 /** MobiCore GD driver numbers. */
 typedef enum {
-	MC_DRV_NUMBER_INVALID = 0,
-	MC_DRV_NUMBER_CRYPTO  = 1,
+    MC_DRV_NUMBER_INVALID = 0,
+    MC_DRV_NUMBER_CRYPTO  = 1,
     /** Last GD driver number reserved for pre-installed drivers.
      * GD driver numbers up to this constant may not be used for loadable drivers. */
     MC_DRV_NUMBER_LAST_PRE_INSTALLED = 100,
@@ -54,8 +54,8 @@ typedef enum {
 
 /** MobiCore driver IDs for Trustlets. */
 typedef enum {
-	MC_DRV_ID_INVALID = MC_DRV_VENDOR_ID_GD | MC_DRV_NUMBER_INVALID,
-	MC_DRV_ID_CRYPTO  = MC_DRV_VENDOR_ID_GD | MC_DRV_NUMBER_CRYPTO,
+    MC_DRV_ID_INVALID = MC_DRV_VENDOR_ID_GD | MC_DRV_NUMBER_INVALID,
+    MC_DRV_ID_CRYPTO  = MC_DRV_VENDOR_ID_GD | MC_DRV_NUMBER_CRYPTO,
     /** Last GD driver ID reserved for pre-installed drivers.
      * GD driver IDs up to this constant may not be used for loadable drivers. */
     MC_DRV_ID_LAST_PRE_INSTALLED = MC_DRV_VENDOR_ID_GD | MC_DRV_NUMBER_LAST_PRE_INSTALLED,
