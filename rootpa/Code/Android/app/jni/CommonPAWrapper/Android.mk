@@ -65,9 +65,9 @@ ifeq ($(ROOTPA_MODULE_TEST), 1)
     LOCAL_STATIC_LIBRARIES += McStub    
 else
     LOCAL_STATIC_LIBRARIES += provisioningagent
-
-    LOCAL_SHARED_LIBRARIES  += libMcClient
-    LOCAL_SHARED_LIBRARIES  += libMcRegistry
+    LOCAL_STATIC_LIBRARIES += MobiCoreTlcm
+    LOCAL_SHARED_LIBRARIES += libMcClient
+    LOCAL_SHARED_LIBRARIES += libMcRegistry
 endif
 
 #LOCAL_LDLIBS += -L$(SYSROOT)/usr/lib

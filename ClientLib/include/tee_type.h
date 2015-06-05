@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2015 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,5 +28,41 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#define MOBICORE_COMPONENT_BUILD_TAG \
-	"t-base-QC-MSM8996-Android-302B-V001-20150529_084320_16"
+#ifndef __TEE_TYPE_H__
+#define __TEE_TYPE_H__
+
+#include <limits.h>
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+
+#ifndef NULL
+#  ifdef __cplusplus
+#     define NULL  0
+#  else
+#     define NULL  ((void *)0)
+#  endif
+#endif
+
+#define IN
+#define OUT
+
+typedef uint32_t TEEC_Result;
+
+/** Definition of an UUID (from RFC 4122 http://www.ietf.org/rfc/rfc4122.txt) */
+typedef struct TEE_UUID {
+    uint32_t timeLow;
+    uint16_t timeMid;
+    uint16_t timeHiAndVersion;
+    uint8_t clockSeqAndNode[8];
+} TEE_UUID;
+typedef TEE_UUID TEEC_UUID;
+
+/** Type definition for a TEE Identity */
+typedef struct TEE_Identity {
+    uint32_t login;
+    TEE_UUID uuid;
+} TEE_Identity;
+
+#endif /* __TEE_TYPE_H__ */

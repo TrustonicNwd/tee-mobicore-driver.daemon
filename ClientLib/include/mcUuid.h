@@ -28,58 +28,65 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef __TCI_H__
-#define __TCI_H__
 
+#ifndef MC_UUID_H_
+#define MC_UUID_H_
 
-typedef uint32_t tciCommandId_t;
-typedef uint32_t tciResponseId_t;
-typedef uint32_t tciReturnCode_t;
+#ifdef WIN32
+#define _UNUSED
+#else
+#define _UNUSED __attribute__((unused))
+#endif
 
+#define UUID_TYPE
 
-/**< Responses have bit 31 set */
-#define RSP_ID_MASK (1U << 31)
-#define RSP_ID(cmdId) (((uint32_t)(cmdId)) | RSP_ID_MASK)
-#define IS_CMD(cmdId) ((((uint32_t)(cmdId)) & RSP_ID_MASK) == 0)
-#define IS_RSP(cmdId) ((((uint32_t)(cmdId)) & RSP_ID_MASK) == RSP_ID_MASK)
+#define UUID_LENGTH 16
+/** Universally Unique Identifier (UUID) according to ISO/IEC 11578. */
+typedef struct {
+    uint8_t value[UUID_LENGTH]; /**< Value of the UUID. */
+} mcUuid_t, *mcUuid_ptr;
 
+/** UUID value used as free marker in service provider containers. */
+#define MC_UUID_FREE_DEFINE \
+    { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, \
+      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }
+
+static _UNUSED const mcUuid_t MC_UUID_FREE = {
+    MC_UUID_FREE_DEFINE
+};
+
+/** Reserved UUID. */
+#define MC_UUID_RESERVED_DEFINE \
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
+
+static _UNUSED const mcUuid_t MC_UUID_RESERVED = {
+    MC_UUID_RESERVED_DEFINE
+};
+
+/** UUID for system applications. */
+#define MC_UUID_SYSTEM_DEFINE \
+    { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, \
+      0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE }
+
+static _UNUSED const mcUuid_t MC_UUID_SYSTEM = {
+    MC_UUID_SYSTEM_DEFINE
+};
+
+#define MC_UUID_RTM_DEFINE \
+    { 0x12, 0x34, 0x12, 0x34, 0x12, 0x34, 0x12, 0x34,       \
+      0x12, 0x34, 0x12, 0x34, 0x12, 0x34, 0x12, 0x34 }
+
+static _UNUSED const mcUuid_t MC_UUID_RTM = {
+    MC_UUID_RTM_DEFINE
+};
 
 /**
- * Return codes
+ * TODO: Replace with v5 UUID (milestone #3)
  */
-#define RET_OK                    0
-#define RET_ERR_UNKNOWN_CMD       1
-#define RET_ERR_NOT_SUPPORTED     2
-#define RET_ERR_INVALID_BUFFER    3
-#define RET_ERR_INVALID_KEY_SIZE  4
-#define RET_ERR_INVALID_KEY_TYPE  5
-#define RET_ERR_INVALID_LENGTH    6
-#define RET_ERR_INVALID_EXPONENT  7
-#define RET_ERR_INVALID_CURVE     8
-#define RET_ERR_KEY_GENERATION    9
-#define RET_ERR_SIGN              10
-#define RET_ERR_VERIFY            11
-#define RET_ERR_DIGEST            12
-#define RET_ERR_SECURE_OBJECT     13
-#define RET_ERR_INTERNAL_ERROR    14
-#define RET_ERR_OUT_OF_MEMORY     15
-/* ... add more error codes when needed */
+#define LTA_UUID_DEFINE \
+    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,         \
+      0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11}
 
+#endif // MC_UUID_H_
 
-/**
- * TCI command header.
- */
-typedef struct{
-    tciCommandId_t commandId; /**< Command ID */
-} tciCommandHeader_t;
-
-
-/**
- * TCI response header.
- */
-typedef struct{
-    tciResponseId_t     responseId; /**< Response ID (must be command ID | RSP_ID_MASK )*/
-    tciReturnCode_t     returnCode; /**< Return code of command */
-} tciResponseHeader_t;
-
-#endif // __TCI_H__

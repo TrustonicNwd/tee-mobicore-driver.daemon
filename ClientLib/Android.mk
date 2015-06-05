@@ -1,0 +1,29 @@
+LOCAL_PATH := $(call my-dir)
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := libMcClient
+LOCAL_MODULE_TAGS := eng
+
+LOCAL_CFLAGS := -fvisibility=hidden
+LOCAL_CFLAGS += -DTBASE_API_LEVEL=5
+LOCAL_CFLAGS += -Wall -Wextra
+LOCAL_CFLAGS += -std=c99
+LOCAL_CFLAGS += -DLOG_ANDROID
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/include
+ifeq ($(APP_PROJECT_PATH),)
+LOCAL_SHARED_LIBRARIES += liblog
+else
+LOCAL_LDLIBS := -llog
+endif
+
+LOCAL_SRC_FILES := \
+	src/common.c \
+	src/ClientLib.c \
+	src/tee_client_api.c
+
+LOCAL_EXPORT_CFLAGS := -DLOG_ANDROID
+LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_EXPORT_C_INCLUDES)
+
+include $(BUILD_SHARED_LIBRARY)

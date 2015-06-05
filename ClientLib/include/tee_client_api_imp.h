@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2015 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,5 +28,46 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#define MOBICORE_COMPONENT_BUILD_TAG \
-	"t-base-QC-MSM8996-Android-302B-V001-20150529_084320_16"
+
+/*
+ * This header file defines the implementation-dependent types,
+ * constants and macros for all the Trusted Foundations implementations
+ * of the TEE Client API
+ */
+#ifndef   __TEE_CLIENT_API_IMP_H__
+#define   __TEE_CLIENT_API_IMP_H__
+
+#if TBASE_API_LEVEL >= 3
+
+#include <pthread.h>
+
+typedef struct {
+    uint32_t                    reserved;
+} TEEC_Context_IMP;
+
+typedef struct {
+    TEEC_Context_IMP            context;
+    uint32_t                    sessionId;
+    void                        *tci;
+    bool                        active;
+    pthread_mutex_t             mutex_tci;  //mutex to serialize CA requests
+} TEEC_Session_IMP;
+
+typedef struct {
+    bool                        implementation_allocated;
+} TEEC_SharedMemory_IMP;
+
+typedef struct {
+    TEEC_Session_IMP            *session;
+} TEEC_Operation_IMP;
+
+/* There is no natural, compile-time limit on the shared memory, but a specific
+   implementation may introduce a limit (in particular on TrustZone) */
+#define TEEC_CONFIG_SHAREDMEM_MAX_SIZE ((size_t)0xFFFFFFFF)
+
+#define TEEC_PARAM_TYPES(entry0Type, entry1Type, entry2Type, entry3Type) \
+   ((entry0Type) | ((entry1Type) << 4) | ((entry2Type) << 8) | ((entry3Type) << 12))
+
+#endif /* TBASE_API_LEVEL >= 3 */
+
+#endif /* __TEE_CLIENT_API_IMP_H__ */

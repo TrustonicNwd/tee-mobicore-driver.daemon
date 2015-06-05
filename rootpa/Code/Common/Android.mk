@@ -63,9 +63,6 @@ LOCAL_SRC_FILES += commandhandler.c
 
 
 LOCAL_C_INCLUDES +=  $(MOBICORE_DIR_INC)
-LOCAL_C_INCLUDES +=  $(MOBICORE_DIR_INC)/TlCm
-LOCAL_C_INCLUDES +=  $(MOBICOREDRIVER_DIR_INC)
-LOCAL_C_INCLUDES +=  $(MOBICOREDRIVER_DIR_INC2)
 LOCAL_C_INCLUDES +=  external/curl/include
 LOCAL_C_INCLUDES +=  external/icu/icu4c/source/common
 LOCAL_C_INCLUDES +=  external/icu4c/common
@@ -81,6 +78,9 @@ else
 endif
 
 LOCAL_MODULE_TAGS := debug eng optional
+
+LOCAL_STATIC_LIBRARIES = MobiCoreTlcm
+LOCAL_SHARED_LIBRARIES = libMcClient libMcRegistry
 
 APP_PIE := true
 LOCAL_32_BIT_ONLY := true

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2015 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,5 +28,26 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#define MOBICORE_COMPONENT_BUILD_TAG \
-	"t-base-QC-MSM8996-Android-302B-V001-20150529_084320_16"
+#ifndef CTHREAD_H_
+#define CTHREAD_H_
+
+#include <pthread.h>
+
+class CThread {
+public:
+    CThread(): m_terminate(false) {}
+    virtual ~CThread() {}
+    virtual void run() = 0;
+    void start(const char* name);
+    void join();
+    void terminate();
+    int kill(int sig);
+protected:
+    bool shouldTerminate();
+private:
+    bool m_terminate;
+    pthread_t m_thread;
+};
+
+#endif /*CTHREAD_H_*/
+

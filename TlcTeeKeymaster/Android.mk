@@ -6,6 +6,8 @@
 # =============================================================================
 
 LOCAL_PATH	:= $(call my-dir)
+MY_CLIENTLIB_PATH	:= $(LOCAL_PATH)
+COMP_PATH_AndroidOpenSsl := $(LOCAL_PATH)/../../openssl
 
 include $(CLEAR_VARS)
 
@@ -20,9 +22,9 @@ LOCAL_SRC_FILES +=\
 	tlcTeeKeymaster_if.c
 
 LOCAL_C_INCLUDES +=\
-    $(LOCAL_PATH)/public \
-    $(LOCAL_PATH)/inc \
-    $(COMP_PATH_MobiCore)/inc
+	$(COMP_PATH_TlSdk)/inc \
+    $(MY_CLIENTLIB_PATH)/public \
+    $(MY_CLIENTLIB_PATH)/inc
 
 # Need the MobiCore client library
 LOCAL_SHARED_LIBRARIES += libMcClient liblog
@@ -42,10 +44,9 @@ LOCAL_SRC_FILES +=\
     testTeeKeymaster.c
 
 LOCAL_C_INCLUDES +=\
-    $(LOCAL_PATH)/public \
-    $(LOCAL_PATH)/inc \
-    $(COMP_PATH_MobiCore)/inc \
-    $(COMP_PATH_AndroidOpenSsl)/include 
+    $(MY_CLIENTLIB_PATH)/public \
+    $(MY_CLIENTLIB_PATH)/inc \
+    $(COMP_PATH_AndroidOpenSsl)/include
 
 LOCAL_SHARED_LIBRARIES +=\
     libMcTeeKeymaster \
