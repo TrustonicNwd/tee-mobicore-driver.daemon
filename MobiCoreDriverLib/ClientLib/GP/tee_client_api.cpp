@@ -34,6 +34,7 @@
 #include "log.h"
 #include "MobiCoreDriverApi.h"
 #include "Mci/mcinq.h"
+#include <stdlib.h>
 #include <sys/mman.h>
 #include "GpTci.h"
 #include "../Session.h"
@@ -345,7 +346,7 @@ static TEEC_Result _TEEC_UnwindOperation(
 //TEEC_InitializeContext: TEEC_SUCCESS, Another error code from Table 4-2.
 //MC_DRV_OK, MC_DRV_ERR_INVALID_OPERATION, MC_DRV_ERR_DAEMON_UNREACHABLE, MC_DRV_ERR_UNKNOWN_DEVICE, MC_DRV_ERR_INVALID_DEVICE_FILE
 TEEC_Result TEEC_InitializeContext(
-    const char   *name,
+    const char   */*name*/,
     TEEC_Context *context)
 {
     LOG_I("== %s() ==============", __func__);
@@ -489,7 +490,7 @@ TEEC_Result TEEC_OpenSession (
     TEEC_Session    *session,
     const TEEC_UUID *destination,
     uint32_t        connectionMethod,
-    void            *connectionData,
+    void            */*connectionData*/,
     TEEC_Operation  *operation,
     uint32_t        *returnOrigin)
 {

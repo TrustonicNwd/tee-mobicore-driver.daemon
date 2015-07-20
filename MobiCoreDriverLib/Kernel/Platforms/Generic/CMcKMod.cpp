@@ -65,8 +65,9 @@ mcResult_t CMcKMod::mapWsm(
     }
 
     // mapping response data is in the buffer
-    struct mc_ioctl_map mapParams = { len : len };
+    struct mc_ioctl_map mapParams;
 
+    mapParams.len = len;
     ret = ioctl(fdKMod, MC_IO_MAP_WSM, &mapParams);
     if (ret != 0) {
         LOG_ERRNO("ioctl MC_IO_MAP_WSM");
@@ -104,8 +105,9 @@ mcResult_t CMcKMod::mapMCI(
 {
     LOG_I("Mapping MCI: len=%d", len);
     // mapping response data is in the buffer
-    struct mc_ioctl_map mapParams = { len : len };
+    struct mc_ioctl_map mapParams;
 
+    mapParams.len = len;
     if (!isOpen()) {
         LOG_E("no connection to kmod");
         return MC_DRV_ERR_KMOD_NOT_OPEN;
@@ -209,7 +211,9 @@ int CMcKMod::fcInfo(uint32_t extInfoId, uint32_t *pState, uint32_t *pExtInfo)
     }
 
     // Init MC with NQ and MCP buffer addresses
-    struct mc_ioctl_info fcInfoParams = { ext_info_id : extInfoId };
+    struct mc_ioctl_info fcInfoParams;
+
+    fcInfoParams.ext_info_id = extInfoId;
     ret = ioctl(fdKMod, MC_IO_INFO, &fcInfoParams);
     if (ret != 0) {
         LOG_ERRNO("ioctl MC_IO_INFO");
@@ -310,15 +314,11 @@ mcResult_t CMcKMod::registerWsmL2(
         return MC_DRV_ERR_KMOD_NOT_OPEN;
     }
 
-    struct mc_ioctl_reg_wsm params = {
-buffer :
-        (uintptr_t) buffer,
-len :
-        len,
-pid :
-        pid
-    };
+    struct mc_ioctl_reg_wsm params;
 
+    params.buffer = (uintptr_t)buffer;
+    params.len = len;
+    params.pid = pid;
     int ret = ioctl(fdKMod, MC_IO_REG_WSM, &params);
     if (ret != 0) {
         LOG_ERRNO("ioctl MC_IO_REG_WSM");

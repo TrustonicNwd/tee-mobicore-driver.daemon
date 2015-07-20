@@ -15,7 +15,6 @@ LOCAL_C_INCLUDES += $(GLOBAL_INCLUDES)
 LOCAL_SHARED_LIBRARIES += $(GLOBAL_LIBRARIES)
 
 LOCAL_CFLAGS := -fvisibility=hidden -fvisibility-inlines-hidden
-LOCAL_CFLAGS += -Wno-missing-field-initializers
 LOCAL_CFLAGS += -include buildTag.h
 LOCAL_CFLAGS += -DLOG_TAG=\"McClient\"
 LOCAL_CFLAGS += -DTBASE_API_LEVEL=3
@@ -57,8 +56,6 @@ LOCAL_MODULE_TAGS := debug eng optional
 LOCAL_CFLAGS += -include buildTag.h
 LOCAL_CFLAGS += -DLOG_TAG=\"McDaemon\"
 LOCAL_CFLAGS += -DTBASE_API_LEVEL=3
-#remove some warnings
-LOCAL_CFLAGS += -Wno-missing-field-initializers -Wno-format
 LOCAL_C_INCLUDES += $(GLOBAL_INCLUDES)
 LOCAL_SHARED_LIBRARIES += $(GLOBAL_LIBRARIES) libMcClient
 

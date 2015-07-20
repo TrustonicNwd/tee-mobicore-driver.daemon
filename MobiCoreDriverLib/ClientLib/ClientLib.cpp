@@ -1090,10 +1090,10 @@ __MC_CLIENT_LIB_API mcResult_t mcWaitNotification(
 //------------------------------------------------------------------------------
 __MC_CLIENT_LIB_API mcResult_t mcMallocWsm(
     uint32_t    deviceId,
-    uint32_t    align,
+    uint32_t    /*align*/,
     uint32_t    len,
     uint8_t     **wsm,
-    uint32_t    wsmFlags)
+    uint32_t    /*wsmFlags*/)
 {
     mcResult_t mcResult = MC_DRV_ERR_UNKNOWN;
 #ifndef WIN32
@@ -1300,7 +1300,7 @@ __MC_CLIENT_LIB_API mcResult_t mcUnmap(
         CHECK_NOT_NULL(mapInfo);
         CHECK_NOT_NULL(buf);
         if (mapInfo->sVirtualAddr == 0) {
-            LOG_E("Invalid secure virtual address %u.", (uintptr_t)mapInfo->sVirtualAddr);
+            LOG_E("Invalid secure virtual address %lu.", (unsigned long)mapInfo->sVirtualAddr);
             mcResult = MC_DRV_ERR_NULL_POINTER;
             break;
         }
@@ -1321,7 +1321,7 @@ __MC_CLIENT_LIB_API mcResult_t mcUnmap(
 
         uint32_t handle = session->getBufHandle((uint32_t)mapInfo->sVirtualAddr, mapInfo->sVirtualLen);
         if (handle == 0) {
-            LOG_E("Unable to find internal handle for buffer %u.", (uintptr_t)mapInfo->sVirtualAddr);
+            LOG_E("Unable to find internal handle for buffer %lu.", (unsigned long)mapInfo->sVirtualAddr);
             mcResult = MC_DRV_ERR_BLK_BUFF_NOT_FOUND;
             break;
         }

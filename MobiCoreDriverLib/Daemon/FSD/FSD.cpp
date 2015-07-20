@@ -72,7 +72,7 @@ void FSD::run(
     void
 )
 {
-	struct stat st = {0};
+	struct stat st;
 	mcResult_t ret;
 	string storage = getTbStoragePath();
 	const char* tbstpath = storage.c_str();
@@ -287,12 +287,11 @@ void FSD_CreateTaDirPath(
 				string               storage,
 				STH_FSD_message_t    *sth_request,
 				char                 *TAdirpath,
-				size_t               TAdirpathSize   //sizeof(TAdirpathSize)
+				size_t               /*TAdirpathSize*/
 ){
 	const char* tbstpath = storage.c_str();
 	size_t tbstpathSize = storage.length();
 	char tadirname[TEE_UUID_STRING_SIZE+1] = {0};
-	assert (TAdirpathSize == tbstpathSize+1+TEE_UUID_STRING_SIZE+1);
 
 	FSD_CreateTaDirName(&sth_request->uuid,tadirname,sizeof(tadirname));
 
@@ -308,13 +307,12 @@ void FSD_CreateTaDirPath(
 void FSD_CreateFilePath(
 				STH_FSD_message_t    *sth_request,
 				char                 *Filepath,
-				size_t               FilepathSize, // sizeof(FilepathSize)
+				size_t               /*FilepathSize*/,
 				char                 *TAdirpath,
 				size_t               TAdirpathSize // sizeof(TAdirpath)
 
 ){
 	char filename[2*FILENAMESIZE+1] = {0};
-	assert (FilepathSize == TAdirpathSize + 2*FILENAMESIZE+1);
 	FSD_HexFileName(sth_request->filename,filename,FILENAMESIZE,sizeof(filename));
 
 	strncpy(Filepath, TAdirpath, TAdirpathSize-1);
@@ -401,7 +399,7 @@ mcResult_t FSD::FSD_LookFile(void){
 
 	if (ferror(pFile))
 	{
-		LOG_E("%s: Error reading file res is %d and errno is %s\n",__func__,res,strerror(errno));
+		LOG_E("%s: Error reading file res is %zu and errno is %s\n",__func__,res,strerror(errno));
         fclose(pFile);
 		return TEEC_ERROR_ITEM_NOT_FOUND;
 	}
@@ -410,7 +408,7 @@ mcResult_t FSD::FSD_LookFile(void){
     {
         //File is shorter than expected
         if (feof(pFile)) {
-            LOG_I("%s: EOF reached: res is %d, payloadLen is %d\n",__func__,res, sth_request->payloadLen);
+            LOG_I("%s: EOF reached: res is %zu, payloadLen is %d\n",__func__,res, sth_request->payloadLen);
         }
     }
 
@@ -454,7 +452,7 @@ mcResult_t FSD::FSD_ReadFile(void){
 
 	if (ferror(pFile))
 	{
-		LOG_E("%s: Error reading file res is %d and errno is %s\n",__func__,res,strerror(errno));
+		LOG_E("%s: Error reading file res is %zu and errno is %s\n",__func__,res,strerror(errno));
 		fclose(pFile);
 		return TEE_ERROR_CORRUPT_OBJECT;
 	}
@@ -463,7 +461,7 @@ mcResult_t FSD::FSD_ReadFile(void){
     {
        //File is shorter than expected
        if (feof(pFile)) {
-           LOG_I("%s: EOF reached: res is %d, payloadLen is %d\n",__func__,res, sth_request->payloadLen);
+           LOG_I("%s: EOF reached: res is %zu, payloadLen is %d\n",__func__,res, sth_request->payloadLen);
        }
     }
 
@@ -539,7 +537,7 @@ mcResult_t FSD::FSD_WriteFile(void){
 
 	if (ferror(pFile))
 	{
-		LOG_E("%s: Error writing file res is %d and errno is %s\n",__func__,res,strerror(errno));
+		LOG_E("%s: Error writing file res is %zu and errno is %s\n",__func__,res,strerror(errno));
 		fclose(pFile);
 		if(remove(Filepath)==-1)
 		{
@@ -556,7 +554,7 @@ mcResult_t FSD::FSD_WriteFile(void){
 		res = fclose(pFile);
 		if ((int32_t) res < 0)
 		{
-			LOG_E("%s: Error closing file res is %d and errno is %s\n",__func__,res,strerror(errno));
+			LOG_E("%s: Error closing file res is %zu and errno is %s\n",__func__,res,strerror(errno));
 			if(remove(Filepath)==-1)
             {
                 LOG_E("%s: remove failed: %s\n",__func__, strerror(errno));

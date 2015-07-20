@@ -163,7 +163,7 @@ void MobiCoreDriverDaemon::run(
 }
 
 //------------------------------------------------------------------------------
-bool MobiCoreDriverDaemon::checkPermission(Connection *connection)
+bool MobiCoreDriverDaemon::checkPermission(Connection */*connection*/)
 {
 #ifdef REGISTRY_CHECK_PERMISSIONS
     struct ucred cred;
@@ -1267,7 +1267,7 @@ bool MobiCoreDriverDaemon::handleConnection(
  */
 
 void printUsage(
-    int argc,
+    int /*argc*/,
     char *args[]
 )
 {

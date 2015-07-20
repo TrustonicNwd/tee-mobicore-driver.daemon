@@ -114,13 +114,11 @@ NetlinkConnection::~NetlinkConnection(
 
 //------------------------------------------------------------------------------
 bool NetlinkConnection::connect(
-    const char *dest
+    const char */*dest*/
 )
 {
     struct sockaddr_nl addr;
     bool ret = false;
-
-    assert(NULL != dest);
 
     LOG_I("%s: Connecting to SEQ 0x%X", __FUNCTION__, MC_DAEMON_PID);
     do {

@@ -381,15 +381,15 @@ mcResult_t mcRegistryCleanupTrustlet(const mcUuid_t *uuid, const mcSpid_t spid)
 }
 
 //------------------------------------------------------------------------------
-mcResult_t mcRegistryStoreData(void *so, uint32_t size)
+mcResult_t mcRegistryStoreData(void */*so*/, uint32_t /*size*/)
 {
     return MC_DRV_ERR_INVALID_PARAMETER;
 }
 
 
 //------------------------------------------------------------------------------
-mcResult_t mcRegistryReadData(uint32_t context, const mcCid_t *cid, mcPid_t pid,
-                              mcSoDataCont_t *so, uint32_t maxLen)
+mcResult_t mcRegistryReadData(uint32_t /*context*/, const mcCid_t */*cid*/, mcPid_t /*pid*/,
+                              mcSoDataCont_t */*so*/, uint32_t /*maxLen*/)
 {
     return MC_DRV_ERR_INVALID_PARAMETER;
 }

@@ -306,7 +306,7 @@ mcResult_t mcRegistryReadAuthToken(mcSoAuthTokenCont_t *so)
     if ((unsigned)res<sizeof(mcSoAuthTokenCont_t)) {
         //File is shorter than expected
         if (feof(fs)) {
-            LOG_E("%s(): EOF reached: res is %u, size of mcSoAuthTokenCont_t is %u", __func__, (unsigned)res,
+            LOG_E("%s(): EOF reached: res is %d, size of mcSoAuthTokenCont_t is %zu", __func__, res,
             sizeof(mcSoAuthTokenCont_t));   
         }
         fclose(fs);
@@ -362,8 +362,8 @@ mcResult_t mcRegistryReadAuthTokenBackup(mcSoAuthTokenCont_t *so)
     if ((unsigned)res<sizeof(mcSoAuthTokenCont_t)) {
         //File is shorter than expected
         if (feof(fs)) {
-            LOG_E("%s(): EOF reached: res is %u, size of mcSoAuthTokenCont_t is %u", __func__,
-            (unsigned)res, sizeof(mcSoAuthTokenCont_t));
+            LOG_E("%s(): EOF reached: res is %d, size of mcSoAuthTokenCont_t is %zu", __func__,
+            res, sizeof(mcSoAuthTokenCont_t));
         }
         fclose(fs);
         return MC_DRV_ERR_INVALID_PARAMETER;
@@ -622,7 +622,7 @@ mcResult_t mcRegistryStoreTABlob(mcSpid_t spid, void *blob, uint32_t size)
 
         // Check attestation size
         if (getAsUint32BE(&pUa->size) < sizeof(uuid_attestation)) {
-            LOG_E("RegistryStoreTABlob failed - Attestation size is equal to %d and is less then %d", getAsUint32BE(&pUa->size), sizeof(uuid_attestation));
+            LOG_E("RegistryStoreTABlob failed - Attestation size is equal to %d and is less then %zu", getAsUint32BE(&pUa->size), sizeof(uuid_attestation));
             return MC_DRV_ERR_TA_ATTESTATION_ERROR;
         }
 
@@ -797,7 +797,7 @@ mcResult_t mcRegistryStoreData(void *so, uint32_t size)
 
 
 //------------------------------------------------------------------------------
-mcResult_t mcRegistryReadData(uint32_t context, const mcCid_t *cid, mcPid_t pid,
+mcResult_t mcRegistryReadData(uint32_t context, const mcCid_t *cid, mcPid_t /*pid*/,
                               mcSoDataCont_t *so, uint32_t maxLen)
 {
     int res = 0;
@@ -854,7 +854,7 @@ mcResult_t mcRegistryReadData(uint32_t context, const mcCid_t *cid, mcPid_t pid,
     if ((unsigned)res<sizeof(mcSoHeader_t)) {
         //File is shorter than expected
         if (feof(fs)) {
-            LOG_E("%s(): EOF reached: res is %u, size of mcSoHeader_t is %u", __func__, (unsigned)res, sizeof(mcSoHeader_t));
+            LOG_E("%s(): EOF reached: res is %d, size of mcSoHeader_t is %zu", __func__, res, sizeof(mcSoHeader_t));
         }
         fclose(fs);
         return MC_DRV_ERR_INVALID_PARAMETER;
@@ -871,7 +871,7 @@ mcResult_t mcRegistryReadData(uint32_t context, const mcCid_t *cid, mcPid_t pid,
     if ((unsigned)res<(MC_SO_SIZE(so->soHeader.plainLen, so->soHeader.encryptedLen) - sizeof(mcSoHeader_t))) {
         //File is shorter than expected
         if (feof(fs)) {
-            LOG_E("%s(): EOF reached: res is %u, size of secure object is %u", __func__, (unsigned)res,
+            LOG_E("%s(): EOF reached: res is %d, size of secure object is %zu", __func__, res,
             MC_SO_SIZE(so->soHeader.plainLen, so->soHeader.encryptedLen) - sizeof(mcSoHeader_t));
         }
         fclose(fs);
