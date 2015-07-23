@@ -639,7 +639,8 @@ rootpaerror_t handleCommandAndFillResponse(xmlDocPtr xmlCommandP, xmlDocPtr xmlR
 }
 
 void handleError(void* ctx, const char *format, ...) 
-{     
+{
+    (void) ctx;
 #ifdef WIN32
 	#define ERROR_LOG_LENGTH 256
     char errMsg[ERROR_LOG_LENGTH];
@@ -893,6 +894,7 @@ rootpaerror_t fillSystemInfo(xmlNodePtr systemInfoNode, const osInfo_t* osSpecif
 
 rootpaerror_t fillMcVersion(xmlNodePtr mcVersionNode, int mcVersionTag, const mcVersionInfo_t* mcVersionP)
 {
+    (void) mcVersionTag;
     char intBuffer[INT_BUFFER_LENGTH];
     LOGD(">>fillMcVersion");
     xmlSetStructuredErrorFunc(NULL, NULL);

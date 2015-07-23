@@ -359,6 +359,9 @@ rootpaerror_t storeTA(mcSpid_t spid, const mcUuid_t* uuidP, const uint8_t* taBin
 
 void dummyCallback(ProvisioningState state, rootpaerror_t error, tltInfo_t* tltInfoP)
 {
+    (void) state;
+    (void) error;
+    (void) tltInfoP;
     LOGD("dummy callback %d %d %ld", state, error, (long int) tltInfoP);
 }
 

@@ -103,7 +103,7 @@ size_t base64DecodeStringRemoveEndZero(const char* toBeDecoded, char** resultP)
     unsigned char out[PLAINSIZE];
     int v;
     int i, len;
-    int inIndex=0;
+    size_t inIndex=0;
     int outIndex=0;
 
     LOGD(">> base64DecodeStringRemoveEndZero");
@@ -190,7 +190,7 @@ char* base64EncodeAddEndZero(const char* toBeEncoded, size_t length)
     unsigned char in[PLAINSIZE];
 	unsigned char out[ENCODEDSIZE];
     int i, len;
-    int inIndex=0;
+    size_t inIndex=0;
     int outIndex=0;
 
     LOGD(">> base64EncodeAddEndZero %d %s", (int) length, ((toBeEncoded!=NULL)?"ptr ok":"NULL"));

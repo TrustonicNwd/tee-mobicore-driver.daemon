@@ -126,7 +126,7 @@ jobject CmpResponses::createCmpResponseObject(CmpMessage msg)
 
                 if(NULL==newObject)
                 {
-                    LOGE("CmpResponses::createCmpResponseObject creating new object failed %d %d", objectCls_, constructor);
+                    LOGE("CmpResponses::createCmpResponseObject creating new object failed %p %p", objectCls_, constructor);
                 }
 
             }

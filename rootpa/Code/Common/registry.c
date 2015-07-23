@@ -133,6 +133,7 @@ int regCleanupTlt(const mcUuid_t* uuidP, mcSpid_t spid)
 
 int regStoreTA(mcSpid_t spid, const mcUuid_t* uuidP, const uint8_t* taBinary, uint32_t taBinLength)
 {
+    (void) uuidP;
 #ifdef WIN32
 	return MC_DRV_ERR_INVALID_OPERATION; // TODO-fix Currently the Windows version of mcRegistry does not support mcRegistryStoreTABlob
 #else

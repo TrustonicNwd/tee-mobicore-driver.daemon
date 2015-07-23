@@ -655,7 +655,7 @@ rootpaerror_t handleResponse(cmpCommandId_t commandId, CmpMessage* outResponseP,
     if(mcRet != MC_DRV_OK)
     {
         LOGE("pacmp3 handleResponse for %d registry failed %d", commandId, mcRet);                
-        if(-1==mcRet)
+        if((mcResult_t)-1==mcRet)
         {
             ret = ROOTPA_ERROR_INTERNAL;
         }
