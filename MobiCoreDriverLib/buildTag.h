@@ -29,5 +29,6 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /** Build tag created during build by /data/buildserver/jenkins/workspace/CustomerPackage-QC-MSM8916-Branch-rel_t-base-301B-V001_qc/dev/components/MobiCoreDriver/Linux/Daemon/../../../../../build/tools/Scripts/setBuildTag.sh. */
+/** Build tag modified, add M for the last fix in daemon close sessions */
 #define MOBICORE_COMPONENT_BUILD_TAG \
-	"t-base-QC-MSM8916-Android-301B-V003-36_36"
+	"t-base-QC-MSM8916-Android-301B-V003-36_36_M"

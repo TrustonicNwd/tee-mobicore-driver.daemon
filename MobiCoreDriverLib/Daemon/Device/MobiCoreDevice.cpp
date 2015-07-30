@@ -233,56 +233,33 @@ void MobiCoreDevice::close(
     // TA, so we want to terminate the TA first and then the driver. This may
     // make this a bit easier for everbody.
 
-    trustletSessionList_t::reverse_iterator revIt = trustletSessions.rbegin();
-    while (revIt != trustletSessions.rend())
+    // Cannot lock list as we need to receive notifications, but it may change, so search under lock
+    trustletSessionList_t sessions_list;
+    mutex_tslist.lock();
+    for (trustletSessionList_t::reverse_iterator revIt = trustletSessions.rbegin(); revIt != trustletSessions.rend(); revIt++)
     {
-        TrustletSession *session = *revIt;
+        if ((*revIt)->deviceConnection == connection) {
+            LOG_I("MobiCoreDevice::close found a session %p", *revIt);
 
-        // wiredness of reverse iterators
-        // * is is incremented to get the next lowe element
-        // * to delete something from the list, we need the "normal" iterator.
-        //   This is simpy "one off" the current revIt. So we can savely use
-        //   the increment below in both cases.
-        revIt++;
-
-        if (session->deviceConnection == connection)
-        {
-            // close session, log any error but ignore it.
-            //mcResult_t mcRet = closeSessionInternal(session);
-            mcResult_t mcRet = closeSession(connection, session->sessionId);
-            if (mcRet != MC_MCP_RET_OK) {
-                LOG_I("device closeSession failed with %d", mcRet);
-            }
-
-            // removing an element from the list it tricky. Convert the revIt
-            // to a "normal" iterator. Remember here that the revIt is one off,
-            // but we have done an increment above, so we are fine here. So
-            // after we have the normal iterator, ude it to delete and then
-            // convert the returned iterator back to a reverse iterator, which
-            // we will use for the loop.
-            //trustletSessionIterator_t it = revIt.base();
-            //it = trustletSessions.erase(it); // delete
-            //revIt =  trustletSessionList_t::reverse_iterator(it);
-
-            // free object
-            //delete session;
+            sessions_list.push_back(*revIt);
+            break;
         }
     }
+    mutex_tslist.unlock();
 
-    // Leave critical section
-    mutex.unlock();
-
-    // After the trustlet is done make sure to tell the driver to cleanup
-    // all the orphaned drivers
-    //cleanupWsmL2();
-
-
+    for (trustletSessionList_t::iterator it = sessions_list.begin(); it != sessions_list.end(); it++) {
+        mcResult_t mcRet = closeSession(connection, (*it)->sessionId);
+        if (mcRet != MC_MCP_RET_OK) {
+            LOG_I("device closeSession failed for %p with %d", *it, mcRet);
+        }
+    }
 
     connection->connectionData = NULL;
 
     // Leave critical section
     mutex.unlock();
 }
+
 
 
 //------------------------------------------------------------------------------
