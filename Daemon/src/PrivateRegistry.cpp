@@ -54,10 +54,9 @@
 #include "mcSpid.h"
 #include "mcVersionHelper.h"
 
-#include "MobiCoreDriverApi.h"
 #include "PrivateRegistry.h"
-#include "MobiCoreRegistry.h"
 
+#include <tee_client_api.h>
 #include "uuid_attestation.h"
 
 #include <log.h>
@@ -231,6 +230,17 @@ void setSearchPaths(const std::vector<std::string>& paths)
     tb_storage_path = search_paths[0] + "/TbStorage";
 }
 
+static inline bool isAllZeros(const unsigned char *so, uint32_t size)
+{
+    for (uint32_t i = 0; i < size; i++) {
+        if (so[i]) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryStoreAuthToken(void *so, size_t size)
 {
@@ -242,29 +252,70 @@ mcResult_t mcRegistryStoreAuthToken(void *so, size_t size)
     const std::string &authTokenFilePath = getAuthTokenFilePath();
     LOG_D("store AuthToken: %s", authTokenFilePath.c_str());
 
+    /*
+     * This special handling is needed because some of our OEM partners do not
+     * supply the AuthToken to Kinibi Sphere. Instead, they retain the
+     * AuthToken in a dedicated (reliable) storage area on the device. And in
+     * that case, Kinibi Sphere is populated with a all-zero-padded AuthToken.
+     * (Obviously the zero-padded AuthToken won't work, so we use that zero-
+     * padding as an indicator to trigger the special behaviour.)
+     *
+     * When Kinibi Sphere supplies the device with the zero-padded AuthToken,
+     * the device must look retrieve the AuthToken from its dedicated storage,
+     * and use it in place of the zero-padded AuthToken supplied by Kinibi
+     * Sphere. Since the AuthToken Backup will already have been retrieved from
+     * the dedicated storage area by the time this method is called, using the
+     * AuthToken Backup as our source is an acceptable proxy for retrieving it
+     * from the dedicated storage area directly.
+     *
+     * This behaviour is triggered following Root.PA detecting a Factory Reset.
+     */
+    void *backup = NULL;
+    if (isAllZeros((const unsigned char*)so, size)) {
+        const std::string &authTokenFilePathBackup = getAuthTokenFilePathBackup();
+
+        LOG_D("AuthToken is all zeros");
+        FILE *backupfs = fopen(authTokenFilePathBackup.c_str(), "rb");
+        if (backupfs) {
+            backup = malloc(size);
+            if (backup) {
+                size_t readsize = fread(backup, 1, size, backupfs);
+                if (readsize == size) {
+                    LOG_D("AuthToken reset backup");
+                    so = backup;
+                } else {
+                    LOG_E("AuthToken read size = %zu (%zu)", readsize, size);
+                }
+            }
+            fclose(backupfs);
+        } else {
+            LOG_W("can't open AuthToken %s", authTokenFilePathBackup.c_str());
+        }
+    }
+
+    mcResult_t ret = MC_DRV_OK;
     FILE *fs = fopen(authTokenFilePath.c_str(), "wb");
-    if (fs==NULL) {
-        LOG_E("mcRegistry store So.Soc failed: %d", MC_DRV_ERR_INVALID_DEVICE_FILE);
-        return MC_DRV_ERR_INVALID_DEVICE_FILE;
-    }
-    res = fseek(fs, 0, SEEK_SET);
-    if (res!=0) {
-        LOG_E("mcRegistry store So.Soc failed: %d", MC_DRV_ERR_INVALID_PARAMETER);
+    if (fs == NULL) {
+        ret = MC_DRV_ERR_INVALID_DEVICE_FILE;
+    } else {
+        res = fseek(fs, 0, SEEK_SET);
+        if (res != 0) {
+            ret = MC_DRV_ERR_INVALID_PARAMETER;
+        } else {
+            fwrite(so, 1, size, fs);
+            if (ferror(fs)) {
+                ret = MC_DRV_ERR_OUT_OF_RESOURCES;
+            }
+        }
         fclose(fs);
-        return MC_DRV_ERR_INVALID_PARAMETER;
     }
-    fwrite(so, 1, size, fs);
-    if (ferror(fs)) {
-        LOG_E("mcRegistry store So.Soc failed %d", MC_DRV_ERR_OUT_OF_RESOURCES);
-        fclose(fs);
-        return MC_DRV_ERR_OUT_OF_RESOURCES;
+    if (ret != MC_DRV_OK) {
+        LOG_ERRNO("mcRegistry store So.Soc failed");
     }
-    fflush(fs);
-    fclose(fs);
+    free(backup);
 
-    return MC_DRV_OK;
+    return ret;
 }
-
 
 //------------------------------------------------------------------------------
 mcResult_t mcRegistryReadAuthToken(mcSoAuthTokenCont_t *so)
@@ -680,7 +731,6 @@ mcResult_t mcRegistryStoreTABlob(mcSpid_t spid, const void *blob, size_t size)
 
         FILE *fs = fopen(taspidFilePath.c_str(), "wb");
         if (fs==NULL) {
-            //TODO: shouldn't we delete TA blob file ?
             LOG_E("RegistryStoreTABlob failed - TA blob file open error: %d", MC_DRV_ERR_INVALID_DEVICE_FILE);
             return MC_DRV_ERR_INVALID_DEVICE_FILE;
         }

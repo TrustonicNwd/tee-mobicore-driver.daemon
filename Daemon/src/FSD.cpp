@@ -44,7 +44,7 @@
 #include <assert.h>
 #include <pthread.h>
 
-#include "MobiCoreRegistry.h"
+#include "PrivateRegistry.h"
 #include "FSD.h"
 #include <log.h>
 
@@ -99,9 +99,9 @@ void FSD::run(void)
 
     /* Create Tbase storage directory */
     if (stat(tbstpath, &st) == -1) {
-        LOG_D("%s: Creating <t-base storage Folder %s\n", TAG_LOG, tbstpath);
+        LOG_D("%s: Creating <t-base storage Folder %s", TAG_LOG, tbstpath);
         if (mkdir(tbstpath, 0700) == -1) {
-            LOG_E("%s: failed creating storage folder\n", TAG_LOG);
+            LOG_E("%s: failed creating storage folder", TAG_LOG);
         }
     }
 
@@ -123,7 +123,7 @@ void FSD::run(void)
         /* clean up first, ignore errors */
         (void) FSD_Close();
 
-        LOG_W("Restarting communications with <t-base STH\n");
+        LOG_W("Restarting communications with <t-base STH");
 
     } while(!shouldTerminate());
     LOG_I("Exiting File Storage Daemon 0x%08X", ret);
@@ -145,7 +145,7 @@ mcResult_t FSD::FSD_Open(void)
     mcRet = mcOpenDevice(MC_DEVICE_ID_DEFAULT);
     if (MC_DRV_OK != mcRet)
     {
-        LOG_E("FSD_Open(): mcOpenDevice returned: %d\n", mcRet);
+        LOG_E("FSD_Open(): mcOpenDevice returned: %d", mcRet);
         goto error;
     }
 
@@ -159,7 +159,7 @@ mcResult_t FSD::FSD_Open(void)
                           static_cast<uint32_t>(m_dci_msg_size));
     if (MC_DRV_OK != mcRet)
     {
-        LOG_E("FSD_Open(): mcOpenSession returned: %d\n", mcRet);
+        LOG_E("FSD_Open(): mcOpenSession returned: %d", mcRet);
         goto close_device;
     }
 
@@ -176,7 +176,7 @@ mcResult_t FSD::FSD_Open(void)
     mcRet = mcNotify(&sessionHandle);
     if (MC_DRV_OK != mcRet)
     {
-        LOG_E("FSD_Open(): mcNotify returned: %d\n", mcRet);
+        LOG_E("FSD_Open(): mcNotify returned: %d", mcRet);
         goto close_session;
     }
 
@@ -185,8 +185,8 @@ mcResult_t FSD::FSD_Open(void)
     if (MC_DRV_OK != mcRet)
         goto close_session;
 
-    LOG_D("FSD_Open(): received first notification \n");
-    LOG_D("FSD_Open(): send notification  back \n");
+    LOG_D("FSD_Open(): received first notification");
+    LOG_D("FSD_Open(): send notification  back");
     mcRet = mcNotify(&sessionHandle);
     if (mcRet == MC_DRV_OK) {
         LockGuard lock(&m_close_lock);
@@ -196,9 +196,9 @@ mcResult_t FSD::FSD_Open(void)
             LOG_D("FSD_Open(): returning success");
             return mcRet;
         } else
-            LOG_E("FSD_Open(): thread should be terminated, bailing out\n");
+            LOG_E("FSD_Open(): thread should be terminated, bailing out");
     } else
-        LOG_E("FSD_Open(): mcNotify returned: %d\n", mcRet);
+        LOG_E("FSD_Open(): mcNotify returned: %d", mcRet);
 
 close_session:
     mcCloseSession(&sessionHandle);
@@ -223,14 +223,14 @@ mcResult_t FSD::FSD_Close(void)
 
         mcRet = mcCloseSession(&m_sessionHandle);
         if (MC_DRV_OK != mcRet)
-            LOG_E("FSD_Close(): mcCloseSession returned: %d\n", mcRet);
+            LOG_E("FSD_Close(): mcCloseSession returned: %d", mcRet);
 
         memset(&m_sessionHandle, 0, sizeof(mcSessionHandle_t));
 
         /* Close <t-base device */
         mcRet = mcCloseDevice(MC_DEVICE_ID_DEFAULT);
         if (MC_DRV_OK != mcRet)
-            LOG_E("FSD_Close(): mcCloseDevice returned: %d\n", mcRet);
+            LOG_E("FSD_Close(): mcCloseDevice returned: %d", mcRet);
 
         /* Clear DCI message buffer */
         memset(m_dci, 0, m_dci_msg_size);
@@ -238,17 +238,17 @@ mcResult_t FSD::FSD_Close(void)
         m_dci = NULL;
     }
 
-    LOG_D("FSD_Close(): returning: 0x%.8x\n", mcRet);
+    LOG_D("FSD_Close(): returning: 0x%.8x", mcRet);
     return mcRet;
 }
 
 void FSD::FSD_listenDci(void)
 {
     mcResult_t mcRet = MC_DRV_OK;
-    LOG_D("FSD_listenDci(): DCI listener \n");
+    LOG_D("FSD_listenDci(): DCI listener");
 
     while (mcRet == MC_DRV_OK && !shouldTerminate()) {
-        LOG_D("FSD_listenDci(): Waiting for notification\n");
+        LOG_D("FSD_listenDci(): Waiting for notification");
 
         LockGuard lock(&m_close_lock);
         if(m_dci == NULL) {
@@ -263,18 +263,18 @@ void FSD::FSD_listenDci(void)
                 LOG_D("Giving up on signal");
                 terminate();
             } else {
-                LOG_ERRNO("FSD_listenDci(): mcWaitNotification failed\n");
+                LOG_ERRNO("FSD_listenDci(): mcWaitNotification failed");
             }
         } else {
             /* Received notification. */
-            LOG_D("FSD_listenDci(): Received Command (0x%.8x) from STH\n",
+            LOG_D("FSD_listenDci(): Received Command (0x%.8x) from STH",
                   m_dci->sth_request.type);
             FSD_ExecuteCommand();
 
             /* notify the STH */
             mcRet = mcNotify(&m_sessionHandle);
             if (mcRet != MC_DRV_OK) {
-                LOG_E("mcNotify() returned: %d\n", mcRet);
+                LOG_E("mcNotify() returned: %d", mcRet);
             }
         }
     }
@@ -341,8 +341,8 @@ void FSD_CreateTaDirPath(
 	strncat(TAdirpath, "/", strlen(("/")));
 	strncat(TAdirpath, tadirname, strlen(tadirname));
 
-	LOG_D("%s: Storage    %s\n", __func__, tbstpath);
-	LOG_D("%s: TA dirname %s\n", __func__, tadirname);
+	LOG_D("%s: Storage    %s", __func__, tbstpath);
+	LOG_D("%s: TA dirname %s", __func__, tadirname);
 
 }
 
@@ -361,8 +361,8 @@ void FSD_CreateFilePath(
 	strncat(Filepath, "/", strlen("/"));
 	strncat(Filepath, filename, strlen(filename));
 
-	LOG_D("%s: filename   %s\n", __func__, filename);
-	LOG_D("%s: fullpath   %s\n", __func__, Filepath);
+	LOG_D("%s: filename   %s", __func__, filename);
+	LOG_D("%s: fullpath   %s", __func__, Filepath);
 
 }
 
@@ -372,36 +372,36 @@ void FSD::FSD_ExecuteCommand(void)
 	switch (m_dci->sth_request.type) {
 
 	case STH_MESSAGE_TYPE_LOOK:
-		LOG_D("FSD_ExecuteCommand(): Looking for file\n");
+		LOG_D("FSD_ExecuteCommand(): Looking for file");
 		m_dci->sth_request.status = FSD_LookFile();
 		break;
 
 	case STH_MESSAGE_TYPE_READ:
-		LOG_D("FSD_ExecuteCommand(): Reading file\n");
+		LOG_D("FSD_ExecuteCommand(): Reading file");
 		m_dci->sth_request.status = FSD_ReadFile();
 		break;
 
 	case STH_MESSAGE_TYPE_WRITE:
-		LOG_D("FSD_ExecuteCommand(): Writing file\n");
+		LOG_D("FSD_ExecuteCommand(): Writing file");
 		m_dci->sth_request.status = FSD_WriteFile();
 		break;
 
 	case STH_MESSAGE_TYPE_DELETE:
-		LOG_D("FSD_ExecuteCommand(): Deleting file\n");
+		LOG_D("FSD_ExecuteCommand(): Deleting file");
 		m_dci->sth_request.status = FSD_DeleteFile();
-		LOG_D("FSD_ExecuteCommand(): file deleted status is 0x%08x\n",
+		LOG_D("FSD_ExecuteCommand(): file deleted status is 0x%08x",
 			m_dci->sth_request.status);
 		break;
 
 	case STH_MESSAGE_TYPE_DELETE_ALL:
-		LOG_D("FSD_ExecuteCommand(): Deleting directory\n");
+		LOG_D("FSD_ExecuteCommand(): Deleting directory");
 		m_dci->sth_request.status = FSD_DeleteDir();
 		LOG_D("FSD_ExecuteCommand(): Directory deleted status is "
-		  "0x%08x\n", m_dci->sth_request.status);
+		  "0x%08x", m_dci->sth_request.status);
 		break;
 
 	default:
-		LOG_E("FSD_ExecuteCommand(): Ignoring unknown command %x\n",
+		LOG_E("FSD_ExecuteCommand(): Ignoring unknown command %x",
 			m_dci->sth_request.type);
 		break;
 	}
@@ -437,7 +437,7 @@ uint32_t FSD::FSD_LookFile(void)
 	pFile = fopen(Filepath, "r");
 	if (pFile==NULL)
 	{
-		LOG_E("%s: Error looking for file 0x%.8x\n",__func__,TEEC_ERROR_ITEM_NOT_FOUND);
+		LOG_E("%s: Error looking for file 0x%.8x",__func__,TEEC_ERROR_ITEM_NOT_FOUND);
 		return TEEC_ERROR_ITEM_NOT_FOUND;
 	}
 
@@ -445,7 +445,7 @@ uint32_t FSD::FSD_LookFile(void)
 
 	if (ferror(pFile))
 	{
-		LOG_E("%s: Error reading file res is %zu and errno is %s\n",__func__,res,strerror(errno));
+		LOG_E("%s: Error reading file res is %zu and errno is %s",__func__,res,strerror(errno));
 		fclose(pFile);
 		return TEEC_ERROR_ITEM_NOT_FOUND;
 	}
@@ -454,7 +454,7 @@ uint32_t FSD::FSD_LookFile(void)
     {
         //File is shorter than expected
         if (feof(pFile)) {
-            LOG_D("%s: EOF reached: res is %zu, payloadLen is %d\n",__func__,res, sth_request->payloadLen);
+            LOG_D("%s: EOF reached: res is %zu, payloadLen is %d",__func__,res, sth_request->payloadLen);
         }
     }
 
@@ -491,14 +491,14 @@ uint32_t FSD::FSD_ReadFile(void)
 	pFile = fopen(Filepath, "r");
 	if (pFile==NULL)
 	{
-		LOG_E("%s: Error looking for file 0x%.8x\n", __func__,TEEC_ERROR_ITEM_NOT_FOUND);
+		LOG_E("%s: Error looking for file 0x%.8x", __func__,TEEC_ERROR_ITEM_NOT_FOUND);
 		return TEEC_ERROR_ITEM_NOT_FOUND;
 	}
 	res = fread(sth_request->payload,sizeof(char),sth_request->payloadLen,pFile);
 
 	if (ferror(pFile))
 	{
-		LOG_E("%s: Error reading file res is %zu and errno is %s\n",__func__,res,strerror(errno));
+		LOG_E("%s: Error reading file res is %zu and errno is %s",__func__,res,strerror(errno));
 		fclose(pFile);
 		return TEE_ERROR_CORRUPT_OBJECT;
 	}
@@ -507,7 +507,7 @@ uint32_t FSD::FSD_ReadFile(void)
     {
        //File is shorter than expected
        if (feof(pFile)) {
-           LOG_D("%s: EOF reached: res is %zu, payloadLen is %d\n",__func__,res, sth_request->payloadLen);
+           LOG_D("%s: EOF reached: res is %zu, payloadLen is %d",__func__,res, sth_request->payloadLen);
        }
     }
 
@@ -542,7 +542,7 @@ uint32_t FSD::FSD_WriteFile(void)
     stat = mkdir(TAdirpath, 0700);
 	if((stat==-1) && (errno!=EEXIST))
 	{
-		LOG_E("%s: error when creating TA dir: %s (%s)\n",__func__,TAdirpath,strerror(errno));
+		LOG_E("%s: error when creating TA dir: %s (%s)",__func__,TAdirpath,strerror(errno));
 		return TEE_ERROR_STORAGE_NO_SPACE;
 	}
 
@@ -555,14 +555,14 @@ uint32_t FSD::FSD_WriteFile(void)
 					sizeof(TAdirpath));
 	strncpy(Filepath_new,Filepath,sizeof(Filepath) - 1);
 	strncat(Filepath_new,NEW_EXT,strlen(NEW_EXT));
-	LOG_D("%s: filename.new   %s\n", __func__, Filepath_new);
+	LOG_D("%s: filename.new   %s", __func__, Filepath_new);
 	if(sth_request->flags == TEE_DATA_FLAG_EXCLUSIVE)
 	{
-		LOG_D("%s: opening file in exclusive mode\n",__func__);
+		LOG_D("%s: opening file in exclusive mode",__func__);
 		fd = open(Filepath, O_WRONLY | O_CREAT | O_EXCL, S_IWUSR);
 		if (fd == -1)
 		{
-			LOG_E("%s: error creating file: %s \n",__func__,strerror(errno));
+			LOG_E("%s: error creating file: %s",__func__,strerror(errno));
 			return TEE_ERROR_CORRUPT_OBJECT;
 		}
 		else
@@ -571,12 +571,12 @@ uint32_t FSD::FSD_WriteFile(void)
 		}
 	}
 	pFile = fopen(Filepath_new, "w");
-	LOG_D("%s: opening file for writing\n",__func__);
+	LOG_D("%s: opening file for writing",__func__);
 	if(pFile==NULL)
 	{
 		if(remove(Filepath)==-1)
 		{
-			LOG_E("%s: remove failed: %s\n",__func__, strerror(errno));
+			LOG_E("%s: remove failed: %s",__func__, strerror(errno));
 		}
 		return TEE_ERROR_STORAGE_NO_SPACE;
 	}
@@ -584,15 +584,15 @@ uint32_t FSD::FSD_WriteFile(void)
 
 	if (ferror(pFile))
 	{
-		LOG_E("%s: Error writing file res is %zu and errno is %s\n",__func__,res,strerror(errno));
+		LOG_E("%s: Error writing file res is %zu and errno is %s",__func__,res,strerror(errno));
 		fclose(pFile);
 		if(remove(Filepath)==-1)
 		{
-			LOG_E("%s: remove failed: %s\n",__func__, strerror(errno));
+			LOG_E("%s: remove failed: %s",__func__, strerror(errno));
 		}
 		if(remove(Filepath_new)==-1)
 		{
-			LOG_E("%s: remove failed: %s\n",__func__, strerror(errno));
+			LOG_E("%s: remove failed: %s",__func__, strerror(errno));
 		}
 		return TEE_ERROR_STORAGE_NO_SPACE;
 	}
@@ -601,14 +601,14 @@ uint32_t FSD::FSD_WriteFile(void)
 		res = fclose(pFile);
 		if ((int32_t) res < 0)
 		{
-			LOG_E("%s: Error closing file res is %zu and errno is %s\n",__func__,res,strerror(errno));
+			LOG_E("%s: Error closing file res is %zu and errno is %s",__func__,res,strerror(errno));
 			if(remove(Filepath)==-1)
             {
-                LOG_E("%s: remove failed: %s\n",__func__, strerror(errno));
+                LOG_E("%s: remove failed: %s",__func__, strerror(errno));
             }
 			if(remove(Filepath_new)==-1)
             {
-                LOG_E("%s: remove failed: %s\n",__func__, strerror(errno));
+                LOG_E("%s: remove failed: %s",__func__, strerror(errno));
             }
 			return TEE_ERROR_STORAGE_NO_SPACE;
 		}
@@ -616,14 +616,14 @@ uint32_t FSD::FSD_WriteFile(void)
 		res = rename(Filepath_new,Filepath);
 		if ((int32_t) res < 0)
 		{
-			LOG_E("%s: Error renaming: %s\n",__func__,strerror(errno));
+			LOG_E("%s: Error renaming: %s",__func__,strerror(errno));
 			if(remove(Filepath)==-1)
             {
-                LOG_E("%s: remove failed: %s\n",__func__, strerror(errno));
+                LOG_E("%s: remove failed: %s",__func__, strerror(errno));
             }
 			if(remove(Filepath_new)==-1)
             {
-                LOG_E("%s: remove failed: %s\n",__func__, strerror(errno));
+                LOG_E("%s: remove failed: %s",__func__, strerror(errno));
             }
 			return TEE_ERROR_STORAGE_NO_SPACE;
 		}
@@ -660,7 +660,7 @@ uint32_t FSD::FSD_DeleteFile(void)
 	pFile = fopen(Filepath, "r");
 	if (pFile==NULL)
 	{
-		LOG_D("%s: file not found: %s (%s)\n",__func__, Filepath, strerror(errno));
+		LOG_D("%s: file not found: %s (%s)",__func__, Filepath, strerror(errno));
 		ret = TEEC_SUCCESS;
 	}
 	else
@@ -676,7 +676,7 @@ uint32_t FSD::FSD_DeleteFile(void)
 	if (((int32_t) res < 0) && (errno != ENOTEMPTY) && (errno != EEXIST) && (errno != ENOENT))
 	{
 		ret = TEE_ERROR_STORAGE_NO_SPACE;
-		LOG_E("%s: rmdir failed: %s (%s)\n",__func__, TAdirpath, strerror(errno));
+		LOG_E("%s: rmdir failed: %s (%s)",__func__, TAdirpath, strerror(errno));
 	}
 	else
 	{
@@ -698,7 +698,7 @@ mcResult_t FSD::FSD_DeleteDir(void)
 {
 	STH_FSD_message_t *sth_request = &m_dci->sth_request;
 
-    switch (mcRegistryCleanupTA((mcUuid_t *) &sth_request->uuid)) {
+    switch (mcRegistryCleanupGPTAStorage((mcUuid_t *) &sth_request->uuid)) {
     case MC_DRV_OK:
         return TEEC_SUCCESS;
     default:

@@ -42,6 +42,8 @@
 #include <pthread.h>
 
 #include "MobiCoreDriverApi.h"
+// drSecureStorage_Api.h uses TEE_UUID
+#include <tee_client_api.h>
 #include "drSecureStorage_Api.h"
 #include "CThread.h"
 

@@ -49,6 +49,7 @@ typedef enum {
      * GD driver numbers up to this constant may not be used for loadable drivers. */
     MC_DRV_NUMBER_LAST_PRE_INSTALLED = 100,
     TB_DRV_NUMBER_TUI  = 0x101,
+    TB_DRV_NUMBER_SFS  = 0x104,
     TB_DRV_NUMBER_TPLAY  = 0x600,
 } mcDrvNumber_t;
 
@@ -56,6 +57,7 @@ typedef enum {
 typedef enum {
     MC_DRV_ID_INVALID = MC_DRV_VENDOR_ID_GD | MC_DRV_NUMBER_INVALID,
     MC_DRV_ID_CRYPTO  = MC_DRV_VENDOR_ID_GD | MC_DRV_NUMBER_CRYPTO,
+    MC_DRV_ID_SFS  = MC_DRV_VENDOR_ID_GD | TB_DRV_NUMBER_SFS,
     /** Last GD driver ID reserved for pre-installed drivers.
      * GD driver IDs up to this constant may not be used for loadable drivers. */
     MC_DRV_ID_LAST_PRE_INSTALLED = MC_DRV_VENDOR_ID_GD | MC_DRV_NUMBER_LAST_PRE_INSTALLED,

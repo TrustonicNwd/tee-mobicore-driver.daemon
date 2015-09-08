@@ -38,6 +38,10 @@
 #include "mcVersionInfo.h"
 #include "stdbool.h"
 
+#define FLAG_RESPONSE       (1U << 31)  /**< Flag to indicate that this is the response to a MCP command. */
+
+#define MCP_MAP_MAX_BUF        4 /** Maximum number of buffers that can be mapped at once */
+
 /** MobiCore Return Code Defines.
  * List of the possible MobiCore return codes.
  */
@@ -97,10 +101,9 @@ typedef enum {
     MC_MCP_CMD_CLOSE_MCP                 = 0x0000000A,   /**< Close MCP and unmap MCI. */
     MC_MCP_CMD_LOAD_TOKEN                = 0x0000000B,   /**< Load token for device attestation */
     MC_MCP_CMD_CHECK_LOAD_TA             = 0x0000000C,   /**< Check that TA can be loaded */
+    MC_MCP_CMD_MULTIMAP                  = 0x0000000D,
+    MC_MCP_CMD_MULTIUNMAP                = 0x0000000E,
 } mcpCmdId_t;
-
-
-#define FLAG_RESPONSE       (1U << 31)  /**< Flag to indicate that this is the response to a MCP command. */
 
 
 /** Types of WSM known to the MobiCore.
@@ -115,6 +118,19 @@ typedef uint32_t wsmType_t;
 #define WSM_WSM_UNCACHED    0x100   /**< Bitflag indicating that WSM should be uncached */
 #define WSM_L2_UNCACHED     0x100   /**< Bitflag indicating that L2 table should be uncached */
 
+/** Magic number used to identify if Open Command supports GP client authentication. */
+#define MC_GP_CLIENT_AUTH_MAGIC    0x47504131  /* "GPA1" */
+
+/** Initialisation values flags. */
+#define MC_IV_FLAG_IRQ             (1 << 0)    /* Set if IRQ is present */
+#define MC_IV_FLAG_TIME            (1 << 1)    /* Set if GP TIME API is supported */
+
+typedef struct {
+    uint32_t flags;  /**< Flags to know what data to expect. */
+    uint32_t irq;    /**< IRQ number to use. */
+    uint32_t timeOffset;/**< Offset from MCI base address of mcTime struct. */
+    uint32_t timeLen;/**< Length of mcTime struct. */
+} initValues_t;
 
 /** Command header.
  * It just contains the command ID. Only values specified in mcpCmdId_t are allowed as command IDs.
@@ -217,10 +233,18 @@ typedef struct {
  * On success, MobiCore returns the session ID which can be used for further communication.
  * @{ */
 
+/** GP client authentication data */
+typedef struct {
+    uint32_t          mclfMagic;        /**< ASCII "GPA1" if GP client authentication is supported,
+                                                   "MCLF" otherwise. */
+    mcIdentity_t      mcIdentity;       /**< GP identity information: login method and data */
+} cmdOpenData_t;
+
 /** Open Command */
 typedef struct {
     commandHeader_t   cmdHeader;        /**< Command header. */
     mcUuid_t          uuid;             /**< Byte array containing the service UUID. */
+    uint8_t           pad1[4];          /**< Padding to be 64-bit aligned */
     uint64_t          adrTciBuffer;     /**< Physical address of the TCI */
     uint64_t          adrLoadData;      /**< Physical address of the data to load. */
     uint32_t          ofsTciBuffer;     /**< Offset to the data. */
@@ -229,8 +253,11 @@ typedef struct {
     wsmType_t         wsmTypeLoadData;  /**< Type of the memory containing the data to load. */
     uint32_t          ofsLoadData;      /**< Offset to the data. */
     uint32_t          lenLoadData;      /**< Length of the data to load. */
-    mclfHeader_t      tlHeader;         /**< Service header. */
-    bool              is_gpta;          /**< true if looking for an SD/GP-TA */
+    union {
+        cmdOpenData_t cmdOpenData;      /**< Magic number and login info for GP client authentication. */
+        mclfHeader_t  tlHeader;         /**< Service header */
+    };
+    uint32_t          is_gpta;          /**< true if looking for an SD/GP-TA */
 } mcpCmdOpen_t, *mcpCmdOpen_ptr;
 
 /** Open Command Response */
@@ -288,8 +315,6 @@ typedef struct {
  * Map a portion of memory to a session.
  * The MAP command provides a block of memory to the context of a service.
  * The memory then becomes world-shared memory (WSM).
- * The WSM can either be normal anonymous memory from malloc() or be a
- * block of page aligned, contiguous memory.
  * The only allowed memory type here is WSM_L2.
  * @{ */
 
@@ -339,6 +364,71 @@ typedef struct {
 
 /** @} */// End MCPUNMAP
 
+/** @defgroup MCPMULTIMAP MULTIMAP
+ * Map up to MCP_MAP_MAX_BUF portions of memory to a session.
+ * The MULTIMAP command provides MCP_MAP_MAX_BUF blocks of memory to the context of a service.
+ * The memory then becomes world-shared memory (WSM).
+ * The only allowed memory type here is WSM_L2.
+ * @{ */
+
+/** NWd physical buffer description
+ *
+ * Note: Information is coming from NWd kernel. So it should not be trusted more than NWd kernel is trusted.
+ */
+typedef struct {
+    uint64_t         adrBuffer;     /**< Physical address, for buffer or for L2 table (1K) */
+    uint32_t         ofsBuffer;     /**< Offset of buffer */
+    uint32_t         lenBuffer;     /**< Length of buffer */
+    wsmType_t        wsmType;       /**< Type of address */
+} mcpBufferMap_t;
+
+/** Multimap Command */
+typedef struct {
+    commandHeader_t  cmdHeader; /**< Command header. */
+    uint32_t         sessionId; /** Session ID */
+    mcpBufferMap_t   buffers[MCP_MAP_MAX_BUF];
+} mcpCmdMultimap_t, *mcpCmdMultimap_ptr;
+
+/** Multimap Command Response */
+typedef struct {
+    responseHeader_t  rspHeader;        /**< Response header. */
+    uint64_t          secureVirtAdr[MCP_MAP_MAX_BUF]; /**< Virtual address in the context of the service the WSM is mapped to, already includes a possible offset! */
+} mcpRspMultimap_t, *mcpRspMultimap_ptr;
+
+/** @} *///End MCPMULTIMAP
+
+/** @defgroup MCPMULTIUNMAP MULTIUNMAP
+ * Unmap up to MCP_MAP_MAX_BUF portions of world-shared memory from a session.
+ * The MULTIUNMAP command is used to unmap MCP_MAP_MAX_BUF previously mapped blocks of
+ * world shared memory from the context of a session.
+ *
+ * Attention: The memory blocks will be immediately unmapped from the specified session.
+ * If the service is still accessing the memory, the service will trigger a segmentation fault.
+ * @{ */
+
+/** NWd mapped buffer description
+ *
+ * Note: Information is coming from NWd kernel. So it should not be trusted more than NWd kernel is trusted.
+ */
+typedef struct {
+    uint64_t         secureVirtAdr; /**< Physical address, for buffer or for L2 table (1K) */
+    uint32_t         lenBuffer;     /**< Length of buffer */
+} mcpBufferUnmap_t;
+
+/** Multiunmap Command */
+typedef struct {
+    commandHeader_t  cmdHeader; /**< Command header. */
+    uint32_t         sessionId; /** Session ID */
+    mcpBufferUnmap_t buffers[MCP_MAP_MAX_BUF]; /* For len and sva */
+} mcpCmdMultiunmap_t, *mcpCmdMultiunmap_ptr;
+
+/** Multiunmap Command Response */
+typedef struct {
+    responseHeader_t rspHeader; /**< Response header. */
+} mcpRspMultiunmap_t, *mcpRspMultiunmap_ptr;
+
+/** @} */// End MCPMULTIUNMAP
+
 /** @} */// End SESSCMD
 
 /** @defgroup MCPLOADTOKEN
@@ -366,6 +456,7 @@ typedef struct {
 
 /** Structure of the MCP buffer. */
 typedef union {
+    initValues_t                 initValues;             /**< initialization values. */
     commandHeader_t              cmdHeader;              /**< Command header. */
     responseHeader_t             rspHeader;              /**< Response header. */
     mcpCmdOpen_t                 cmdOpen;                /**< Load and open service. */
@@ -386,7 +477,10 @@ typedef union {
     mcpRspLoadToken_t            rspLoadToken;
     mcpCmdCheckLoad_t            cmdCheckLoad;           /**< TA load check command. */
     mcpRspCheckLoad_t            rspCheckLoad;           /**< Response to TA load check. */
-
+    mcpCmdMultimap_t             cmdMultimap;            /**< Map a list of WSM to service context. */
+    mcpRspMultimap_t             rspMultimap;            /**< Response to MULTIMAP command. */
+    mcpCmdMultiunmap_t           cmdMultiunmap;            /**< Map a list of WSM to service context. */
+    mcpRspMultiunmap_t           rspMultiunmap;            /**< Response to MULTIMAP command. */
 } mcpMessage_t, *mcpMessage_ptr;
 
 

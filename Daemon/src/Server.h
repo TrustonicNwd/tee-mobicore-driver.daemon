@@ -38,7 +38,6 @@
 #include <cstdio>
 #include <pthread.h>
 
-
 #include <list>
 
 #include "CThread.h"

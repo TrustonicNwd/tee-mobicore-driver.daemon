@@ -1,33 +1,33 @@
 /*
-Copyright  © Trustonic Limited 2013
-
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification, 
-are permitted provided that the following conditions are met:
-
-  1. Redistributions of source code must retain the above copyright notice, this 
-     list of conditions and the following disclaimer.
-
-  2. Redistributions in binary form must reproduce the above copyright notice, 
-     this list of conditions and the following disclaimer in the documentation 
-     and/or other materials provided with the distribution.
-
-  3. Neither the name of the Trustonic Limited nor the names of its contributors 
-     may be used to endorse or promote products derived from this software 
-     without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
-OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Copyright (c) 2013 TRUSTONIC LIMITED
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the TRUSTONIC LIMITED nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 #include <string.h>
 #include <stdlib.h>
@@ -38,9 +38,9 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "tools.h"
 #include "logging.h"
 #include "rootpaErrors.h"
-#include "pacmtl.h" 
-#include "pacmp3.h" 
-#include "registry.h" 
+#include "pacmtl.h"
+#include "pacmp3.h"
+#include "registry.h"
 
 static mcSpid_t spid_;
 static mcUuid_t tltUuid_;
@@ -51,7 +51,7 @@ void setCallbackP(CallbackFunctionP callbackP)
     callbackP_=callbackP;
 }
 
-// recovery from factory reset  
+// recovery from factory reset
 bool factoryResetAssumed()
 {
     uint32_t contSize=0;
@@ -71,7 +71,7 @@ bool factoryResetAssumed()
         return false;
     }
 
-    // if neither root container, nor auth token container exists, we assume that factory reset has been performed.    
+    // if neither root container, nor auth token container exists, we assume that factory reset has been performed.
     if(MC_DRV_ERR_INVALID_DEVICE_FILE==result1 && MC_DRV_ERR_INVALID_DEVICE_FILE==result2)
     {
         LOGD("factoryResetAssumed returning true");
@@ -80,7 +80,7 @@ bool factoryResetAssumed()
 
     return false;
 }
-// recovery from factory reset  
+// recovery from factory reset
 
 /*
 */
@@ -126,7 +126,7 @@ bool ensureMappedBufferSize(CMTHANDLE handle, uint32_t neededSize)
             LOGE("ensureMappedBufferSize, unable to allocate more memory %d", neededSize);
             return false;
         }
-        handle->mappedP = newMappedP;            
+        handle->mappedP = newMappedP;
     }
     return true;
 }
@@ -135,7 +135,7 @@ rootpaerror_t addAuthTokenContainer(uint32_t* indexP, uint32_t* offsetP, CMTHAND
 {
     rootpaerror_t ret=ROOTPA_ERROR_OUT_OF_MEMORY;
     AUTHTOKENCONTAINERP authTokenP = NULL;
-    uint32_t contSize=0;    
+    uint32_t contSize=0;
 
     if((*mcRetP=regReadAuthToken(&authTokenP, &contSize))==MC_DRV_OK)
     {
@@ -162,7 +162,7 @@ rootpaerror_t addRootContainer(uint32_t* indexP, uint32_t* offsetP, CMTHANDLE ha
 {
     rootpaerror_t ret=ROOTPA_ERROR_OUT_OF_MEMORY;
     ROOTCONTAINERP rootP = NULL;
-    uint32_t contSize=0;    
+    uint32_t contSize=0;
 
     if((*mcRetP=regReadRoot(&rootP, &contSize))==MC_DRV_OK)
     {
@@ -189,7 +189,7 @@ rootpaerror_t addSpContainer(uint32_t* indexP, uint32_t* offsetP, mcSpid_t spid,
 {
     rootpaerror_t ret=ROOTPA_ERROR_OUT_OF_MEMORY;
     SPCONTAINERP spP = NULL;
-    uint32_t contSize=0;    
+    uint32_t contSize=0;
 
     if((*mcRetP=regReadSp(spid, &spP, &contSize))==MC_DRV_OK)
     {
@@ -199,7 +199,7 @@ rootpaerror_t addSpContainer(uint32_t* indexP, uint32_t* offsetP, mcSpid_t spid,
             setCmdElementInfo(indexP, handle->wsmP, offsetP, contSize);
             ret=ROOTPA_OK;
         }
-    }    
+    }
     else if (MC_DRV_ERR_INVALID_DEVICE_FILE==*mcRetP)
     {
         ret=ROOTPA_ERROR_REGISTRY_OBJECT_NOT_AVAILABLE;
@@ -218,11 +218,11 @@ rootpaerror_t addTltContainer(uint32_t* indexP, uint32_t* offsetP, const mcUuid_
     rootpaerror_t ret=ROOTPA_ERROR_OUT_OF_MEMORY;
     TLTCONTAINERP tltP = NULL;
     uint32_t contSize=0;
-    
+
     if((*mcRetP=regReadTlt(uuidP, &tltP, &contSize, spid))==MC_DRV_OK)
     {
         if(ensureMappedBufferSize(handle, (*offsetP) + contSize))
-        {        
+        {
             memcpy(handle->mappedP+(*offsetP),tltP,contSize);
             setCmdElementInfo(indexP, handle->wsmP, offsetP, contSize);
             ret=ROOTPA_OK;
@@ -251,14 +251,14 @@ rootpaerror_t prepareCommand(cmpCommandId_t commandId, CmpMessage* inCommandP,  
     rootpaerror_t ret=ROOTPA_OK;
     mcResult_t mcRet=MC_DRV_OK;
     LOGI("prepareCommand command id %d length %d", commandId, inCommandP->length);  // this is LOGI level on purpose to indicate that CMP command has reached RootPA
-    
+
     memset(handle->wsmP,0,sizeOfCmp());
 
     setCmdMapInfo(handle->wsmP, &handle->mapInfo);
     setCmdCmpVersionAndCmdId(handle->wsmP, commandId);
     setCmdElementInfo(&elementIndex, handle->wsmP, &offset, inCommandP->length);
     if(ensureMappedBufferSize(handle, inCommandP->length))
-    {   
+    {
         memcpy(handle->mappedP, inCommandP->contentP, inCommandP->length);
     }
     else
@@ -270,36 +270,36 @@ rootpaerror_t prepareCommand(cmpCommandId_t commandId, CmpMessage* inCommandP,  
     {
         case MC_CMP_CMD_BEGIN_SOC_AUTHENTICATION:
             if (callbackP_) callbackP_(AUTHENTICATING_SOC, ROOTPA_OK, NULL);
-            ret=addAuthTokenContainer(&elementIndex, &offset, handle, &mcRet); 
+            ret=addAuthTokenContainer(&elementIndex, &offset, handle, &mcRet);
             break;
 
         case MC_CMP_CMD_BEGIN_ROOT_AUTHENTICATION:
             if (callbackP_) callbackP_(AUTHENTICATING_ROOT, ROOTPA_OK, NULL);
-            ret=addRootContainer(&elementIndex, &offset, handle, &mcRet); 
-            break;        
-        
+            ret=addRootContainer(&elementIndex, &offset, handle, &mcRet);
+            break;
+
         case MC_CMP_CMD_BEGIN_SP_AUTHENTICATION:
             ret=addRootContainer(&elementIndex, &offset, handle, &mcRet);
             if(ROOTPA_OK==ret)
             {
                 mcSpid_t spid=((cmpCmdBeginSpAuthentication_t*)outCommandP)->cmd.spid;
-                ret=addSpContainer(&elementIndex, &offset, spid, handle, &mcRet); 
+                ret=addSpContainer(&elementIndex, &offset, spid, handle, &mcRet);
             }
             break;
         case MC_CMP_CMD_ROOT_CONT_REGISTER_ACTIVATE:
             if (callbackP_) callbackP_(CREATING_ROOT_CONTAINER, ROOTPA_OK, NULL);
             break;
-            
+
         case MC_CMP_CMD_ROOT_CONT_UNREGISTER:
             if (callbackP_) callbackP_(UNREGISTERING_ROOT_CONTAINER, ROOTPA_OK, NULL);
-            break;            
-            
+            break;
+
         case MC_CMP_CMD_SP_CONT_ACTIVATE:
             spid_=((cmpCmdSpContActivate_t*)outCommandP)->cmd.sdata.spid;
             break;
         case MC_CMP_CMD_SP_CONT_LOCK_BY_ROOT:
             spid_=((cmpCmdSpContLockByRoot_t*)outCommandP)->cmd.sdata.spid;
-            ret=addSpContainer(&elementIndex, &offset, spid_, handle, &mcRet); 
+            ret=addSpContainer(&elementIndex, &offset, spid_, handle, &mcRet);
             break;
         case MC_CMP_CMD_SP_CONT_LOCK_BY_SP :
             spid_=((cmpCmdSpContLockBySp_t*)outCommandP)->cmd.sdata.spid;
@@ -314,7 +314,7 @@ rootpaerror_t prepareCommand(cmpCommandId_t commandId, CmpMessage* inCommandP,  
             break;
         case MC_CMP_CMD_SP_CONT_UNLOCK_BY_ROOT:
             spid_=((cmpCmdSpContUnlockByRoot_t*)outCommandP)->cmd.sdata.spid;
-            ret=addSpContainer(&elementIndex, &offset, spid_, handle, &mcRet); 
+            ret=addSpContainer(&elementIndex, &offset, spid_, handle, &mcRet);
             break;
         case MC_CMP_CMD_SP_CONT_UNLOCK_BY_SP :
             spid_=((cmpCmdSpContUnlockBySp_t*)outCommandP)->cmd.sdata.spid;
@@ -325,7 +325,7 @@ rootpaerror_t prepareCommand(cmpCommandId_t commandId, CmpMessage* inCommandP,  
         case MC_CMP_CMD_TLT_CONT_ACTIVATE:
             spid_=((cmpCmdTltContActivate_t*)outCommandP)->cmd.sdata.spid;
             memcpy(&tltUuid_,&((cmpCmdTltContActivate_t*)outCommandP)->cmd.sdata.uuid, sizeof(mcUuid_t));
-            ret=addTltContainer(&elementIndex, &offset, &tltUuid_, spid_, handle, &mcRet);             
+            ret=addTltContainer(&elementIndex, &offset, &tltUuid_, spid_, handle, &mcRet);
             break;
         case MC_CMP_CMD_TLT_CONT_LOCK_BY_SP:
             spid_=((cmpCmdTltContLockBySp_t*)outCommandP)->cmd.sdata.spid;
@@ -333,14 +333,14 @@ rootpaerror_t prepareCommand(cmpCommandId_t commandId, CmpMessage* inCommandP,  
             ret=addTltContainer(&elementIndex, &offset, &tltUuid_, spid_, handle, &mcRet);
             break;
         case MC_CMP_CMD_TLT_CONT_PERSONALIZE:
-            ret=addTltContainer(&elementIndex, &offset, &((cmpCmdTltContPersonalize_t*)outCommandP)->cmd.sdata.uuid, 
+            ret=addTltContainer(&elementIndex, &offset, &((cmpCmdTltContPersonalize_t*)outCommandP)->cmd.sdata.uuid,
                                                         ((cmpCmdTltContPersonalize_t*)outCommandP)->cmd.sdata.spid,
                                                         handle, &mcRet);
             break;
         case MC_CMP_CMD_TLT_CONT_REGISTER:
             spid_=((cmpCmdTltContRegister_t*)outCommandP)->cmd.sdata.spid;
             memcpy(&tltUuid_,&((cmpCmdTltContRegister_t*)outCommandP)->cmd.sdata.uuid, sizeof(mcUuid_t));
-            break; 
+            break;
         case MC_CMP_CMD_TLT_CONT_REGISTER_ACTIVATE:
             spid_=((cmpCmdTltContRegisterActivate_t*)outCommandP)->cmd.sdata.spid;
             memcpy(&tltUuid_,&((cmpCmdTltContRegisterActivate_t*)outCommandP)->cmd.sdata.uuid, sizeof(mcUuid_t));
@@ -357,7 +357,7 @@ rootpaerror_t prepareCommand(cmpCommandId_t commandId, CmpMessage* inCommandP,  
         default:
             // nothing extra to do, just return ret at the end of function
             break;
-    
+
     }
     responseP->hdr.ret=ret;
     responseP->hdr.intRet=mcRet;
@@ -370,7 +370,7 @@ mcResult_t storeContainers(cmpCommandId_t commandId, CMTHANDLE handle, uint32_t 
     mcResult_t mcRet=MC_DRV_OK;
     uint32_t length=0;
     LOGD(">>pacmp3 storeContainers for %d element %d offset %d", commandId, elementIndex, offset);
-    
+
 // store the containers when needed
     switch(commandId)
     {
@@ -394,12 +394,12 @@ mcResult_t storeContainers(cmpCommandId_t commandId, CMTHANDLE handle, uint32_t 
             {
                 mcRet=-1;
             }
-                
+
             if(MC_DRV_OK==mcRet)
             {
                 mcSoAuthTokenCont_t* authTokenP=NULL;
                 uint32_t authTokenSize=0;
-                
+
                 mcRet=regReadAuthToken(&authTokenP, &authTokenSize);
                 if(mcRet!=MC_DRV_OK)
                 {
@@ -423,7 +423,7 @@ mcResult_t storeContainers(cmpCommandId_t commandId, CMTHANDLE handle, uint32_t 
             }
             else
             {
-                LOGE("pacmp3 storeContainers for %d regWriteRoot failed %d", commandId, mcRet);                
+                LOGE("pacmp3 storeContainers for %d regWriteRoot failed %d", commandId, mcRet);
             }
             break;
 
@@ -441,7 +441,7 @@ mcResult_t storeContainers(cmpCommandId_t commandId, CMTHANDLE handle, uint32_t 
 
             break;
 
-        case MC_CMP_CMD_ROOT_CONT_UNREGISTER: 
+        case MC_CMP_CMD_ROOT_CONT_UNREGISTER:
             mcRet=regCleanupRoot();
             break;
 
@@ -458,14 +458,14 @@ mcResult_t storeContainers(cmpCommandId_t commandId, CMTHANDLE handle, uint32_t 
             {
                 mcRet=-1;
             }
-            
+
             break;
 
         case MC_CMP_CMD_SP_CONT_REGISTER:
         case MC_CMP_CMD_SP_CONT_REGISTER_ACTIVATE:
         {
             // Root container is in the buffer first, that is why we read it first
-            // we write it last since if SP container writing fails we do not want 
+            // we write it last since if SP container writing fails we do not want
             // to write root container
             uint32_t rootLength=0;
             ROOTCONTAINERP rootP=NULL;
@@ -476,7 +476,7 @@ mcResult_t storeContainers(cmpCommandId_t commandId, CMTHANDLE handle, uint32_t 
                 {
                     mcRet=regWriteSp(spid_, (SPCONTAINERP) (handle->mappedP+offset), length);
                 }
-                else    
+                else
                 {
                     mcRet=-1;
                 }
@@ -492,26 +492,26 @@ mcResult_t storeContainers(cmpCommandId_t commandId, CMTHANDLE handle, uint32_t 
             }
             else
             {
-                LOGE("pacmp3 storeContainers for %d regWriteSp failed %d", commandId, mcRet);                                
+                LOGE("pacmp3 storeContainers for %d regWriteSp failed %d", commandId, mcRet);
             }
             break;
 
         }
         case MC_CMP_CMD_SP_CONT_UNREGISTER:
-            mcRet=regCleanupSp(spid_);        
+            mcRet=regCleanupSp(spid_);
             if(MC_DRV_OK!=mcRet)
             {
-                LOGE("pacmp3 storeContainers for %d regCleanupSp failed %d, , still attempting storing root", commandId, mcRet);                                
+                LOGE("pacmp3 storeContainers for %d regCleanupSp failed %d, , still attempting storing root", commandId, mcRet);
             }
 
             if(getRspElementInfo(&elementIndex, handle, &offset, &length))
             {
                 mcRet=regWriteRoot((ROOTCONTAINERP) (handle->mappedP+offset), length);
             }
-            else    
+            else
             {
                 mcRet=-1;
-            }                
+            }
 
             break;
 
@@ -520,7 +520,7 @@ mcResult_t storeContainers(cmpCommandId_t commandId, CMTHANDLE handle, uint32_t 
         case MC_CMP_CMD_TLT_CONT_REGISTER_ACTIVATE:
         {
             // SP container is in the buffer first, that is why we read it first
-            // we write it last since if TLT container writing fails we do not want 
+            // we write it last since if TLT container writing fails we do not want
             // to write SP container
             uint32_t spLength=0;
             SPCONTAINERP spP=NULL;
@@ -531,28 +531,28 @@ mcResult_t storeContainers(cmpCommandId_t commandId, CMTHANDLE handle, uint32_t 
                 {
                     mcRet=regWriteTlt(&tltUuid_,(TLTCONTAINERP) (handle->mappedP+offset), length, spid_);
                 }
-                else    
+                else
                 {
                     mcRet=-1;
                 }
             }
-            else    
+            else
             {
                 mcRet=-1;
             }
-            
+
             if(MC_DRV_OK==mcRet)
             {
                 mcRet=regWriteSp(spid_, spP, spLength);
                 if(MC_DRV_OK!=mcRet)
                 {
-                    LOGE("pacmp3 storeContainers for %d regWriteSp failed %d", commandId, mcRet);                                
+                    LOGE("pacmp3 storeContainers for %d regWriteSp failed %d", commandId, mcRet);
                     regCleanupTlt(&tltUuid_, spid_);
                 }
             }
             else
             {
-                LOGE("pacmp3 storeContainers for %d regWriteTlt failed %d", commandId, mcRet);                                
+                LOGE("pacmp3 storeContainers for %d regWriteTlt failed %d", commandId, mcRet);
             }
             break;
 
@@ -564,18 +564,18 @@ mcResult_t storeContainers(cmpCommandId_t commandId, CMTHANDLE handle, uint32_t 
             {
                 mcRet=regWriteTlt(&tltUuid_,(TLTCONTAINERP) (handle->mappedP+offset), length, spid_);
             }
-            else    
+            else
             {
                 mcRet=-1;
             }
-                
+
             break;
 
         case MC_CMP_CMD_TLT_CONT_UNREGISTER:
             mcRet=regCleanupTlt(&tltUuid_, spid_);
             if(MC_DRV_OK!=mcRet)
             {
-                LOGE("pacmp3 storeContainers for %d regCleanupTlt failed %d, still attempting storing sp", commandId, mcRet);                                
+                LOGE("pacmp3 storeContainers for %d regCleanupTlt failed %d, still attempting storing sp", commandId, mcRet);
             }
 
             if(getRspElementInfo(&elementIndex, handle, &offset, &length))
@@ -583,27 +583,27 @@ mcResult_t storeContainers(cmpCommandId_t commandId, CMTHANDLE handle, uint32_t 
                 mcRet=regWriteSp(spid_, (SPCONTAINERP) (handle->mappedP+offset), length);
                 if(MC_DRV_OK!=mcRet)
                 {
-                    LOGE("pacmp3 storeContainers for %d regWriteSp failed %d", commandId, mcRet);                                
-                }   
+                    LOGE("pacmp3 storeContainers for %d regWriteSp failed %d", commandId, mcRet);
+                }
             }
-            else    
+            else
             {
                 mcRet=-1;
             }
-                    
+
             break;
 
-         default:  
-            LOGD("pacmp3 storeContainers nothing to store");                                
+         default:
+            LOGD("pacmp3 storeContainers nothing to store");
             // nothing to do
-            break;             
+            break;
     }
     LOGD("<<pacmp3 storeContainers %d %d", commandId, mcRet);
     return mcRet;
 }
 /**
-handleResponse stores the container received in response and copies the response to the buffer to be returned 
-to the client Note that the container is not store id cmtl returned an error, but the content of the response is 
+handleResponse stores the container received in response and copies the response to the buffer to be returned
+to the client Note that the container is not store id cmtl returned an error, but the content of the response is
 returned to the client.
 */
 rootpaerror_t handleResponse(cmpCommandId_t commandId, CmpMessage* outResponseP, CMTHANDLE handle)
@@ -613,7 +613,7 @@ rootpaerror_t handleResponse(cmpCommandId_t commandId, CmpMessage* outResponseP,
     uint32_t elementIndex=1;
     uint32_t offset=0;
     uint32_t length=0;
-    
+
     LOGD(">>handleResponse for command %d ", commandId);
 
     if(isValidResponseTo(commandId, handle->wsmP)==false)
@@ -651,11 +651,11 @@ rootpaerror_t handleResponse(cmpCommandId_t commandId, CmpMessage* outResponseP,
     }
 
     mcRet=storeContainers(commandId, handle, elementIndex, offset);
-    
+
     if(mcRet != MC_DRV_OK)
     {
-        LOGE("pacmp3 handleResponse for %d registry failed %d", commandId, mcRet);                
-        if(-1==mcRet)
+        LOGE("pacmp3 handleResponse for %d registry failed %d", commandId, mcRet);
+        if((mcResult_t)-1==mcRet)
         {
             ret = ROOTPA_ERROR_INTERNAL;
         }
@@ -667,8 +667,8 @@ rootpaerror_t handleResponse(cmpCommandId_t commandId, CmpMessage* outResponseP,
         {
             outResponseP->hdr.intRet=mcRet;
         }
-        outResponseP->hdr.ret=ret; 
+        outResponseP->hdr.ret=ret;
     }
-    LOGD("<<handleResponse returning %d ", ret);    
+    LOGD("<<handleResponse returning %d ", ret);
     return ret;
 }

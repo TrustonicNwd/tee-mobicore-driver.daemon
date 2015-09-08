@@ -37,6 +37,7 @@
  */
 
 #include <stdint.h>
+#include <string.h>
 #include <sys/uio.h>
 #include <fcntl.h>
 #include "log.h"
@@ -85,6 +86,7 @@ static mcResult_t send_cmd_recv_data(struct iovec *out_iov,
     uint32_t nsegs;
     ResponseHeader rsp;
     size_t payload_sz;
+    ssize_t length;
 
     if( (rbuff == NULL && rlen != NULL) ||
         (rbuff != NULL && rlen == NULL) ||
@@ -126,16 +128,22 @@ static mcResult_t send_cmd_recv_data(struct iovec *out_iov,
         return MC_DRV_ERR_DAEMON_SOCKET;
     }
 
-    if (con.readMsg(in_iov, nsegs, DAEMON_TIMEOUT) <= 0) {
+    length = con.readMsg(in_iov, nsegs, DAEMON_TIMEOUT);
+    if (length <= 0) {
         LOG_E("Failed to get answer from daemon!");
         return MC_DRV_ERR_DAEMON_SOCKET;
     }
+    if (length < (ssize_t)sizeof(ResponseHeader)) {
+        LOG_E("Invalid length received from daemon!");
+        return MC_DRV_ERR_DAEMON_SOCKET;
+    }
+    length -= sizeof(ResponseHeader);
 
     LOG_D("result is %x", rsp.result);
 
     // Return also the read size
     if(rsp.result == MC_DRV_OK && rlen != NULL)
-	*rlen = static_cast<uint32_t>(in_iov[1].iov_len);
+	*rlen = length;
 
     return rsp.result;
 }

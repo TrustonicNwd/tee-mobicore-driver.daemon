@@ -36,7 +36,7 @@
 
 #include "ConnectionHandler.h"
 #include "Server.h"
-#include "FSD.h"
+#include "FSD2.h"
 #include "SecureWorld.h"
 
 class MobiCoreDriverDaemon: public ConnectionHandler
@@ -111,7 +111,7 @@ class MobiCoreDriverDaemon: public ConnectionHandler
 
     SecureWorld m_secure_world;
     // Create the <t-base File Storage Daemon
-    FSD m_fsd;
+    FSD2 m_fsd2;
     Server  m_reg_server;
 public:
     MobiCoreDriverDaemon();

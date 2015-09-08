@@ -37,8 +37,10 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 
 #ifndef WIN32
+#include <errno.h>
 #include <unistd.h>
 #define GETPID getpid
 #else
@@ -46,19 +48,19 @@
 #define GETPID _getpid
 #endif
 
-/** LOG_D(fmt, args...)
+/** LOG_D(fmt, ...)
  * Debug information logging, only shown in debug version
  */
 
-/** LOG_I(fmt, args...)
+/** LOG_I(fmt, ...)
  * Important information logging
  */
 
-/** LOG_W(fmt, args...)
+/** LOG_W(fmt, ...)
  * Warnings logging
  */
 
-/** LOG_E(fmt, args...)
+/** LOG_E(fmt, ...)
  * Error logging
  */
 
@@ -66,28 +68,20 @@
  * Binary logging, line-wise output to LOG_D
  */
 
-#define EOL "\n"
 #define DUMMY_FUNCTION()    do {} while(0)
 
 #ifdef LOG_ANDROID
 #include <android/log.h>
 // log to adb logcat
 #ifdef NDEBUG // no logging in debug version
-    #define LOG_D(fmt, args...) DUMMY_FUNCTION()
+    #define LOG_D(fmt, ...) DUMMY_FUNCTION()
 #else
     // add LINE
-    #define LOG_D(fmt, args...) LOG_d(fmt";%d", ## args, __LINE__)
+    #define LOG_D(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, fmt " [%s:%d]", ##__VA_ARGS__, __FILE__, __LINE__)
 #endif
-    // always defined
-    #define LOG_I(fmt, args...) LOG_i(fmt";%d", ## args, __LINE__)
-    #define LOG_W(fmt, args...) LOG_w(fmt";%d", ## args, __LINE__)
-    #define _LOG_E(fmt, args...) LOG_e(fmt, ## args)
-
-    // actually mapping to log system, adding level and tag.
-    #define LOG_d(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
-    #define LOG_i(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
-    #define LOG_w(...) __android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__)
-    #define LOG_e(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+    #define LOG_I(fmt, ...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, fmt " [%s:%d]", ##__VA_ARGS__, __FILE__, __LINE__)
+    #define LOG_W(fmt, ...) __android_log_print(ANDROID_LOG_WARN, LOG_TAG, fmt " [%s:%d]", ##__VA_ARGS__, __FILE__, __LINE__)
+    #define _LOG_E(fmt, ...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, fmt, ##__VA_ARGS__)
 #endif // defined(LOG_ANDROID)
 
 
@@ -96,17 +90,11 @@
 #ifdef NDEBUG
     #define LOG_D(...)  DUMMY_FUNCTION()
 #else
-    #define LOG_D(...)  LOG_d(__VA_ARGS__)
+    #define LOG_D(...)  SLOGD(__VA_ARGS__)
 #endif
-    #define LOG_I(...)  LOG_i(__VA_ARGS__)
-    #define LOG_W(...)  LOG_w(__VA_ARGS__)
-    #define _LOG_E(...) LOG_e(__VA_ARGS__)
-
-    // actually mapping to log system
-    #define LOG_d(...)  SLOGD(__VA_ARGS__)
-    #define LOG_i(...)  SLOGI(__VA_ARGS__)
-    #define LOG_w(...)  SLOGW(__VA_ARGS__)
-    #define LOG_e(...)  SLOGE(__VA_ARGS__)
+    #define LOG_I(...)  SLOGI(__VA_ARGS__)
+    #define LOG_W(...)  SLOGW(__VA_ARGS__)
+    #define _LOG_E(...) SLOGE(__VA_ARGS__)
 #endif // defined(LOG_TIZEN)
 
 
@@ -117,12 +105,11 @@
     // Example:
     // I/McDrvBasicTest_0_1( 4075): setUp
     #define _LOG_x(_x_,...) \
-                do \
-                { \
+                do { \
                     printf("%s/%s(%d): ",_x_,LOG_TAG,GETPID()); \
                     printf(__VA_ARGS__); \
-                    printf(EOL); \
-                } while(1!=1)
+                    printf("\n"); \
+                } while(0)
 
 
 #ifdef NDEBUG // no logging in debug version
@@ -133,12 +120,6 @@
     #define LOG_I(...)  _LOG_x("I",__VA_ARGS__)
     #define LOG_W(...)  _LOG_x("W",__VA_ARGS__)
     #define _LOG_E(...)  _LOG_x("E",__VA_ARGS__)
-
-    #define LOG_d(...) printf(__VA_ARGS__)
-    #define LOG_i(...) printf(__VA_ARGS__)
-    #define LOG_w(...) printf(__VA_ARGS__)
-    #define LOG_e(...) printf(__VA_ARGS__)
-
 #endif // !defined(_LOG_E): neither Android nor Tizen
 
 
@@ -146,13 +127,12 @@
  * Display "*********** ERROR ***********" before actual error message.
  */
 #define LOG_E(...) \
-            do \
-            { \
+            do { \
                 _LOG_E("  *****************************"); \
                 _LOG_E("  *** ERROR: " __VA_ARGS__); \
-                _LOG_E("  *** Detected in %s/%u()", __FUNCTION__, __LINE__); \
+                _LOG_E("  *** Detected in %s:%u()", __FILE__, __LINE__); \
                 _LOG_E("  *****************************"); \
-            } while(1!=1)
+            } while(0)
 
 #define LOG_ERRNO(MESSAGE) \
     LOG_E("%s failed with \"%s\"(errno %i)", MESSAGE, strerror(errno), errno);

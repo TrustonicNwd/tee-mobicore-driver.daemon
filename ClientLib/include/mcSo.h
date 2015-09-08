@@ -102,6 +102,9 @@ typedef struct {
     mcRootid_t rootid;
 } tlApiSpTrustletIdEx_t;
 
+// The client identity (encoding its root ID, SPID and UUID).
+typedef tlApiSpTrustletIdEx_t client_identity_t;
+
 /** Secure object header v2.2.
  * A secure object header introduces a secure object.
  * Layout of a secure object:

@@ -32,7 +32,9 @@
 #ifndef __TEE_UUID_ATTESTATION_H__
 #define __TEE_UUID_ATTESTATION_H__
 
+#ifndef __TEE_CLIENT_TYPES_H__
 #include "tee_type.h"
+#endif
 
 // Sizes of the fields of attestation structure
 #define AT_MAGIC_SIZE           8

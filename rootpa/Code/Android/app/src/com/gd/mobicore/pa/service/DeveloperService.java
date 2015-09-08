@@ -1,33 +1,33 @@
 /*
-Copyright  © Trustonic Limited 2013
-
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification, 
-are permitted provided that the following conditions are met:
-
-  1. Redistributions of source code must retain the above copyright notice, this 
-     list of conditions and the following disclaimer.
-
-  2. Redistributions in binary form must reproduce the above copyright notice, 
-     this list of conditions and the following disclaimer in the documentation 
-     and/or other materials provided with the distribution.
-
-  3. Neither the name of the Trustonic Limited nor the names of its contributors 
-     may be used to endorse or promote products derived from this software 
-     without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
-OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Copyright (c) 2013 TRUSTONIC LIMITED
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the TRUSTONIC LIMITED nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 package com.gd.mobicore.pa.service;
 
@@ -54,7 +54,7 @@ public class DeveloperService extends BaseService {
     private static final int EXTERNAL_MEMORY=2;
     private static final int DEFAULT_MEMORY_TYPE=EXTERNAL_MEMORY;
     private static final int DEFAULT_NUMBER_OF_INSTANCES=1;
-    private static final int DEFAULT_FLAGS=0;    
+    private static final int DEFAULT_FLAGS=0;
     private static final byte[] DEFAULT_PUKHASH={0,0,0,0,0,0,0,0,0,0,
                                                  0,0,0,0,0,0,0,0,0,0,
                                                  0,0,0,0,0,0,0,0,0,0,0,0};
@@ -65,7 +65,7 @@ public class DeveloperService extends BaseService {
 
         // note that these values have to be in line with TltInstallationRequestDataType in rootpa.h
         public static final int REQUEST_DATA_TLT=1;
-        public static final int REQUEST_DATA_KEY=2;    
+        public static final int REQUEST_DATA_KEY=2;
 
 
         private CommonPAWrapper commonPAWrapper(){
@@ -80,18 +80,18 @@ public class DeveloperService extends BaseService {
             Log.d(TAG,"DeveloperService.Stub.uuidOk OK");
             return true;
         }
-        
+
         public CommandResult installTrustletOrKey(int spid, byte[] uuid, byte[] trustletBinary, byte[] key, int minTltVersion, byte[] tltPukHash){
-            Log.d(TAG,">>DeveloperService.Stub.installTrustletOrKey"); 
+            Log.d(TAG,">>DeveloperService.Stub.installTrustletOrKey");
             if(tltPukHash==null){
                 tltPukHash=DEFAULT_PUKHASH;
             }
-            
+
             if((trustletBinary == null && key == null) || (trustletBinary != null && key != null) || 0==spid || !uuidOk(uuid) ){
                 return new CommandResult(CommandResult.ROOTPA_ERROR_ILLEGAL_ARGUMENT);
             }
 
-            int tmpSuid=DEVELOPER_UID_FOR_LOCK+new Random().nextInt(); 
+            int tmpSuid=DEVELOPER_UID_FOR_LOCK+new Random().nextInt();
 
             if(!DeveloperService.this.acquireLock(tmpSuid, false).isOk()){
                 return new CommandResult(CommandResult.ROOTPA_ERROR_LOCK);
@@ -99,7 +99,7 @@ public class DeveloperService extends BaseService {
             doProvisioningLockSuid_=tmpSuid;
             int err=0;
             byte[] data=null;
-            int dataType;            
+            int dataType;
             try{
                 if(trustletBinary != null){
                     data=trustletBinary;
@@ -108,16 +108,16 @@ public class DeveloperService extends BaseService {
                     data=key;
                     dataType=REQUEST_DATA_KEY;
                 }
-                setupProxy();    
-                err=commonPAWrapper().installTrustlet(spid, 
-                                                      uuid, 
-                                                      dataType, 
-                                                      data,  
-                                                      minTltVersion, 
-                                                      tltPukHash, 
-                                                      DEFAULT_MEMORY_TYPE, 
-                                                      DEFAULT_NUMBER_OF_INSTANCES, 
-                                                      DEFAULT_FLAGS, 
+                setupProxy();
+                err=commonPAWrapper().installTrustlet(spid,
+                                                      uuid,
+                                                      dataType,
+                                                      data,
+                                                      minTltVersion,
+                                                      tltPukHash,
+                                                      DEFAULT_MEMORY_TYPE,
+                                                      DEFAULT_NUMBER_OF_INSTANCES,
+                                                      DEFAULT_FLAGS,
                                                       se_);
             }catch(Exception e){
                 Log.e(TAG,"CommonPAWrapper().installTrustletOrKey exception: ", e);
@@ -127,26 +127,26 @@ public class DeveloperService extends BaseService {
             Log.d(TAG,"<<DeveloperService.Stub.installTrustletOrKey");
             return new CommandResult(err);
         }
-        
-        public CommandResult installTrustlet(int spid, 
-                                             byte[] uuid, 
-                                             byte[] trustletBinary, 
-                                             int minTltVersion, 
-                                             byte[] tltPukHash, 
-                                             int memoryType, 
-                                             int numberOfInstances, 
+
+        public CommandResult installTrustlet(int spid,
+                                             byte[] uuid,
+                                             byte[] trustletBinary,
+                                             int minTltVersion,
+                                             byte[] tltPukHash,
+                                             int memoryType,
+                                             int numberOfInstances,
                                              int flags){
-            Log.d(TAG,">>DeveloperService.Stub.installTrustlet"); 
+            Log.d(TAG,">>DeveloperService.Stub.installTrustlet");
             if(tltPukHash==null){
                 tltPukHash=DEFAULT_PUKHASH;
             }
 
-                                                 
+
             if(trustletBinary == null || 0==spid || !uuidOk(uuid) || memoryType > EXTERNAL_MEMORY){
                 return new CommandResult(CommandResult.ROOTPA_ERROR_ILLEGAL_ARGUMENT);
             }
 
-            int tmpSuid=DEVELOPER_UID_FOR_LOCK+new Random().nextInt(); 
+            int tmpSuid=DEVELOPER_UID_FOR_LOCK+new Random().nextInt();
 
             if(!DeveloperService.this.acquireLock(tmpSuid, false).isOk()){
                 return new CommandResult(CommandResult.ROOTPA_ERROR_LOCK);
@@ -154,16 +154,16 @@ public class DeveloperService extends BaseService {
             doProvisioningLockSuid_=tmpSuid;
             int err=0;
             try{
-                setupProxy();    
-                err=commonPAWrapper().installTrustlet(spid, 
-                                                      uuid, 
-                                                      REQUEST_DATA_TLT, 
-                                                      trustletBinary, 
-                                                      minTltVersion, 
+                setupProxy();
+                err=commonPAWrapper().installTrustlet(spid,
+                                                      uuid,
+                                                      REQUEST_DATA_TLT,
+                                                      trustletBinary,
+                                                      minTltVersion,
                                                       tltPukHash,
-                                                      memoryType, 
-                                                      numberOfInstances, 
-                                                      flags, 
+                                                      memoryType,
+                                                      numberOfInstances,
+                                                      flags,
                                                       se_);
             }catch(Exception e){
                 Log.e(TAG,"CommonPAWrapper().installTrustlet exception: ", e);
@@ -172,9 +172,9 @@ public class DeveloperService extends BaseService {
 
             Log.d(TAG,"<<DeveloperService.Stub.installTrustlet");
             return new CommandResult(err);
-        }        
+        }
     }
-    
+
     @Override
     public void onCreate() {
         Log.d(TAG,"Hello, DeveloperService onCreate");
@@ -184,14 +184,14 @@ public class DeveloperService extends BaseService {
     @Override
     public void onLowMemory() {
         Log.d(TAG,"DeveloperService onLowMemory");
-        super.onLowMemory();    
+        super.onLowMemory();
     }
 
     public void onDestroy(){
         super.onDestroy();
         Log.d(TAG,"DeveloperService being destroyed");
     }
-    
+
     @Override
     public IBinder onBind(Intent intent){
         try{
@@ -200,7 +200,7 @@ public class DeveloperService extends BaseService {
             Log.i(TAG,"DeveloperService something wrong in the given ip "+e );
         }
 
-        try{        
+        try{
             Log.setLoggingLevel(intent.getIntExtra("LOG",0));
         }catch(Exception e){
             Log.i(TAG,"DeveloperService something wrong in the given logging level "+e );
@@ -214,8 +214,8 @@ public class DeveloperService extends BaseService {
     @Override
     public int  onStartCommand(Intent i, int flags, int startid){
         Log.d(TAG,"DeveloperService starting");
-        return START_STICKY; 
-    }    
+        return START_STICKY;
+    }
 }
 
 

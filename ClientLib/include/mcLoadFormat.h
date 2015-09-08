@@ -179,7 +179,6 @@ typedef struct {
  *  it is used only for MCLF header versions >=2.5
  *
  */
-
 typedef struct {
     union {
         segmentDescriptor_t     mcLibData;  /**< Segment for McLib data.
@@ -194,6 +193,13 @@ typedef struct {
 } mclfIMD_t, *mclfIMD_ptr;
 
 
+/*
+ * GP TA identity.
+ */
+typedef struct {
+    uint32_t loginType;                     /**< GP TA login type */
+    uint8_t  loginData[16];                 /**< GP TA login data */
+} mcIdentity_t;
 
 /**
  * Version 2 MCLF text segment header.
@@ -217,6 +223,7 @@ typedef struct {
                                                  Value set at compile time for drivers. 0 for trustlets.
                                                  Required always. */
     uint32_t                ta_properties;  /**< address of _TA_Properties in the TA. */
+    mcIdentity_t            mcIdentity;     /**< Identity of GP TA */
 } mclfTextHeader_t, *mclfTextHeader_ptr;
 
 // Version 2 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -240,6 +247,13 @@ typedef union {
 
 // This is only minimum size, so nothing below this makes sense.
 #define MCLF_BINARY_MIN_SIZE(version) (MCLF_HEADER_SIZE_V23+sizeof(mclfTextHeader_t))
+
+/** mclfTlHeader: layout of TA start */
+typedef struct {
+    mclfIntro_t        intro;
+    uint8_t            mclfHeader[0x80-sizeof(mclfIntro_t)];
+    mclfTextHeader_t   textHeader;
+} mclfTlHeader_t;
 
 #endif /* MCLOADFORMAT_H_ */
 

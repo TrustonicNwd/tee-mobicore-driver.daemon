@@ -40,10 +40,11 @@
 /** @} */
 
 /** \name NQ Length Defines
- * Minimum and maximum notification queue length.
+ * Note that there is one queue for NWd->SWd and one queue for SWd->NWd
  * @{ */
-#define MIN_NQ_LEN (MIN_NQ_ELEM * sizeof(notification_t))   /**< Minimum notification length (in bytes). */
-#define MAX_NQ_LEN (MAX_NQ_ELEM * sizeof(notification_t))   /**< Maximum notification length (in bytes). */
+#define NQ_SIZE(n)   (2*(sizeof(notificationQueueHeader_t) + (n)*sizeof(notification_t)))
+#define MIN_NQ_LEN NQ_SIZE(MIN_NQ_ELEM)   /**< Minimum size for the notification queue data structure */
+#define MAX_NQ_LEN NQ_SIZE(MAX_NQ_ELEM)   /**< Maximum size for the notification queue data structure */
 /** @} */
 
 /** \name Session ID Defines

@@ -40,7 +40,6 @@
 
 #include "mcVersion.h"
 #include "PrivateRegistry.h"
-#include "FSD.h"
 #include "MobiCoreDriverDaemon.h"
 #include "buildTag.h"
 
@@ -167,7 +166,6 @@ int MobiCoreDriverDaemon::init(const std::vector<std::string>& drivers)
 
     // Open Secure World access
     if (m_secure_world.open() < 0) {
-        LOG_ERRNO("open");
         return EXIT_FAILURE;
     }
 
@@ -184,7 +182,6 @@ int MobiCoreDriverDaemon::init(const std::vector<std::string>& drivers)
     return EXIT_SUCCESS;
 }
 
-/* TODO CPI: align return code with function prototype */
 uint32_t MobiCoreDriverDaemon::reg_store_auth_token(CommandHeader& cmd,
         const uint8_t* rx_data, uint32_t* , std::auto_ptr<uint8_t>& )
 {
@@ -404,10 +401,17 @@ bool MobiCoreDriverDaemon::handleConnection(Connection &conn)
                     LOG_E("Out of memory for command %d", cmd.cmd);
                     goto out;
                 } else {
-                    ssize_t sz = conn.readData(rx_data.get(), cmd.data_size);
-                    if (sz != static_cast<ssize_t>(cmd.data_size)) {
-                       LOG_E("Payload reading failed for command %d", cmd.cmd);
-                       result.result = MC_DRV_ERR_UNKNOWN;
+                    uint32_t total=0;
+                    uint8_t *ptr = rx_data.get();
+                    while(total < cmd.data_size) {
+                        ssize_t sz = conn.readData(ptr, cmd.data_size-total);
+                        if (sz <= 0) {
+                            LOG_E("Payload reading failed for command %d expected=%d received=%zd", cmd.cmd, cmd.data_size-total, sz);
+                            result.result = MC_DRV_ERR_UNKNOWN;
+                            break;
+                        }
+                        ptr += sz;
+                        total += sz;
                     }
                 }
             } else {
@@ -447,7 +451,7 @@ int MobiCoreDriverDaemon::run(void)
     LOG_D("run()====");
 
     // Start File Storage Daemon and registry server
-    m_fsd.start();
+    m_fsd2.start();
     m_reg_server.start();
 
     g_secure_world = &m_secure_world;
@@ -458,11 +462,12 @@ int MobiCoreDriverDaemon::run(void)
     m_reg_server.stop();
     m_reg_server.join();
 
-    m_fsd.terminate();
-    m_fsd.kill(SIGUSR1);
-    m_fsd.join();
-
-    LOG_D("run()<-------");
+    // New secure storage runs in parallel to the old one
+    m_fsd2.terminate();
+    m_fsd2.kill(SIGUSR1);
+    m_fsd2.FSD2_Close();
+    m_fsd2.join();
+    LOG_I("run()<-------");
 
     return ret;
 }
@@ -496,7 +501,7 @@ int main(int argc, char *args[])
             break;
         case 'p': /* Search paths for registry */
             registry_paths.push_back(optarg);
-            LOG_D("registry search path %s added\n", optarg);
+            LOG_D("registry search path %s added", optarg);
             break;
         case 'r': /* Load <t-base driver at start-up */
             drivers.push_back(optarg);
@@ -524,6 +529,12 @@ int main(int argc, char *args[])
     LOG_D("Registry search paths:");
     for (auto path = registry_paths.begin(); path != registry_paths.end(); path++) {
         LOG_D("  %s", path->c_str());
+    }
+
+    // Open the device before becoming a daemon
+    MobiCoreDriverDaemon mobiCoreDriverDaemon;
+    if (mobiCoreDriverDaemon.init(drivers)) {
+        return EXIT_FAILURE;
     }
 
     // We should fork the daemon to background
@@ -564,10 +575,7 @@ int main(int argc, char *args[])
     LOG_I("%s", MOBICORE_COMPONENT_BUILD_TAG);
     LOG_I("Build timestamp is %s %s", __DATE__, __TIME__);
 
-    MobiCoreDriverDaemon mobiCoreDriverDaemon;
-    ret = mobiCoreDriverDaemon.init(drivers);
-    if (ret == 0)
-        ret = mobiCoreDriverDaemon.run();
+    ret = mobiCoreDriverDaemon.run();
 
     LOG_D("Daemon exit with code %d...", ret);
     return ret;
