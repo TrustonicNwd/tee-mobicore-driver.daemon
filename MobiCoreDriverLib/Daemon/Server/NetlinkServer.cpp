@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2015 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -62,7 +62,7 @@ void NetlinkServer::run(
         LOG_I("NetlinkServer: Starting to listen on netlink bus");
 
         // Open a socket
-        serverSock = socket(PF_NETLINK, SOCK_DGRAM,  MC_DAEMON_NETLINK);
+        serverSock = ::socket(PF_NETLINK, SOCK_DGRAM,  MC_DAEMON_NETLINK);
         if (serverSock < 0) {
             LOG_ERRNO("Opening socket");
             break;
@@ -75,7 +75,7 @@ void NetlinkServer::run(
         struct msghdr msg;
         uint32_t len;
 
-        memset(&src_addr, 0, sizeof(src_addr));
+        ::memset(&src_addr, 0, sizeof(src_addr));
         src_addr.nl_family = AF_NETLINK;
         src_addr.nl_pid = MC_DAEMON_PID;  /* daemon pid */
         src_addr.nl_groups = 0;  /* not in mcast groups */
@@ -91,12 +91,12 @@ void NetlinkServer::run(
 
         for (;;) {
             // This buffer will be taken over by the connection it was routed to
-            nlh = (struct nlmsghdr *)malloc(NLMSG_SPACE(MAX_PAYLOAD));
+            nlh = (struct nlmsghdr *)::malloc(NLMSG_SPACE(MAX_PAYLOAD));
             if (nlh == NULL) {
                 LOG_E("Allocation failure");
                 break;
             }
-            memset(&msg, 0, sizeof(msg));
+            ::memset(&msg, 0, sizeof(msg));
             iov.iov_base = (void *)nlh;
             iov.iov_len = NLMSG_SPACE(MAX_PAYLOAD);
             msg.msg_iov = &iov;
@@ -104,11 +104,11 @@ void NetlinkServer::run(
             msg.msg_name = &src_addr;
             msg.msg_namelen = sizeof(src_addr);
 
-            memset(nlh, 0, NLMSG_SPACE(MAX_PAYLOAD));
+            ::memset(nlh, 0, NLMSG_SPACE(MAX_PAYLOAD));
 
             // Read the incoming message and route it to the connection based
             // on the incoming PID
-            if ((int) (len = recvmsg(serverSock, &msg, 0)) < 0) {
+            if ((int) (len = ::recvmsg(serverSock, &msg, 0)) < 0) {
                 LOG_ERRNO("recvmsg");
                 break;
             }
@@ -124,6 +124,8 @@ void NetlinkServer::run(
     } while (false);
 
     LOG_W("Could not open netlink socket. KernelAPI disabled");
+    kill(getpid(), SIGTERM);
+
 }
 
 //------------------------------------------------------------------------------

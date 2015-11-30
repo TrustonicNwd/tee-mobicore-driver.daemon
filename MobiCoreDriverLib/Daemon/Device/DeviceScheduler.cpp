@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,6 +37,6 @@ void DeviceScheduler::run(
 )
 {
     schedule();
-    exit(-1);
+    exit((void*)-1);
 }
 

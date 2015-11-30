@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2015 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -173,19 +173,28 @@ ssize_t Connection::readData(void *buffer, uint32_t len, int32_t timeout)
 
 
 //------------------------------------------------------------------------------
-ssize_t Connection::writeData(void *buffer, uint32_t len)
+ssize_t Connection::writeData(const void *buffer, uint32_t len)
 {
     assert(socketDescriptor != -1);
 
-    ssize_t ret = send(socketDescriptor, buffer, len, 0);
-    if ((uint32_t)ret != len) {
-        LOG_ERRNO("could not send all data, because send");
-        LOG_E("ret = %d", (uint32_t)ret);
-        ret = -1;
+    const char *cbuf = static_cast<const char*>(buffer);
+    uint32_t left = len;
+    while (left) {
+        ssize_t wlen = ::send(socketDescriptor, cbuf, left, 0);
+        if (wlen < 0) {
+            LOG_ERRNO("writeData");
+            return -1;
+        }
+        if (wlen == 0) {
+            LOG_E("Client closed the connection");
+            return -1;
+        }
+        left -= wlen;
+        cbuf += wlen;
     }
-
-    return ret;
+    return len;
 }
+
 
 
 //------------------------------------------------------------------------------

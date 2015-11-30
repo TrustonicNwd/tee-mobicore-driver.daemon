@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2015 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -57,6 +57,8 @@ MobiCoreDevice::MobiCoreDevice()
     mcFault = false;
     mciReused = false;
     mcpMessage = NULL;
+    notifySessionRemoved = false;
+
 }
 
 //------------------------------------------------------------------------------
@@ -68,6 +70,8 @@ MobiCoreDevice::~MobiCoreDevice()
     mcVersionInfo = NULL;
     mcFlags = NULL;
     nq = NULL;
+    notifySessionRemoved = false;
+
 }
 
 //------------------------------------------------------------------------------
@@ -234,31 +238,37 @@ void MobiCoreDevice::close(
     // make this a bit easier for everbody.
 
     // Cannot lock list as we need to receive notifications, but it may change, so search under lock
-    trustletSessionList_t sessions_list;
-    mutex_tslist.lock();
-    for (trustletSessionList_t::reverse_iterator revIt = trustletSessions.rbegin(); revIt != trustletSessions.rend(); revIt++)
-    {
-        if ((*revIt)->deviceConnection == connection) {
-            LOG_I("MobiCoreDevice::close found a session %p", *revIt);
+    for (;;) {
+        TrustletSession *session = NULL;
 
-            sessions_list.push_back(*revIt);
+        mutex_tslist.lock();
+        for (trustletSessionList_t::reverse_iterator revIt = trustletSessions.rbegin(); revIt != trustletSessions.rend(); revIt++)
+        {
+            if ((*revIt)->deviceConnection == connection) {
+                session = *revIt;
+                break;
+            }
+        }
+        mutex_tslist.unlock();
+        if (!session) {
             break;
         }
-    }
-    mutex_tslist.unlock();
-
-    for (trustletSessionList_t::iterator it = sessions_list.begin(); it != sessions_list.end(); it++) {
-        mcResult_t mcRet = closeSession(connection, (*it)->sessionId);
+        mcResult_t mcRet = closeSession(connection, session->sessionId);
         if (mcRet != MC_MCP_RET_OK) {
-            LOG_I("device closeSession failed for %p with %d", *it, mcRet);
+            LOG_I("device closeSession failed with %d", mcRet);
         }
     }
+
+    // After the trustlet is done make sure to tell the driver to cleanup
+    // all the orphaned drivers
+    cleanupWsmL2();
 
     connection->connectionData = NULL;
 
     // Leave critical section
     mutex.unlock();
 }
+
 
 
 //------------------------------------------------------------------------------
@@ -284,6 +294,7 @@ void MobiCoreDevice::start(void)
 
     if (mciReused)
     {
+		notifySessionRemoved = true;
         // Remove all pending sessions. In <t-base-301, there is a maximum of 32 sessions.
         // Few sessions in the start are reserved by the system.
 #define LOG_SOURCE_TASK_SHIFT      8
@@ -291,6 +302,11 @@ void MobiCoreDevice::start(void)
             int sessionId = ((sessionNumber<<LOG_SOURCE_TASK_SHIFT)+1);
             LOG_I("invalidating session %03x", sessionId);
             mcResult_t mcRet = sendSessionCloseCmd(sessionId);
+            if (mcRet==MC_DRV_ERR_DAEMON_MCI_ERROR) {
+                LOG_I("invalid MCP response for CLOSE_SESSION, try again");
+                mcRet = sendSessionCloseCmd(sessionId);
+            }
+
             if (mcRet != MC_MCP_RET_OK) {
                 LOG_I("sendSessionCloseCmd error %d", mcRet);
             }
@@ -343,7 +359,7 @@ bool MobiCoreDevice::waitMcpNotification(void)
     } // while(1)
 
     // Check healthiness state of the device
-	if (DeviceIrqHandler::isExiting() || 
+	if (DeviceIrqHandler::isExiting() ||
 		DeviceScheduler::isExiting() ||
 		TAExitHandler::isExiting())
 	{
@@ -351,15 +367,15 @@ bool MobiCoreDevice::waitMcpNotification(void)
         LOG_I("Irq handler : %s", (DeviceIrqHandler::isExiting()==true)?"running":"exit");
         LOG_I("Scheduler   : %s", (DeviceScheduler::isExiting()==true)?"running":"exit");
         LOG_I("Exit handler: %s", (TAExitHandler::isExiting()==true)?"running":"exit");
-        
+
         //There is no CThread::wait() so no need to wake up
         LOG_I("waitMcpNotification(): IrqHandler thread should exit automatically");
-        
+
         DeviceScheduler::terminate();
         //Cancel waiting just in case.
         DeviceScheduler::wakeup();
         LOG_I("waitMcpNotification(): terminate Scheduler  thread");
-    
+
         TAExitHandler::terminate();
         //Cancel waiting just in case.
         TAExitHandler::wakeup();
@@ -537,6 +553,9 @@ mcResult_t MobiCoreDevice::checkLoad(
     loadDataOpenSession_ptr         pLoadDataOpenSession,
     mcDrvRspOpenSessionPayload_ptr  /*pRspOpenSessionPayload*/)
 {
+    mcResult_t mcRet = MC_DRV_OK;
+    mutex_mcp.lock();
+
     do {
         // Write MCP open message to buffer
         mcpMessage->cmdCheckLoad.cmdHeader.cmdId = MC_MCP_CMD_CHECK_LOAD_TA;
@@ -553,33 +572,34 @@ mcResult_t MobiCoreDevice::checkLoad(
         // seen in openSession never happens elsewhere
         notifications = std::queue<notification_t>();
 
-        mcResult_t mcRet = mshNotifyAndWait();
+        mcRet = mshNotifyAndWait();
         if (mcRet != MC_MCP_RET_OK)
         {
             LOG_E("mshNotifyAndWait failed for CHECK_LOAD_TA, code %d.", mcRet);
             // Here Mobicore can be considered dead.
-            return mcRet;
+            break;
         }
 
         // Check if the command response ID is correct
         if ((MC_MCP_CMD_CHECK_LOAD_TA | FLAG_RESPONSE) != mcpMessage->rspHeader.rspId) {
-            LOG_E("CMD_OPEN_SESSION got invalid MCP command response(0x%X)", mcpMessage->rspHeader.rspId);
+            LOG_E("CMD_CHECK_LOAD_TA got invalid MCP command response(0x%X)", mcpMessage->rspHeader.rspId);
             // Something is messing with our MCI memory, we cannot know if the Trustlet was loaded.
             // Had in been loaded, we are loosing track of it here.
 
-            return MC_DRV_ERR_DAEMON_MCI_ERROR;
+            mcRet = MC_DRV_ERR_DAEMON_MCI_ERROR;
+            break;
         }
 
         mcRet = mcpMessage->rspCheckLoad.rspHeader.result;
-
         if (mcRet != MC_MCP_RET_OK) {
             LOG_E("MCP CHECK_LOAD returned code %d.", mcRet);
-            return MAKE_MC_DRV_MCP_ERROR(mcRet);
+            mcRet = MAKE_MC_DRV_MCP_ERROR(mcRet);
+            break;
         }
-        return MC_DRV_OK;
-
     } while (0);
-    return MC_DRV_ERR_UNKNOWN;
+
+    mutex_mcp.unlock();
+    return mcRet;
 }
 
 
@@ -635,7 +655,7 @@ mcResult_t MobiCoreDevice::closeSession(
     Connection  *deviceConnection,
     uint32_t    sessionId
 ) {
-    TrustletSession *session = findSession(deviceConnection,sessionId);
+    TrustletSession *session = findSession(deviceConnection, sessionId);
     if (session == NULL) {
         LOG_E("cannot close session %03x", sessionId);
         return MC_DRV_ERR_DAEMON_UNKNOWN_SESSION;
@@ -875,6 +895,9 @@ mcResult_t MobiCoreDevice::getMobiCoreVersion(
     }
 
     pRspGetMobiCoreVersionPayload->versionInfo = mcpMessage->rspGetMobiCoreVersion.versionInfo;
+    // The CMP version is meaningless in this case, and is replaced by the NWd version (1.5)
+    pRspGetMobiCoreVersionPayload->versionInfo.versionCmp = 0x00010005;
+
 
     // Store MobiCore info for future reference.
     mcVersionInfo = new mcVersionInfo_t();

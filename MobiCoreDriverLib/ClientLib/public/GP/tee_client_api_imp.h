@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2015 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,34 +41,29 @@
 
 #include <pthread.h>
 
-#include "tee_type.h"
-#include "tee_error.h"
-#include "MobiCoreDriverApi.h"
+#define TEEC_MEM_INOUT (TEEC_MEM_INPUT | TEEC_MEM_OUTPUT)
 
 
 typedef struct {
     uint32_t    reserved;
-}
-TEEC_Context_IMP;
+} TEEC_Context_IMP;
 
 
 typedef struct {
-    mcSessionHandle_t   handle;
+    uint32_t                    sessionId;
+    TEEC_Context_IMP            context;
     void                *tci;
     bool                active;
     pthread_mutex_t     mutex_tci;  //mutex to serialize CA requests
-}
-TEEC_Session_IMP;
+} TEEC_Session_IMP;
 
 typedef struct {
     bool    implementation_allocated;
-}
-TEEC_SharedMemory_IMP;
+} TEEC_SharedMemory_IMP;
 
 typedef struct {
     TEEC_Session_IMP    *session;
-}
-TEEC_Operation_IMP;
+} TEEC_Operation_IMP;
 
 /* There is no natural, compile-time limit on the shared memory, but a specific
    implementation may introduce a limit (in particular on TrustZone) */

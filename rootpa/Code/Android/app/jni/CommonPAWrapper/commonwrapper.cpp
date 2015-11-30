@@ -1,33 +1,33 @@
 /*
-Copyright  © Trustonic Limited 2013
-
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification, 
-are permitted provided that the following conditions are met:
-
-  1. Redistributions of source code must retain the above copyright notice, this 
-     list of conditions and the following disclaimer.
-
-  2. Redistributions in binary form must reproduce the above copyright notice, 
-     this list of conditions and the following disclaimer in the documentation 
-     and/or other materials provided with the distribution.
-
-  3. Neither the name of the Trustonic Limited nor the names of its contributors 
-     may be used to endorse or promote products derived from this software 
-     without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
-OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Copyright (c) 2013 TRUSTONIC LIMITED
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the TRUSTONIC LIMITED nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 #include <string.h>
 
 #include "com_gd_mobicore_pa_jni_CommonPAWrapper.h"
@@ -45,8 +45,8 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 JavaVM* jvmP_ = NULL;
 const jint VERSION=JNI_VERSION_1_2;
 
-
-JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* jvm, void* reserved) 
+/* Original params list : (JavaVM* jvm, void* reserved)*/
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* jvm, void*)
 {
 // remember JVM pointer:
 	jvmP_ = jvm;
@@ -56,7 +56,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* jvm, void* reserved)
 
 JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_openSession(JNIEnv *, jobject)
 {
-    return (jint) openSessionToCmtl();  
+    return (jint) openSessionToCmtl();
 }
 
 JNIEXPORT void JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_closeSession(JNIEnv *, jobject)
@@ -64,8 +64,9 @@ JNIEXPORT void JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_closeSession(
     closeSessionToCmtl();
 }
 
+/* Original params list : (JNIEnv* env, jobject, jint uid, jobject inCommands, jobject outResults)*/
 JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_executeCmpCommands
-  (JNIEnv* env, jobject, jint uid, jobject inCommands, jobject outResults)
+  (JNIEnv* env, jobject, jint, jobject inCommands, jobject outResults)
 {
     LOGD(">>Java_com_gd_mobicore_pa_jni_CommonPAWrapper_executeCmpCommands\n");
     int ret=ROOTPA_OK;
@@ -75,22 +76,22 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_executeCmpCom
     int numberOfCommands=inCmd.numberOfElements();
 
     if(0==numberOfCommands){
-        LOGD("No commands received, returning ROOTPA_COMMAND_NOT_SUPPORTED\n");    
+        LOGD("No commands received, returning ROOTPA_COMMAND_NOT_SUPPORTED\n");
         return ROOTPA_COMMAND_NOT_SUPPORTED;
     }
 
     CmpMessage* commands = new CmpMessage[numberOfCommands];
     if(NULL==commands) return ROOTPA_ERROR_OUT_OF_MEMORY;
-    memset(commands, 0, numberOfCommands*sizeof(CmpMessage)); 
+    memset(commands, 0, numberOfCommands*sizeof(CmpMessage));
 
     CmpMessage* responses = new CmpMessage[numberOfCommands];
     if(NULL==responses)
-    { 
+    {
         delete [] commands;
         return ROOTPA_ERROR_OUT_OF_MEMORY;
     }
     memset(responses, 0, numberOfCommands*sizeof(CmpMessage));
-            
+
     if(inCmd.getCommands(commands)==false)
     {
         LOGE("getting commands on C side of the wrapper failed\n");
@@ -99,7 +100,7 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_executeCmpCom
     else
     {
         ret=executeCmpCommands(numberOfCommands, commands, responses, &internalError);
-        CmpResponses outRsp(env, outResults);    
+        CmpResponses outRsp(env, outResults);
         if(ret!=ROOTPA_OK)
         {
             LOGE("call to executeCmpCommands failed %d %d\n", ret, internalError);
@@ -144,7 +145,7 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_getVersion
     int ret=ROOTPA_OK;
     int tag=0;
     mcVersionInfo_t version;
-    
+
     ret=getVersion(&tag, &version);
     if(ROOTPA_OK == ret)
     {
@@ -177,7 +178,7 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_getVersion
             }
         }
     }
-    LOGD("<<Java_com_gd_mobicore_pa_jni_CommonPAWrapper_getVersion %x %x %x\n", productId, keys, values);    
+    LOGD("<<Java_com_gd_mobicore_pa_jni_CommonPAWrapper_getVersion %x %x %x\n", productId, keys, values);
     return ret;
 }
 
@@ -186,14 +187,14 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_getSuid
 {
     int ret=ROOTPA_OK;
     mcSuid_t mySuid;
-    
+
     ret=getSuid(&mySuid);
     if(ROOTPA_OK == ret)
     {
         JniHelpers jniHelp(env);
         ret=jniHelp.setByteArray(&suid, (uint8_t*)&mySuid, sizeof(mySuid));
     }
-    return ret;  
+    return ret;
 }
 
 JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_isRootContainerRegistered
@@ -201,14 +202,14 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_isRootContain
 {
     int ret=ROOTPA_OK;
     bool isRegistered;
-    
+
     ret=isRootContainerRegistered(&isRegistered);
     if(ROOTPA_OK == ret)
     {
         JniHelpers jniHelp(envP);
         ret=jniHelp.setBooleanToArray(&result, isRegistered);
     }
-    return ret;  
+    return ret;
 }
 
 JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_isSpContainerRegistered
@@ -223,7 +224,7 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_isSpContainer
         JniHelpers jniHelp(envP);
         ret=jniHelp.setBooleanToArray(&result, isRegistered);
     }
-    return ret;  
+    return ret;
 }
 
 JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_getSPContainerState
@@ -240,11 +241,11 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_getSPContaine
         ret=jniHelp.setIntToArray(&stateArray, 0, state);
     }
     LOGD("<<Java_com_gd_mobicore_pa_jni_CommonPAWrapper_getSpContainerState\n");
-    return ret;    
+    return ret;
 }
 
 const int CONTAINER_STATE_IDX=0;
-const int NUMBER_OF_TLTS_IDX=1;            
+const int NUMBER_OF_TLTS_IDX=1;
 const int NUMBER_OF_ELEMENTS=2;
 
 JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_getSPContainerStructure
@@ -255,7 +256,7 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_getSPContaine
     int state;
 
     SpContainerStructure spContainerStructure;
-    
+
     ret=getSpContainerStructure((mcSpid_t) spid, &spContainerStructure);
     if(ROOTPA_OK == ret)
     {
@@ -285,7 +286,7 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_getSPContaine
                                                                                                              spContainerStructure.tltContainers[i].uuid.value[13],
                                                                                                              spContainerStructure.tltContainers[i].uuid.value[14],
                                                                                                              spContainerStructure.tltContainers[i].uuid.value[15]);
-                    
+
                     ret=jniHelp.setIntToArray(&trustletStates, i, spContainerStructure.tltContainers[i].state);
                     jbyteArray uuid = jniHelp.byteArrayToJByteArray(spContainerStructure.tltContainers[i].uuid.value, UUID_LENGTH);
                     envP->SetObjectArrayElement(uuidArray, i, (jobject) uuid);
@@ -304,12 +305,12 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_getSPContaine
     }
     else
     {
-        LOGE("..._jni_CommonPAWrapper_getSPContainerStructure getSpContainerStructure failed\n");    
+        LOGE("..._jni_CommonPAWrapper_getSPContainerStructure getSpContainerStructure failed\n");
     }
-    
-    
+
+
     LOGD("<<Java_com_gd_mobicore_pa_jni_CommonPAWrapper_getSPContainerStructure %d\n", ret);
-    return ret;    
+    return ret;
 }
 
 jmethodID provisioningStateCallback_=NULL;
@@ -323,7 +324,7 @@ void stateUpdateCallback(ProvisioningState state, rootpaerror_t error, tltInfo_t
 
     JNIEnv* envP=NULL;
 
-    // it is enough to call this only once for each thread but since this is 
+    // it is enough to call this only once for each thread but since this is
     // the best place to call it we call it every time
 
     jint res = jvmP_->AttachCurrentThread(&envP, NULL);
@@ -331,7 +332,7 @@ void stateUpdateCallback(ProvisioningState state, rootpaerror_t error, tltInfo_t
     if(NULL==obj_ ||NULL==provisioningStateCallback_ || NULL== envP || res != JNI_OK)
     {
         LOGE("obj=%ld, provisioningStateCallback==%ld, envP==%ld res==%d", (long int) obj_, (long int) provisioningStateCallback_, (long int) envP, res);
-    }    
+    }
     else if(PROVISIONING_STATE_INSTALL_TRUSTLET == state)
     {
         if(tltInfoP)
@@ -348,7 +349,7 @@ void stateUpdateCallback(ProvisioningState state, rootpaerror_t error, tltInfo_t
     }
     else
     {
-        envP->CallVoidMethod(obj_, provisioningStateCallback_, state, error); 
+        envP->CallVoidMethod(obj_, provisioningStateCallback_, state, error);
     }
 
     if( obj_!=NULL && (PROVISIONING_STATE_THREAD_EXITING == state) )
@@ -358,20 +359,20 @@ void stateUpdateCallback(ProvisioningState state, rootpaerror_t error, tltInfo_t
         obj_=NULL;
     }
 
-    // doing this in every round in order to make sure what is attached will be detached and that 
-    // envP is correctly updated at every round (it seems to work also inside the above if statement, 
-    // but calling AttachCurrentThread to already attached thread is is supposed to be no-op. It seems 
+    // doing this in every round in order to make sure what is attached will be detached and that
+    // envP is correctly updated at every round (it seems to work also inside the above if statement,
+    // but calling AttachCurrentThread to already attached thread is is supposed to be no-op. It seems
     // to update the envP though.)
     // If the thread is not detached there will be a crash when the thread exists
     jvmP_->DetachCurrentThread();
-    
+
     LOGD("<<stateUpdateCallback\n");
 }
 
 void storeCallbackMethodIds(JNIEnv* envP)
 {
-    LOGD(">>storeCallbackMethodIds\n");   
-    
+    LOGD(">>storeCallbackMethodIds\n");
+
     jclass cls = envP->GetObjectClass(obj_);
     if(NULL==cls)
     {
@@ -382,37 +383,37 @@ void storeCallbackMethodIds(JNIEnv* envP)
     if(NULL==provisioningStateCallback_)
     {
         LOGE("storeCallbackMethodIds provisioningStateCallback_==NULL");
-    }    
+    }
 
 
     getSystemInfoCallback_ = envP->GetMethodID(cls, "getSystemInfo","()[Ljava/lang/String;");
     if(NULL==getSystemInfoCallback_)
     {
         LOGE("storeCallbackMethodIds getSystemInfoCallback_==NULL");
-    }    
+    }
 
     trustletInstallCallback_ = envP->GetMethodID(cls, "trustletInstallCallback","([B)V");
     if(NULL==trustletInstallCallback_)
     {
         LOGE("storeCallbackMethodIds trustletInstallCallback_==NULL");
-    }        
+    }
 
     if(cls!=NULL)
     {
         envP->DeleteLocalRef(cls);
     }
-    
+
     LOGD("<<storeCallbackMethodIds\n");
 }
 
 /*
-This function has to be called before any communication with SE is done (or actually, 
+This function has to be called before any communication with SE is done (or actually,
 before any xml parsing is done.
 */
 void setFilesPath(JNIEnv* envP, jobject obj)
 {
     LOGD(">>setFilesPath\n");
-    
+
     jclass cls = envP->GetObjectClass(obj);
     if(NULL==cls)
     {
@@ -422,14 +423,14 @@ void setFilesPath(JNIEnv* envP, jobject obj)
     jmethodID getFilesDirPath = envP->GetMethodID(cls, "getFilesDirPath","()Ljava/lang/String;");
     if(NULL==getFilesDirPath)
     {
-        setPaths(HARDCODED_STORAGEPATH, CERT_PATH);        
+        setPaths(HARDCODED_STORAGEPATH, CERT_PATH);
         LOGE("<<setFilesPath getFilesDirPath==NULL, used hardcoded paths");
         return;
     }
-    
-    jobject jpath = envP->CallObjectMethod(obj, getFilesDirPath); 
+
+    jobject jpath = envP->CallObjectMethod(obj, getFilesDirPath);
     if(jpath!=NULL)
-    {    
+    {
         const char* pathP = envP->GetStringUTFChars((jstring)jpath, NULL);
         setPaths(pathP, CERT_PATH);
         if(NULL == pathP)
@@ -443,19 +444,19 @@ void setFilesPath(JNIEnv* envP, jobject obj)
     else
     {
         LOGE("setFilesPath jpath==NULL, using hardcoded paths");
-        setPaths(HARDCODED_STORAGEPATH, CERT_PATH);        
-    }    
+        setPaths(HARDCODED_STORAGEPATH, CERT_PATH);
+    }
 
     if(cls!=NULL)
     {
         envP->DeleteLocalRef(cls);
-    }    
-    
+    }
+
     LOGD("<<setFilesPath\n");
 }
 
 const int IMEI_ESN_INDEX=com_gd_mobicore_pa_jni_CommonPAWrapper_IMEI_ESN_INDEX;
-const int MNO_INDEX=com_gd_mobicore_pa_jni_CommonPAWrapper_MNO_INDEX;    
+const int MNO_INDEX=com_gd_mobicore_pa_jni_CommonPAWrapper_MNO_INDEX;
 const int BRAND_INDEX=com_gd_mobicore_pa_jni_CommonPAWrapper_BRAND_INDEX;
 const int MANUFACTURER_INDEX=com_gd_mobicore_pa_jni_CommonPAWrapper_MANUFACTURER_INDEX;
 const int HARDWARE_INDEX=com_gd_mobicore_pa_jni_CommonPAWrapper_HARDWARE_INDEX;
@@ -476,7 +477,7 @@ void copyElement(JNIEnv* envP, char** target, jstring source)
     }
     else
     {
-        *target=NULL;    
+        *target=NULL;
     }
 }
 
@@ -486,9 +487,9 @@ rootpaerror_t getSystemInfoCallback(osInfo_t* osSpecificInfoP)
     rootpaerror_t ret=ROOTPA_OK;
 
     if(NULL==osSpecificInfoP) return ROOTPA_ERROR_INTERNAL;
-    
+
     memset(osSpecificInfoP, 0, sizeof(osInfo_t));
-    
+
     JNIEnv* envP=NULL;
     jint res = jvmP_->AttachCurrentThread(&envP, NULL);
 
@@ -497,12 +498,12 @@ rootpaerror_t getSystemInfoCallback(osInfo_t* osSpecificInfoP)
     {
         ret=ROOTPA_ERROR_INTERNAL;
         LOGE("obj=%ld, getSystemInfoCallback_==%ld, envP==%ld res==%d", (long int) obj_, (long int) getSystemInfoCallback_, (long int) envP, res);
-    }    
+    }
     else
     {
-        jobjectArray systemInfo = (jobjectArray) envP->CallObjectMethod(obj_, getSystemInfoCallback_); 
+        jobjectArray systemInfo = (jobjectArray) envP->CallObjectMethod(obj_, getSystemInfoCallback_);
         if(systemInfo!=NULL)
-        {    
+        {
             jstring imeiEsn=(jstring) envP->GetObjectArrayElement(systemInfo, IMEI_ESN_INDEX);
             jstring mno=(jstring) envP->GetObjectArrayElement(systemInfo, MNO_INDEX);
             jstring brand=(jstring) envP->GetObjectArrayElement(systemInfo, BRAND_INDEX);
@@ -510,7 +511,7 @@ rootpaerror_t getSystemInfoCallback(osInfo_t* osSpecificInfoP)
             jstring hw=(jstring) envP->GetObjectArrayElement(systemInfo, HARDWARE_INDEX);
             jstring model=(jstring) envP->GetObjectArrayElement(systemInfo, MODEL_INDEX);
             jstring version=(jstring) envP->GetObjectArrayElement(systemInfo, VERSION_INDEX);
-                                
+
             copyElement(envP, &osSpecificInfoP->imeiEsnP, imeiEsn);
             copyElement(envP, &osSpecificInfoP->mnoP, mno);
             copyElement(envP, &osSpecificInfoP->brandP, brand);
@@ -526,12 +527,12 @@ rootpaerror_t getSystemInfoCallback(osInfo_t* osSpecificInfoP)
             if(manufacturer!=NULL) envP->DeleteLocalRef(manufacturer);
             if(hw!=NULL) envP->DeleteLocalRef(hw);
             if(model!=NULL) envP->DeleteLocalRef(model);
-            if(version!=NULL) envP->DeleteLocalRef(version);        
-        }        
+            if(version!=NULL) envP->DeleteLocalRef(version);
+        }
     }
 
-    // doing this in every round in order to make sure what is attached will be detached and that 
-    // envP is correctly updated at every round (it seems to work also inside the above if, but 
+    // doing this in every round in order to make sure what is attached will be detached and that
+    // envP is correctly updated at every round (it seems to work also inside the above if, but
     // calling AttachCurrentThread to already attched thread is is supposed to be no-op. It seems to
     // update the envP though.)
     // If the thread is not detached there will be a crash when the thread exists
@@ -541,20 +542,21 @@ rootpaerror_t getSystemInfoCallback(osInfo_t* osSpecificInfoP)
     return ret;
 }
 
+/* Original params list : (JNIEnv* envP, jobject obj, jint uid, jint spid, jbyteArray seAddress)*/
 JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_doProvisioning
-  (JNIEnv* envP, jobject obj, jint uid, jint spid, jbyteArray seAddress)
+  (JNIEnv* envP, jobject obj, jint, jint spid, jbyteArray seAddress)
 {
     LOGD(">>Java_com_gd_mobicore_pa_jni_CommonPAWrapper_doProvisioning %ld %ld\n", (long int) stateUpdateCallback, (long int) getSystemInfoCallback);
     setFilesPath(envP, obj);
     int ret=ROOTPA_OK;
-    
+
     if(seAddress)
     {
         uint32_t length=0;
         JniHelpers jniHelp(envP);
         char*  addrP=(char*)jniHelp.jByteArrayToCByteArray(seAddress, &length);
         ret=setSeAddress(addrP, length);
-        delete[] addrP;        
+        delete[] addrP;
     }
 
     if(ROOTPA_OK==ret)
@@ -569,36 +571,36 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_doProvisionin
 
 
 JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_installTrustlet
-(JNIEnv* envP, jobject obj, 
-jint spid, 
-jbyteArray uuid, 
-jint requestDataType, 
-jbyteArray tltOrKeyData, 
+(JNIEnv* envP, jobject obj,
+jint spid,
+jbyteArray uuid,
+jint requestDataType,
+jbyteArray tltOrKeyData,
 jint minTltVersion,
 jbyteArray tltPukHash,
-jint memoryType, 
-jint numberOfInstances, 
-jint flags, 
+jint memoryType,
+jint numberOfInstances,
+jint flags,
 jbyteArray seAddress)
 {
     LOGD(">>Java_com_gd_mobicore_pa_jni_CommonPAWrapper_installTrustlet %ld %ld\n", (long int) stateUpdateCallback, (long int) getSystemInfoCallback);
     setFilesPath(envP, obj);
     int ret=ROOTPA_OK;
-    JniHelpers jniHelp(envP);    
-    
+    JniHelpers jniHelp(envP);
+
     if(seAddress)
     {
         uint32_t length=0;
         char*  addrP=(char*)jniHelp.jByteArrayToCByteArray(seAddress, &length);
         ret=setSeAddress(addrP, length);
-        delete[] addrP;        
+        delete[] addrP;
     }
 
     if(ROOTPA_OK==ret)
     {
         obj_= envP->NewGlobalRef(obj);
         storeCallbackMethodIds(envP);
-        trustletInstallationData_t tltData;        
+        trustletInstallationData_t tltData;
         tltData.dataP=(uint8_t*) jniHelp.jByteArrayToCByteArray(tltOrKeyData, &tltData.dataLength);
         tltData.dataType=(TltInstallationRequestDataType) requestDataType;
         tltData.minTltVersion=minTltVersion;
@@ -606,7 +608,7 @@ jbyteArray seAddress)
         tltData.memoryType=memoryType;
         tltData.numberOfInstances=numberOfInstances;
         tltData.flags=flags;
-        
+
         uint32_t uuidLength=0;
         uint8_t* uuidP=(uint8_t*) jniHelp.jByteArrayToCByteArray(uuid, &uuidLength);
         if(UUID_LENGTH != uuidLength){
@@ -636,11 +638,11 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_unregisterRoo
         uint32_t length=0;
         char*  addrP=(char*)jniHelp.jByteArrayToCByteArray(seAddress, &length);
         ret=setSeAddress(addrP, length);
-        delete[] addrP;        
+        delete[] addrP;
     }
 
     if(ROOTPA_OK==ret)
-    {    
+    {
         obj_= envP->NewGlobalRef(obj);
         storeCallbackMethodIds(envP);
         ret=unregisterRootContainer(stateUpdateCallback, getSystemInfoCallback);
@@ -659,19 +661,20 @@ char* addTrailingZero(uint8_t* vP, uint32_t length)
         memcpy(newVP, vP, length);
         newVP[length]=0;
     }
-    delete [] vP;    
+    delete [] vP;
     return newVP;
 }
 
-JNIEXPORT void JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_setEnvironmentVariable(JNIEnv* envP, jobject obj, jbyteArray variable_name, jbyteArray value)
+/* Original params list : (JNIEnv* envP, jobject obj, jbyteArray variable_name, jbyteArray value)*/
+JNIEXPORT void JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_setEnvironmentVariable(JNIEnv* envP, jobject, jbyteArray variable_name, jbyteArray value)
 {
     LOGD(">>Java_com_gd_mobicore_pa_jni_CommonPAWrapper_setEnvironmentVariable");
     JniHelpers jniHelp(envP);
-    uint32_t length=0;    
+    uint32_t length=0;
     char* envVarP=NULL;
     char* envValP=NULL;
     uint8_t*  vP=jniHelp.jByteArrayToCByteArray(variable_name, &length);
-    
+
     if(NULL==vP)
     {
         LOGE("Java_com_gd_mobicore_pa_jni_CommonPAWrapper_setEnvironmentVariable, FAILURE: can not get variable\n");
@@ -681,7 +684,7 @@ JNIEXPORT void JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_setEnvironmen
     envVarP = addTrailingZero(vP, length);
     if(value!=NULL)
     {
-        vP=jniHelp.jByteArrayToCByteArray(value, &length);    
+        vP=jniHelp.jByteArrayToCByteArray(value, &length);
         if(NULL!=vP)
         {
             envValP = addTrailingZero(vP, length);
@@ -701,7 +704,7 @@ JNIEXPORT void JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_setEnvironmen
     }
     else
     {
-        LOGD("unsetting environment variable, %s", envVarP);        
+        LOGD("unsetting environment variable, %s", envVarP);
         if(unsetenv(envVarP)!=0)
         {
             LOGE("Java_com_gd_mobicore_pa_jni_CommonPAWrapper_setEnvironmentVariable, unsetenv %s FAILURE\n", envVarP);
@@ -713,7 +716,8 @@ JNIEXPORT void JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_setEnvironmen
     LOGD("<<Java_com_gd_mobicore_pa_jni_CommonPAWrapper_setEnvironmentVariable");
 }
 
-JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_storeTA(JNIEnv* envP, jobject obj, jint spid, jbyteArray uuid, jbyteArray taBin)
+/* Original params list : (JNIEnv* envP, jobject obj, jint spid, jbyteArray uuid, jbyteArray taBin)*/
+JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_storeTA(JNIEnv* envP, jobject, jint spid, jbyteArray uuid, jbyteArray taBin)
 {
     LOGD(">>Java_com_gd_mobicore_pa_jni_CommonPAWrapper_storeTA");
     int ret=ROOTPA_OK;
@@ -721,7 +725,7 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_storeTA(JNIEn
 
     uint32_t uuidLength=0;
     uint8_t* uuidP=(uint8_t*) jniHelp.jByteArrayToCByteArray(uuid, &uuidLength);
-    
+
     if(UUID_LENGTH != uuidLength){
         LOGD("<<Java_com_gd_mobicore_pa_jni_CommonPAWrapper_storeTA, wrong uuidLength %d, not installing\n", uuidLength);
         free(uuidP);
@@ -729,8 +733,8 @@ JNIEXPORT jint JNICALL Java_com_gd_mobicore_pa_jni_CommonPAWrapper_storeTA(JNIEn
     }
     mcUuid_t mcUuid;
     memcpy(mcUuid.value, uuidP, UUID_LENGTH);
-    free(uuidP);    
-    
+    free(uuidP);
+
     uint32_t taBinLength=0;
     uint8_t* taBinP=(uint8_t*) jniHelp.jByteArrayToCByteArray(taBin, &taBinLength);
     if(0==taBinLength){

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,6 +44,7 @@
 #include <string>
 #include <cstdio>
 #include <vector>
+#include <pthread.h>
 #include "CThread.h"
 #include "ConnectionHandler.h"
 
@@ -76,7 +77,15 @@ public:
     );
 
     /**
-     * Start server and listen for incoming connections.
+     * Start server thread.
+     * This function only returns once the server is indeed ready.
+     */
+    virtual void start(
+        const char *name = NULL
+    );
+
+    /**
+     * Listen for incoming connections.
      * Implements the central socket server loop. Incoming connections will be stored.
      */
     virtual void run(
@@ -94,13 +103,23 @@ public:
         Connection *connection
     );
 
+    pthread_mutex_t startup_mutex;
+    pthread_cond_t startup_cond;
+
 protected:
     int serverSock;
     string socketAddr;
     ConnectionHandler   *connectionHandler; /**< Connection handler registered to the server */
 
 private:
-    connectionList_t    peerConnections; /**< Connections to devices */
+    struct Private;
+    Private *priv_;
+    // Startup
+    enum {
+        STOPPED,
+        STARTING,
+        STARTED,
+    } server_state;
 
 };
 

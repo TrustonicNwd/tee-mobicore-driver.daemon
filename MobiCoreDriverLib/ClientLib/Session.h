@@ -34,7 +34,6 @@
 #include <stdint.h>
 #include <list>
 
-#include "mc_linux.h"
 #include "Connection.h"
 #include "CMcKMod.h"
 #include "CMutex.h"

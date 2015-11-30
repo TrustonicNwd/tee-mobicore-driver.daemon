@@ -44,19 +44,20 @@
 #include "CWsm.h"
 
 
-class Device
-{
+class Device {
+
 
 private:
     sessionList_t   sessionList; /**< MobiCore Trustlet session associated with the device */
     wsmList_t       wsmL2List; /**< WSM L2 Table  */
+    bool            isValid_;
+
 
 
 public:
     uint32_t     deviceId; /**< Device identifier */
     Connection   *connection; /**< The device connection */
-    CMcKMod_ptr  pMcKMod;
-    uint32_t     openCount;
+    CMcKMod_ptr  pMcKMod;    
 
     Device(
         uint32_t    deviceId,
@@ -82,6 +83,24 @@ public:
     void close(
         void
     );
+    
+    /**
+     * Mark device as invalid.
+     */
+    void setInvalid()
+    {
+        isValid_ = false;
+    }
+
+    /**
+     * Return whether device is valid.
+     */
+    bool isValid()
+    {
+        return isValid_;
+    }
+
+
 
     /**
      * Check if the device has open sessions.
@@ -167,4 +186,3 @@ public:
 };
 
 #endif /* DEVICE_H_ */
-

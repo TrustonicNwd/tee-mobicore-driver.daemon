@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,6 +42,8 @@ class ConnectionHandler
 
 public:
     virtual ~ConnectionHandler() {};
+    virtual bool readCommand(Connection *connection, uint32_t *command_id) = 0;
+    virtual void handleCommand(Connection *connection, uint32_t command_id) = 0;
 
     /**
      * Handle connection activities.
@@ -49,9 +51,14 @@ public:
      *
      * @param [in] connection Reference to the connection which has data to process.
      */
-    virtual bool handleConnection(
-        Connection *connection
-    ) = 0;
+    bool handleConnection(Connection *connection) {
+        uint32_t command_id;
+        if (!readCommand(connection, &command_id)) {
+            return false;
+        }
+        handleCommand(connection, command_id);
+        return true;
+    }
 
     /**
      * Connection has been closed.
@@ -60,9 +67,7 @@ public:
      *
      * @param [in] connection Reference to the connection which will be deleted.
      */
-    virtual void dropConnection(
-        Connection *connection
-    ) = 0;
+    virtual void dropConnection(Connection *connection) = 0;
 };
 
 #endif /* CONNECTIONHANDLER_H_ */

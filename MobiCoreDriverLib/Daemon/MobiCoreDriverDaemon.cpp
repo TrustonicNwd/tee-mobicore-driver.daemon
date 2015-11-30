@@ -155,11 +155,19 @@ void MobiCoreDriverDaemon::run(
     for (i = 0; i < MAX_SERVERS; i++) {
         servers[i]->start(i ? "McDaemon.Server" : "NetlinkServer");
     }
+    
+#ifndef WITHOUT_PROXY
+    proxy_server.open();
+#endif
 
     // then wait for them to exit
     for (i = 0; i < MAX_SERVERS; i++) {
         servers[i]->join();
     }
+    
+#ifndef WITHOUT_PROXY
+    proxy_server.close();
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -354,12 +362,22 @@ bool MobiCoreDriverDaemon::loadDeviceDriver(
     }
 
 //------------------------------------------------------------------------------
-inline bool getData(Connection *con, void *buf, uint32_t len)
+inline bool getData(Connection *connection, void *buf, uint32_t len)
 {
-    uint32_t rlen = con->readData(buf, len);
-    if (rlen < len || (int32_t)rlen < 0) {
-        LOG_E("reading from Client failed");
-        return false;
+    char *cbuf = (char*)buf;
+    uint32_t left = len;
+    while (left) {
+        ssize_t rlen = connection->readData(cbuf, left);
+        if (rlen < 0) {
+            LOG_ERRNO("reading from Client");
+            return false;
+        }
+        if (rlen == 0) {
+            LOG_E("Client closed the connection");
+            return false;
+        }
+        left -= rlen;
+        cbuf += rlen;
     }
     return true;
 }
@@ -1103,16 +1121,7 @@ mcDrvResponseHeader_t rspRegistry = { responseId :
 }
 
 //------------------------------------------------------------------------------
-bool MobiCoreDriverDaemon::handleConnection(
-    Connection *connection
-)
-{
-    bool ret = false;
-
-    // This is the big lock around everything the Daemon does, including socket and MCI access
-    static CMutex reg_mutex;
-    static CMutex siq_mutex;
-
+bool MobiCoreDriverDaemon::readCommand(Connection *connection, uint32_t *command_id) {
     /* In case of RTM fault do not try to signal anything to MobiCore
      * just answer NO to all incoming connections! */
     if (mobiCoreDevice->getMcFault()) {
@@ -1120,145 +1129,175 @@ bool MobiCoreDriverDaemon::handleConnection(
         return false;
     }
 
-    LOG_I("handleConnection()==== %p", connection);
-    do {
-        // Read header
-        mcDrvCommandHeader_t mcDrvCommandHeader;
-        ssize_t rlen = connection->readData(
-                           &(mcDrvCommandHeader),
-                           sizeof(mcDrvCommandHeader));
+    // Read header
+    LOG_I("%s()==== %p", __FUNCTION__, connection);
+    mcDrvCommandHeader_t mcDrvCommandHeader;
+    ssize_t rlen = connection->readData(&mcDrvCommandHeader, sizeof(mcDrvCommandHeader));
+    if (rlen == 0) {
+        LOG_I(" %s(): Connection closed.", __FUNCTION__);
+        return false;
+    }
+    if (rlen == -1) {
+        LOG_E("Socket error.");
+        return false;
+    }
+    if (rlen == -2) {
+        LOG_E("Timeout.");
+        return false;
+    }
 
-        if (rlen == 0) {
-            LOG_V(" handleConnection(): Connection closed.");
-            break;
-        }
-        if (rlen == -1) {
-            LOG_E("Socket error.");
-            break;
-        }
-        if (rlen == -2) {
-            LOG_E("Timeout.");
-            break;
-        }
-        ret = true;
+    // Check command ID
+    switch (mcDrvCommandHeader.commandId) {
+        //-----------------------------------------
+    case MC_DRV_CMD_OPEN_DEVICE:
+    case MC_DRV_CMD_CLOSE_DEVICE:
+    case MC_DRV_CMD_OPEN_SESSION:
+    case MC_DRV_CMD_OPEN_TRUSTLET:
+    case MC_DRV_CMD_OPEN_TRUSTED_APP:
+    case MC_DRV_CMD_CLOSE_SESSION:
+    case MC_DRV_CMD_NQ_CONNECT:
+    case MC_DRV_CMD_NOTIFY:
+    case MC_DRV_CMD_MAP_BULK_BUF:
+    case MC_DRV_CMD_UNMAP_BULK_BUF:
+    case MC_DRV_CMD_GET_VERSION:
+    case MC_DRV_CMD_GET_MOBICORE_VERSION:
+    case MC_DRV_REG_STORE_AUTH_TOKEN:
+    case MC_DRV_REG_WRITE_ROOT_CONT:
+    case MC_DRV_REG_WRITE_SP_CONT:
+    case MC_DRV_REG_WRITE_TL_CONT:
+    case MC_DRV_REG_WRITE_SO_DATA:
+    case MC_DRV_REG_STORE_TA_BLOB:
+    case MC_DRV_REG_READ_AUTH_TOKEN:
+    case MC_DRV_REG_READ_ROOT_CONT:
+    case MC_DRV_REG_READ_SP_CONT:
+    case MC_DRV_REG_READ_TL_CONT:
+    case MC_DRV_REG_DELETE_AUTH_TOKEN:
+    case MC_DRV_REG_DELETE_ROOT_CONT:
+    case MC_DRV_REG_DELETE_SP_CONT:
+    case MC_DRV_REG_DELETE_TL_CONT:
+        break;
+    default:
+        LOG_E("Unknown command: %d=0x%x", mcDrvCommandHeader.commandId, mcDrvCommandHeader.commandId);
+        return false;
+    }
 
-        switch (mcDrvCommandHeader.commandId) {
-            //-----------------------------------------
-        case MC_DRV_CMD_OPEN_DEVICE:
-            mobiCoreDevice->mutex_mcp.lock();
-            processOpenDevice(connection);
-            mobiCoreDevice->mutex_mcp.unlock();
-            break;
-            //-----------------------------------------
-        case MC_DRV_CMD_CLOSE_DEVICE:
-            mobiCoreDevice->mutex_mcp.lock();
-            processCloseDevice(connection);
-            mobiCoreDevice->mutex_mcp.unlock();
-            break;
-            //-----------------------------------------
-        case MC_DRV_CMD_OPEN_SESSION:
-            mobiCoreDevice->mutex_mcp.lock();
-            processOpenSession(connection, false);
-            mobiCoreDevice->mutex_mcp.unlock();
-            break;
-            //-----------------------------------------
-        case MC_DRV_CMD_OPEN_TRUSTLET:
-            mobiCoreDevice->mutex_mcp.lock();
-            processOpenTrustlet(connection);
-            mobiCoreDevice->mutex_mcp.unlock();
-            break;
-            //-----------------------------------------
-        case MC_DRV_CMD_OPEN_TRUSTED_APP:
-            mobiCoreDevice->mutex_mcp.lock();
-            processOpenSession(connection, true);
-            mobiCoreDevice->mutex_mcp.unlock();
-            break;
-            //-----------------------------------------
-        case MC_DRV_CMD_CLOSE_SESSION:
-            mobiCoreDevice->mutex_mcp.lock();
-            processCloseSession(connection);
-            mobiCoreDevice->mutex_mcp.unlock();
-            break;
-            //-----------------------------------------
-        case MC_DRV_CMD_NQ_CONNECT:
-            siq_mutex.lock();
-            processNqConnect(connection);
-            siq_mutex.unlock();
-            break;
-            //-----------------------------------------
-        case MC_DRV_CMD_NOTIFY:
-            siq_mutex.lock();
-            processNotify(connection);
-            siq_mutex.unlock();
-            break;
-            //-----------------------------------------
-        case MC_DRV_CMD_MAP_BULK_BUF:
-            mobiCoreDevice->mutex_mcp.lock();
-            processMapBulkBuf(connection);
-            mobiCoreDevice->mutex_mcp.unlock();
-            break;
-            //-----------------------------------------
-        case MC_DRV_CMD_UNMAP_BULK_BUF:
-            mobiCoreDevice->mutex_mcp.lock();
-            processUnmapBulkBuf(connection);
-            mobiCoreDevice->mutex_mcp.unlock();
-            break;
-            //-----------------------------------------
-        case MC_DRV_CMD_GET_VERSION:
-            processGetVersion(connection);
-            break;
-            //-----------------------------------------
-        case MC_DRV_CMD_GET_MOBICORE_VERSION:
-            mobiCoreDevice->mutex_mcp.lock();
-            processGetMobiCoreVersion(connection);
-            mobiCoreDevice->mutex_mcp.unlock();
-            break;
-            //-----------------------------------------
-            /* Registry functionality */
-            // Write Registry Data
-        case MC_DRV_REG_STORE_AUTH_TOKEN:
-        case MC_DRV_REG_WRITE_ROOT_CONT:
-        case MC_DRV_REG_WRITE_SP_CONT:
-        case MC_DRV_REG_WRITE_TL_CONT:
-        case MC_DRV_REG_WRITE_SO_DATA:
-        case MC_DRV_REG_STORE_TA_BLOB:
-            reg_mutex.lock();
-            processRegistryWriteData(mcDrvCommandHeader.commandId, connection);
-            reg_mutex.unlock();
-            break;
-            //-----------------------------------------
-            // Read Registry Data
-        case MC_DRV_REG_READ_AUTH_TOKEN:
-        case MC_DRV_REG_READ_ROOT_CONT:
-        case MC_DRV_REG_READ_SP_CONT:
-        case MC_DRV_REG_READ_TL_CONT:
-            reg_mutex.lock();
-            processRegistryReadData(mcDrvCommandHeader.commandId, connection);
-            reg_mutex.unlock();
-            break;
-            //-----------------------------------------
-            // Delete registry data
-        case MC_DRV_REG_DELETE_AUTH_TOKEN:
-        case MC_DRV_REG_DELETE_ROOT_CONT:
-        case MC_DRV_REG_DELETE_SP_CONT:
-        case MC_DRV_REG_DELETE_TL_CONT:
-            reg_mutex.lock();
-            processRegistryDeleteData(mcDrvCommandHeader.commandId, connection);
-            reg_mutex.unlock();
-            break;
-            //-----------------------------------------
-        default:
-            LOG_E("Unknown command: %d=0x%x",
-                  mcDrvCommandHeader.commandId,
-                  mcDrvCommandHeader.commandId);
-            ret = false;
-            break;
-        }
-    } while (0);
+    *command_id = mcDrvCommandHeader.commandId;
+    return true;
+}
 
-    LOG_I("handleConnection()<-------");
+void MobiCoreDriverDaemon::handleCommand(Connection *connection, uint32_t command_id) {
+    // This is the big lock around everything the Daemon does, including socket and MCI access
+    static CMutex reg_mutex;
+    static CMutex siq_mutex;
 
-    return ret;
+    LOG_I("%s()==== %p %d", __FUNCTION__, connection, command_id);
+    switch (command_id) {
+        //-----------------------------------------
+    case MC_DRV_CMD_OPEN_DEVICE:
+        mobiCoreDevice->mutex_mcp.lock();
+        processOpenDevice(connection);
+        mobiCoreDevice->mutex_mcp.unlock();
+        break;
+        //-----------------------------------------
+    case MC_DRV_CMD_CLOSE_DEVICE:
+        mobiCoreDevice->mutex_mcp.lock();
+        processCloseDevice(connection);
+        mobiCoreDevice->mutex_mcp.unlock();
+        break;
+        //-----------------------------------------
+    case MC_DRV_CMD_OPEN_SESSION:
+        mobiCoreDevice->mutex_mcp.lock();
+        processOpenSession(connection, false);
+        mobiCoreDevice->mutex_mcp.unlock();
+        break;
+        //-----------------------------------------
+    case MC_DRV_CMD_OPEN_TRUSTLET:
+        mobiCoreDevice->mutex_mcp.lock();
+        processOpenTrustlet(connection);
+        mobiCoreDevice->mutex_mcp.unlock();
+        break;
+        //-----------------------------------------
+    case MC_DRV_CMD_OPEN_TRUSTED_APP:
+        mobiCoreDevice->mutex_mcp.lock();
+        processOpenSession(connection, true);
+        mobiCoreDevice->mutex_mcp.unlock();
+        break;
+        //-----------------------------------------
+    case MC_DRV_CMD_CLOSE_SESSION:
+        mobiCoreDevice->mutex_mcp.lock();
+        processCloseSession(connection);
+        mobiCoreDevice->mutex_mcp.unlock();
+        break;
+        //-----------------------------------------
+    case MC_DRV_CMD_NQ_CONNECT:
+        siq_mutex.lock();
+        processNqConnect(connection);
+        siq_mutex.unlock();
+        break;
+        //-----------------------------------------
+    case MC_DRV_CMD_NOTIFY:
+        siq_mutex.lock();
+        processNotify(connection);
+        siq_mutex.unlock();
+        break;
+        //-----------------------------------------
+    case MC_DRV_CMD_MAP_BULK_BUF:
+        mobiCoreDevice->mutex_mcp.lock();
+        processMapBulkBuf(connection);
+        mobiCoreDevice->mutex_mcp.unlock();
+        break;
+        //-----------------------------------------
+    case MC_DRV_CMD_UNMAP_BULK_BUF:
+        mobiCoreDevice->mutex_mcp.lock();
+        processUnmapBulkBuf(connection);
+        mobiCoreDevice->mutex_mcp.unlock();
+        break;
+        //-----------------------------------------
+    case MC_DRV_CMD_GET_VERSION:
+        processGetVersion(connection);
+        break;
+        //-----------------------------------------
+    case MC_DRV_CMD_GET_MOBICORE_VERSION:
+        mobiCoreDevice->mutex_mcp.lock();
+        processGetMobiCoreVersion(connection);
+        mobiCoreDevice->mutex_mcp.unlock();
+        break;
+        //-----------------------------------------
+        /* Registry functionality */
+        // Write Registry Data
+    case MC_DRV_REG_STORE_AUTH_TOKEN:
+    case MC_DRV_REG_WRITE_ROOT_CONT:
+    case MC_DRV_REG_WRITE_SP_CONT:
+    case MC_DRV_REG_WRITE_TL_CONT:
+    case MC_DRV_REG_WRITE_SO_DATA:
+    case MC_DRV_REG_STORE_TA_BLOB:
+        reg_mutex.lock();
+        processRegistryWriteData(command_id, connection);
+        reg_mutex.unlock();
+        break;
+        //-----------------------------------------
+        // Read Registry Data
+    case MC_DRV_REG_READ_AUTH_TOKEN:
+    case MC_DRV_REG_READ_ROOT_CONT:
+    case MC_DRV_REG_READ_SP_CONT:
+    case MC_DRV_REG_READ_TL_CONT:
+        reg_mutex.lock();
+        processRegistryReadData(command_id, connection);
+        reg_mutex.unlock();
+        break;
+        //-----------------------------------------
+        // Delete registry data
+    case MC_DRV_REG_DELETE_AUTH_TOKEN:
+    case MC_DRV_REG_DELETE_ROOT_CONT:
+    case MC_DRV_REG_DELETE_SP_CONT:
+    case MC_DRV_REG_DELETE_TL_CONT:
+        reg_mutex.lock();
+        processRegistryDeleteData(command_id, connection);
+        reg_mutex.unlock();
+        break;
+    }
+
+    LOG_I("%s()<------- %p", __FUNCTION__, connection);
 }
 
 //------------------------------------------------------------------------------
@@ -1296,6 +1335,7 @@ void terminateDaemon(
 )
 {
     LOG_E("Signal %d received\n", signum);
+    exit(EXIT_FAILURE);
 }
 
 //------------------------------------------------------------------------------

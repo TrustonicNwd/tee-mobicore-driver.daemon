@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2015 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -58,6 +58,8 @@
 
 #include "Mci/mcimcp.h"
 
+#include "ClientLib.h"
+
 MC_CHECK_VERSION(DAEMON, 0, 2);
 
 /** Notification data structure. */
@@ -66,83 +68,29 @@ typedef struct {
     int32_t payload; /**< Additional notification information. */
 } notification_t;
 
-using namespace std;
-
-static list<Device *> devices;
-
-// Forward declarations.
-uint32_t getDaemonVersion(Connection *devCon, uint32_t *version);
-
-static CMutex devMutex;
-//------------------------------------------------------------------------------
-Device *resolveDeviceId(uint32_t deviceId)
-{
-    for (list<Device *>::iterator iterator = devices.begin();
-            iterator != devices.end();
-            ++iterator) {
-        Device  *device = (*iterator);
-
-        if (device->deviceId == deviceId) {
-            return device;
-        }
-    }
-    return NULL;
-}
-
-
-//------------------------------------------------------------------------------
-void addDevice(Device *device)
-{
-    devices.push_back(device);
-}
-
-
-//------------------------------------------------------------------------------
-bool removeDevice(uint32_t deviceId)
-{
-    for (list<Device *>::iterator iterator = devices.begin();
-            iterator != devices.end();
-            ++iterator) {
-        Device  *device = (*iterator);
-
-        if (device->deviceId == deviceId) {
-            devices.erase(iterator);
-            delete device;
-            return true;
-        }
-    }
-    return false;
-}
+#ifndef WIN32
+// Forward declaration
+static uint32_t getDaemonVersion(Connection *devCon, uint32_t *version);
+#endif
 
 //------------------------------------------------------------------------------
 // Parameter checking functions
 // Note that android-ndk renames __func__ to __PRETTY_FUNCTION__
 // see also /prebuilt/ndk/android-ndk-r4/platforms/android-8/arch-arm/usr/include/sys/cdefs.h
 
-#define CHECK_DEVICE(device) \
-    if (NULL == device) \
-    { \
-        LOG_E("Device has not been found"); \
-        mcResult = MC_DRV_ERR_UNKNOWN_DEVICE; \
-        break; \
-    }
-
-#define CHECK_DEVICE_CLOSED(device,  deviceId) \
-    if (NULL == device && MC_DEVICE_ID_DEFAULT == deviceId) \
-    { \
-        LOG_E("Device not open"); \
-        mcResult = MC_DRV_ERR_DAEMON_DEVICE_NOT_OPEN; \
-        break; \
-    } else \
-        CHECK_DEVICE(device);
-
-
-
 #define CHECK_NOT_NULL(X) \
     if (NULL == X) \
     { \
         LOG_E("Parameter \""#X "\" is NULL"); \
         mcResult = MC_DRV_ERR_NULL_POINTER; \
+        break; \
+    }
+
+#define CHECK_DEVICE(X) \
+    if (NULL == X) \
+    { \
+        LOG_E("Parameter \""#X "\" is NULL"); \
+        mcResult = MC_DRV_ERR_DAEMON_DEVICE_NOT_OPEN; \
         break; \
     }
 
@@ -189,25 +137,14 @@ bool removeDevice(uint32_t deviceId)
 #endif /* WIN32 */
 
 //------------------------------------------------------------------------------
-__MC_CLIENT_LIB_API mcResult_t mcOpenDevice(uint32_t deviceId)
+__MC_CLIENT_LIB_API mcResult_t mcOpenDevice_(Device** device)
 {
     mcResult_t mcResult = MC_DRV_OK;
 #ifndef WIN32
-
+    LOG_I("===%s(%p)===", __FUNCTION__, device);
     Connection *devCon = NULL;
 
-    devMutex.lock();
-    LOG_I("===%s(%i)===", __FUNCTION__, deviceId);
-
     do {
-        Device *device = resolveDeviceId(deviceId);
-        if (device != NULL) {
-            LOG_E("Device %d already opened", deviceId);
-            mcResult = MC_DRV_OK;
-            device->openCount++;
-            break;
-        }
-
         // Handle SIGPIPE inside write()
         //  If Daemon crashes and ClientLib writes to named socket,
         //  a sigpipe is send to ClientLib/TLC and kills it.
@@ -236,7 +173,7 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenDevice(uint32_t deviceId)
         LOG_I(" %s", errmsg);
 
         // Forward device open to the daemon and read result
-        SEND_TO_DAEMON(devCon, MC_DRV_CMD_OPEN_DEVICE, deviceId);
+        SEND_TO_DAEMON(devCon, MC_DRV_CMD_OPEN_DEVICE, 0);
 
         RECV_FROM_DAEMON(devCon, &mcResult);
 
@@ -247,26 +184,23 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenDevice(uint32_t deviceId)
 
         // there is no payload to read
 
-        device = new Device(deviceId, devCon);
-        mcResult = device->open("/dev/" MC_USER_DEVNODE);
+        Device* local_device = new Device(0, devCon);
+        mcResult = local_device->open("/dev/" MC_USER_DEVNODE);
         if (mcResult != MC_DRV_OK) {
-            delete device;
+            delete local_device;
             // devCon is freed in the Device destructor
             devCon = NULL;
             LOG_E("Could not open device file: /dev/%s", MC_USER_DEVNODE);
             break;
         }
 
-        addDevice(device);
-        device->openCount++;
-
+        *device = local_device;
     } while (false);
 
-    devMutex.unlock();
     if (mcResult != MC_DRV_OK) {
         if (devCon != NULL)
             delete devCon;
-        LOG_I(" Device not opened.");
+        LOG_I(" Device not open.");
     } else {
         LOG_I(" Successfully opened the device.");
     }
@@ -277,30 +211,22 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenDevice(uint32_t deviceId)
 
 
 //------------------------------------------------------------------------------
-__MC_CLIENT_LIB_API mcResult_t mcCloseDevice(
-    uint32_t deviceId
+__MC_CLIENT_LIB_API mcResult_t mcCloseDevice_(
+    Device*             device
 )
 {
     mcResult_t mcResult = MC_DRV_OK;
 #ifndef WIN32
 
-	devMutex.lock();
-    LOG_I("===%s(%i)===", __FUNCTION__, deviceId);
+    LOG_I("===%s(%p)===", __FUNCTION__, device);
     do {
-        Device *device = resolveDeviceId(deviceId);
-        CHECK_DEVICE_CLOSED(device, deviceId);
-
+        CHECK_DEVICE(device);
         Connection *devCon = device->connection;
-
-        if (device->openCount != 1) {
-            device->openCount--;
-            break;
-        }
 
         // Check if daemon is still alive
         if (!devCon->isConnectionAlive()) {
-            removeDevice(deviceId);
-            LOG_E("Daemon is  dead removing device");
+            device->setInvalid();
+            LOG_E("Daemon is dead removing device");
             mcResult = MC_DRV_ERR_DAEMON_UNREACHABLE;
             break;
         }
@@ -322,11 +248,8 @@ __MC_CLIENT_LIB_API mcResult_t mcCloseDevice(
             break;
         }
 
-        removeDevice(deviceId);
-
+        device->setInvalid();
     } while (false);
-
-    devMutex.unlock();
 
 #endif /* WIN32 */
 	return mcResult;
@@ -334,24 +257,70 @@ __MC_CLIENT_LIB_API mcResult_t mcCloseDevice(
 
 
 //------------------------------------------------------------------------------
-__MC_CLIENT_LIB_API mcResult_t mcOpenSession(
-    mcSessionHandle_t  *session,
-    const mcUuid_t     *uuid,
-    uint8_t            *tci,
-    uint32_t           len
+__MC_CLIENT_LIB_API bool mcDeviceIsValid_(
+    Device*             device
+)
+{
+    if (!device) {
+        return false;
+    }
+    return device->isValid();
+}
+
+
+//------------------------------------------------------------------------------
+__MC_CLIENT_LIB_API mcResult_t mcDeviceHasOpenSessions_(
+    Device*             device
+)
+{
+    mcResult_t mcResult = MC_DRV_OK;
+
+#ifndef WIN32
+    LOG_I("===%s(%p)===", __FUNCTION__, device);
+    do {
+        CHECK_DEVICE(device);
+        Connection *devCon = device->connection;
+
+        // Check if daemon is still alive
+        if (!devCon->isConnectionAlive()) {
+            device->setInvalid();
+            LOG_E("Daemon is  dead removing device");
+            mcResult = MC_DRV_ERR_DAEMON_UNREACHABLE;
+            break;
+        }
+
+        // Return if not all sessions have been closed
+        if (device->hasSessions()) {
+            LOG_E("Trying to close device while sessions are still pending.");
+            mcResult = MC_DRV_ERR_SESSION_PENDING;
+            break;
+        }
+    } while (false);
+#endif /* WIN32 */
+
+    return mcResult;
+}
+
+
+//------------------------------------------------------------------------------
+__MC_CLIENT_LIB_API mcResult_t mcOpenSession_(
+    Device*             device,
+    uint32_t*           sessionId,
+    const mcUuid_t*    uuid,
+    uint8_t*            tci,
+    uint32_t            len
 )
 {
     mcResult_t mcResult = MC_DRV_OK;
 #ifndef WIN32
 
-    devMutex.lock();
     LOG_I("===%s()===", __FUNCTION__);
 
     BulkBufferDescriptor *bulkBuf = NULL;
 
     do {
         uint32_t handle = 0;
-        CHECK_NOT_NULL(session);
+        CHECK_DEVICE(device);
         CHECK_NOT_NULL(uuid);
 
         if (len > MC_MAX_TCI_LEN) {
@@ -359,10 +328,6 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenSession(
             mcResult = MC_DRV_ERR_TCI_TOO_BIG;
             break;
         }
-
-        // Get the device associated with the given session
-        Device *device = resolveDeviceId(session->deviceId);
-        CHECK_DEVICE(device);
 
         Connection *devCon = device->connection;
 
@@ -394,7 +359,7 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenSession(
         }
 
         SEND_TO_DAEMON(devCon, MC_DRV_CMD_OPEN_SESSION,
-                       session->deviceId,
+                       0,
                        *uuid,
                        (uint32_t)((uintptr_t)tci & 0xFFF),
                        handle,
@@ -452,7 +417,8 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenSession(
         RECV_FROM_DAEMON(devCon, &rspOpenSessionPayload);
 
         // Register session with handle
-        session->sessionId = rspOpenSessionPayload.sessionId;
+        *sessionId = rspOpenSessionPayload.sessionId;
+
 
         LOG_I(" Service is started. Setting up channel for notifications.");
 
@@ -469,8 +435,8 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenSession(
 
         do {
             SEND_TO_DAEMON(sessionConnection, MC_DRV_CMD_NQ_CONNECT,
-                           session->deviceId,
-                           session->sessionId,
+                           0,
+                           *sessionId,
                            rspOpenSessionPayload.deviceSessionId,
                            rspOpenSessionPayload.sessionMagic);
 
@@ -492,12 +458,13 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenSession(
         // there is no payload.
 
         // Session has been established, new session object must be created
-        Session *sessionObj = device->createNewSession(session->sessionId, sessionConnection);
+        Session *sessionObj = device->createNewSession(*sessionId, sessionConnection);
+
         // If the session tci was a mapped buffer then register it
         if (bulkBuf)
             sessionObj->addBulkBuf(bulkBuf);
 
-        LOG_I(" Successfully opened session %03x.", session->sessionId);
+        LOG_I(" Successfully opened session %03x.", *sessionId);
 
     } while (false);
 
@@ -508,18 +475,18 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenSession(
 // TODO: enable as soon as there are more error codes
 //    if (mcResult == MC_DRV_ERR_SOCKET_WRITE || mcResult == MC_DRV_ERR_SOCKET_READ) {
 //        LOG_E("Connection is dead, removing device.");
-//        removeDevice(session->deviceId);
+//        device->setInvalid();
 //    }
 
-    devMutex.unlock();
-
+    
 #endif /* WIN32 */
     return mcResult;
 }
 
 //------------------------------------------------------------------------------
-__MC_CLIENT_LIB_API mcResult_t mcOpenTrustlet(
-    mcSessionHandle_t  *session,
+__MC_CLIENT_LIB_API mcResult_t mcOpenTrustlet_(
+    Device*             device,
+    uint32_t*           sessionId,
     mcSpid_t           spid,
     uint8_t            *trustlet,
     uint32_t           tlen,
@@ -530,14 +497,13 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenTrustlet(
     mcResult_t mcResult = MC_DRV_OK;
 #ifndef WIN32
 
-    devMutex.lock();
     LOG_I("===%s()===", __FUNCTION__);
 
     BulkBufferDescriptor *bulkBuf = NULL;
 
     do {
         uint32_t handle = 0;
-        CHECK_NOT_NULL(session);
+        CHECK_DEVICE(device);
         CHECK_NOT_NULL(trustlet);
         CHECK_NOT_NULL(tci);
 
@@ -546,10 +512,6 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenTrustlet(
             mcResult = MC_DRV_ERR_TCI_TOO_BIG;
             break;
         }
-
-        // Get the device associated with the given session
-        Device *device = resolveDeviceId(session->deviceId);
-        CHECK_DEVICE(device);
 
         Connection *devCon = device->connection;
 
@@ -575,7 +537,7 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenTrustlet(
         }
 
         SEND_TO_DAEMON(devCon, MC_DRV_CMD_OPEN_TRUSTLET,
-                       session->deviceId,
+                       0,
                        spid,
                        (uint32_t)tlen,
                        (uint32_t)((uintptr_t)tci & 0xFFF),
@@ -644,7 +606,7 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenTrustlet(
         RECV_FROM_DAEMON(devCon, &rspOpenSessionPayload);
 
         // Register session with handle
-        session->sessionId = rspOpenSessionPayload.sessionId;
+        *sessionId = rspOpenSessionPayload.sessionId;
 
         LOG_I(" Service is started. Setting up channel for notifications.");
 
@@ -661,8 +623,8 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenTrustlet(
 
         do {
             SEND_TO_DAEMON(sessionConnection, MC_DRV_CMD_NQ_CONNECT,
-                           session->deviceId,
-                           session->sessionId,
+                           0,
+                           *sessionId,
                            rspOpenSessionPayload.deviceSessionId,
                            rspOpenSessionPayload.sessionMagic);
 
@@ -685,12 +647,12 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenTrustlet(
         // there is no payload.
 
         // Session has been established, new session object must be created
-        Session *sessionObj = device->createNewSession(session->sessionId, sessionConnection);
+        Session *sessionObj = device->createNewSession(*sessionId, sessionConnection);
         // If the session tci was a mapped buffer then register it
         if (bulkBuf)
             sessionObj->addBulkBuf(bulkBuf);
 
-        LOG_I(" Successfully opened session %03x.", session->sessionId);
+        LOG_I(" Successfully opened session %03x.", *sessionId);
 
     } while (false);
 
@@ -701,18 +663,17 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenTrustlet(
 // TODO: enable as soon as there are more error codes
 //    if (mcResult == MC_DRV_ERR_SOCKET_WRITE || mcResult == MC_DRV_ERR_SOCKET_READ) {
 //        LOG_E("Connection is dead, removing device.");
-//        removeDevice(session->deviceId);
+//         device->setInvalid();
 //    }
-
-    devMutex.unlock();
 
 #endif /* WIN32 */
     return mcResult;
 }
 
 //------------------------------------------------------------------------------
-__MC_CLIENT_LIB_API mcResult_t mcOpenGPTA(
-    mcSessionHandle_t  *session,
+__MC_CLIENT_LIB_API mcResult_t mcOpenGPTA_(
+    Device*             device,
+    uint32_t*           sessionId,
     const mcUuid_t     *uuid,
     uint8_t            *tci,
     uint32_t           len
@@ -721,14 +682,14 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenGPTA(
     mcResult_t mcResult = MC_DRV_OK;
 
 #ifndef WIN32
-    devMutex.lock();
+    
     LOG_I("===%s()===", __FUNCTION__);
 
     BulkBufferDescriptor *bulkBuf = NULL;
 
     do {
         uint32_t handle = 0;
-        CHECK_NOT_NULL(session);
+        CHECK_DEVICE(device);
         CHECK_NOT_NULL(uuid);
 
         if (len > MC_MAX_TCI_LEN) {
@@ -736,10 +697,6 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenGPTA(
             mcResult = MC_DRV_ERR_TCI_TOO_BIG;
             break;
         }
-
-        // Get the device associated with the given session
-        Device *device = resolveDeviceId(session->deviceId);
-        CHECK_DEVICE(device);
 
         Connection *devCon = device->connection;
 
@@ -771,7 +728,7 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenGPTA(
         }
 
         SEND_TO_DAEMON(devCon, MC_DRV_CMD_OPEN_TRUSTED_APP,
-                       session->deviceId,
+                       0,
                        *uuid,
                        (uint32_t)((uintptr_t)tci & 0xFFF),
                        handle,
@@ -829,7 +786,7 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenGPTA(
         RECV_FROM_DAEMON(devCon, &rspOpenSessionPayload);
 
         // Register session with handle
-        session->sessionId = rspOpenSessionPayload.sessionId;
+        *sessionId = rspOpenSessionPayload.sessionId;
 
         LOG_I(" Service is started. Setting up channel for notifications.");
 
@@ -846,8 +803,8 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenGPTA(
 
         do {
             SEND_TO_DAEMON(sessionConnection, MC_DRV_CMD_NQ_CONNECT,
-                           session->deviceId,
-                           session->sessionId,
+                           0,
+                           *sessionId,
                            rspOpenSessionPayload.deviceSessionId,
                            rspOpenSessionPayload.sessionMagic);
 
@@ -869,12 +826,12 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenGPTA(
         // there is no payload.
 
         // Session has been established, new session object must be created
-        Session *sessionObj = device->createNewSession(session->sessionId, sessionConnection);
+        Session *sessionObj = device->createNewSession(*sessionId, sessionConnection);
         // If the session tci was a mapped buffer then register it
         if (bulkBuf)
             sessionObj->addBulkBuf(bulkBuf);
 
-        LOG_I(" Successfully opened session %03x.", session->sessionId);
+        LOG_I(" Successfully opened session %03x.", *sessionId);
 
     } while (false);
 
@@ -885,37 +842,34 @@ __MC_CLIENT_LIB_API mcResult_t mcOpenGPTA(
 // TODO: enable as soon as there are more error codes
 //    if (mcResult == MC_DRV_ERR_SOCKET_WRITE || mcResult == MC_DRV_ERR_SOCKET_READ) {
 //        LOG_E("Connection is dead, removing device.");
-//        removeDevice(session->deviceId);
+//        device->setInvalid();
 //    }
 
-    devMutex.unlock();
-
+    
 #endif /* WIN32 */
     return mcResult;
 }
 
 //------------------------------------------------------------------------------
-__MC_CLIENT_LIB_API mcResult_t mcCloseSession(mcSessionHandle_t *session)
+__MC_CLIENT_LIB_API mcResult_t mcCloseSession_( 
+    Device*             device,
+    uint32_t            sessionId
+    )
+
 {
     mcResult_t mcResult = MC_DRV_OK;
 #ifndef WIN32
 
-    LOG_I("===%s()===", __FUNCTION__);
-    devMutex.lock();
+    LOG_I("===%s()===", __FUNCTION__);  
     do {
-        CHECK_NOT_NULL(session);
-        LOG_I(" Closing session %03x.", session->sessionId);
-
-        Device *device = resolveDeviceId(session->deviceId);
         CHECK_DEVICE(device);
+        LOG_I(" Closing session %03x.", sessionId);
 
         Connection *devCon = device->connection;
+        Session *nqSession = device->resolveSessionId(sessionId);
+        CHECK_SESSION(nqSession, sessionId);
 
-        Session *nqSession = device->resolveSessionId(session->sessionId);
-
-        CHECK_SESSION(nqSession, session->sessionId);
-
-        SEND_TO_DAEMON(devCon, MC_DRV_CMD_CLOSE_SESSION, session->sessionId);
+        SEND_TO_DAEMON(devCon, MC_DRV_CMD_CLOSE_SESSION, sessionId);
 
         RECV_FROM_DAEMON(devCon, &mcResult);
 
@@ -926,7 +880,7 @@ __MC_CLIENT_LIB_API mcResult_t mcCloseSession(mcSessionHandle_t *session)
             break;
         }
 
-        bool r = device->removeSession(session->sessionId);
+        bool r = device->removeSession(sessionId);
         if (!r)
         {
             LOG_E("removeSession failed");
@@ -939,10 +893,9 @@ __MC_CLIENT_LIB_API mcResult_t mcCloseSession(mcSessionHandle_t *session)
 
     if (mcResult == MC_DRV_ERR_SOCKET_WRITE || mcResult == MC_DRV_ERR_SOCKET_READ) {
         LOG_E("Connection is dead, removing device.");
-        removeDevice(session->deviceId);
+        device->setInvalid();
     }
-
-    devMutex.unlock();
+    
 
 #endif /* WIN32 */
     return mcResult;
@@ -950,38 +903,33 @@ __MC_CLIENT_LIB_API mcResult_t mcCloseSession(mcSessionHandle_t *session)
 
 
 //------------------------------------------------------------------------------
-__MC_CLIENT_LIB_API mcResult_t mcNotify(
-    mcSessionHandle_t   *session
+__MC_CLIENT_LIB_API mcResult_t mcNotify_(
+    Device*             device,
+    uint32_t            sessionId
 )
 {
     mcResult_t mcResult = MC_DRV_OK;
 #ifndef WIN32
-
-	devMutex.lock();
+	
     LOG_I("===%s()===", __FUNCTION__);
 
     do {
-        CHECK_NOT_NULL(session);
-        LOG_I(" Notifying session %03x.", session->sessionId);
-
-        Device *device = resolveDeviceId(session->deviceId);
         CHECK_DEVICE(device);
+        LOG_I(" Notifying session %03x.", sessionId);
 
         Connection *devCon = device->connection;
+        Session *nqsession = device->resolveSessionId(sessionId);
+        CHECK_SESSION(nqsession, sessionId);
 
-        Session *nqsession = device->resolveSessionId(session->sessionId);
-        CHECK_SESSION(nqsession, session->sessionId);
+        SEND_TO_DAEMON(devCon, MC_DRV_CMD_NOTIFY, sessionId);
 
-        SEND_TO_DAEMON(devCon, MC_DRV_CMD_NOTIFY, session->sessionId);
         // Daemon will not return a response
     } while (false);
 
     if (mcResult == MC_DRV_ERR_SOCKET_WRITE) {
         LOG_E("Connection is dead, removing device.");
-        removeDevice(session->deviceId);
+        device->setInvalid();
     }
-
-    devMutex.unlock();
 
 #endif /* WIN32 */
     return mcResult;
@@ -989,31 +937,24 @@ __MC_CLIENT_LIB_API mcResult_t mcNotify(
 
 
 //------------------------------------------------------------------------------
-__MC_CLIENT_LIB_API mcResult_t mcWaitNotification(
-    mcSessionHandle_t  *session,
+__MC_CLIENT_LIB_API mcResult_t mcWaitNotification_(
+    Device*             device,
+    uint32_t            sessionId,
     int32_t            timeout
 )
 {
     mcResult_t mcResult = MC_DRV_OK;
 #ifndef WIN32
 
-    // TODO-2012-11-02-gurel: devMutex locking and unlocking had to be commented out
-    // below. Otherwise, when there are multiple threads in Nwd TLC side, we endup a
-    // deadlock situation, e.g. one thread waits for notification and another one sends
-    // notification.
-
-    //devMutex.lock();
     LOG_I("===%s()===", __FUNCTION__);
 
     do {
-        CHECK_NOT_NULL(session);
-        LOG_I(" Waiting for notification of session %03x.", session->sessionId);
-
-        Device *device = resolveDeviceId(session->deviceId);
+        
         CHECK_DEVICE(device);
+        LOG_I(" Waiting for notification of session %03x.", sessionId);
 
-        Session  *nqSession = device->resolveSessionId(session->sessionId);
-        CHECK_SESSION(nqSession, session->sessionId);
+        Session  *nqSession = device->resolveSessionId(sessionId);
+        CHECK_SESSION(nqSession, sessionId);
 
         Connection *nqconnection = nqSession->notificationConnection;
         uint32_t count = 0;
@@ -1043,7 +984,7 @@ __MC_CLIENT_LIB_API mcResult_t mcWaitNotification(
             }
             if (count == 0 && numRead == 0 ) {
                 LOG_E("Connection is dead, removing device.");
-                removeDevice(session->deviceId);
+                device->setInvalid();
                 mcResult = MC_DRV_ERR_NOTIFICATION;
                 break;
             }
@@ -1079,8 +1020,7 @@ __MC_CLIENT_LIB_API mcResult_t mcWaitNotification(
         } // for(;;)
 
     } while (false);
-
-    //devMutex.unlock();
+    
 
 #endif /* WIN32 */
     return mcResult;
@@ -1088,29 +1028,21 @@ __MC_CLIENT_LIB_API mcResult_t mcWaitNotification(
 
 
 //------------------------------------------------------------------------------
-__MC_CLIENT_LIB_API mcResult_t mcMallocWsm(
-    uint32_t    deviceId,
-    uint32_t    /*align*/,
-    uint32_t    len,
-    uint8_t     **wsm,
-    uint32_t    /*wsmFlags*/)
+__MC_CLIENT_LIB_API mcResult_t mcMallocWsm_(
+    Device*             device,
+    uint32_t            len,
+    uint8_t**           wsm
+)
+
 {
     mcResult_t mcResult = MC_DRV_ERR_UNKNOWN;
 #ifndef WIN32
 
     LOG_I("===%s(len=%i)===", __FUNCTION__, len);
-
-    devMutex.lock();
-
+  
     do {
-        Device *device = resolveDeviceId(deviceId);
-
-        // Is the device known
-        // CHECK_DEVICE(device);
-
-        // Is the device opened.
-        CHECK_DEVICE_CLOSED(device, deviceId)
-
+        CHECK_DEVICE(device);
+        
         CHECK_NOT_NULL(wsm);
 
         CWsm_ptr pWsm;
@@ -1124,8 +1056,7 @@ __MC_CLIENT_LIB_API mcResult_t mcMallocWsm(
         mcResult = MC_DRV_OK;
 
     } while (false);
-
-    devMutex.unlock();
+    
 
 #endif /* WIN32 */
     return mcResult;
@@ -1133,30 +1064,20 @@ __MC_CLIENT_LIB_API mcResult_t mcMallocWsm(
 
 
 //------------------------------------------------------------------------------
-__MC_CLIENT_LIB_API mcResult_t mcFreeWsm(
-    uint32_t    deviceId,
-    uint8_t     *wsm
+__MC_CLIENT_LIB_API mcResult_t mcFreeWsm_(
+    Device*             device,
+    uint8_t*            wsm
 )
 {
     mcResult_t mcResult = MC_DRV_ERR_UNKNOWN;
 #ifndef WIN32
 
-    Device *device;
-
-    devMutex.lock();
-
+    
     LOG_I("===%s(%p)===", __FUNCTION__, wsm);
 
     do {
 
-        // Get the device associated wit the given session
-        device = resolveDeviceId(deviceId);
-
-        // Is the device known
-        CHECK_DEVICE(device);
-
-        // Is the device opened.
-        CHECK_DEVICE_CLOSED(device, deviceId)
+        CHECK_DEVICE(device);       
 
         // find WSM object
         CWsm_ptr pWsm = device->findContiguousWsm(wsm);
@@ -1175,16 +1096,16 @@ __MC_CLIENT_LIB_API mcResult_t mcFreeWsm(
         mcResult = MC_DRV_OK;
 
     } while (false);
-
-    devMutex.unlock();
+   
 
 #endif /* WIN32 */
     return mcResult;
 }
 
 //------------------------------------------------------------------------------
-__MC_CLIENT_LIB_API mcResult_t mcMap(
-    mcSessionHandle_t  *sessionHandle,
+__MC_CLIENT_LIB_API mcResult_t mcMap_(
+    Device*             device,
+    uint32_t            sessionId,
     void               *buf,
     uint32_t           bufLen,
     mcBulkMap_t        *mapInfo
@@ -1196,29 +1117,20 @@ __MC_CLIENT_LIB_API mcResult_t mcMap(
     static CMutex mutex;
 
     LOG_I("===%s()===", __FUNCTION__);
-
-    devMutex.lock();
+    
 
     do {
-        CHECK_NOT_NULL(sessionHandle);
+        CHECK_DEVICE(device);
         CHECK_NOT_NULL(mapInfo);
         CHECK_NOT_NULL(buf);
-
-        // Determine device the session belongs to
-        Device *device = resolveDeviceId(sessionHandle->deviceId);
-        // Is the device known
-        CHECK_DEVICE(device);
-
-        // Is the device opened.
-        CHECK_DEVICE_CLOSED(device, sessionHandle->deviceId)
 
         Connection *devCon = device->connection;
 
         // Get session
-        Session *session = device->resolveSessionId(sessionHandle->sessionId);
-        CHECK_SESSION(session, sessionHandle->sessionId);
+        Session *session = device->resolveSessionId(sessionId);
+        CHECK_SESSION(session, sessionId);
 
-        LOG_I(" Mapping %p to session %03x.", buf, sessionHandle->sessionId);
+        LOG_I(" Mapping %p to session %03x.", buf, sessionId);
 
         // Register mapped bulk buffer to Kernel Module and keep mapped bulk buffer in mind
         BulkBufferDescriptor *bulkBuf;
@@ -1229,7 +1141,7 @@ __MC_CLIENT_LIB_API mcResult_t mcMap(
         }
 
         SEND_TO_DAEMON(devCon, MC_DRV_CMD_MAP_BULK_BUF,
-                       session->sessionId,
+                       sessionId,
                        bulkBuf->handle,
                        0,
                        (uint32_t)((uintptr_t)bulkBuf->virtAddr & 0xFFF),
@@ -1270,18 +1182,18 @@ __MC_CLIENT_LIB_API mcResult_t mcMap(
 //    // TODO: enable as soon as there are more error codes
 //    if (mcResult == MC_DRV_ERR_SOCKET_WRITE || mcResult == MC_DRV_ERR_SOCKET_READ) {
 //        LOG_E("Connection is dead, removing device.");
-//        removeDevice(sessionHandle->deviceId);
+//        device->setInvalid();
 //    }
 
-    devMutex.unlock();
-
+    
 #endif /* WIN32 */
     return mcResult;
 }
 
 //------------------------------------------------------------------------------
-__MC_CLIENT_LIB_API mcResult_t mcUnmap(
-    mcSessionHandle_t  *sessionHandle,
+__MC_CLIENT_LIB_API mcResult_t mcUnmap_(
+    Device*             device,
+    uint32_t            sessionId,
     void               *buf,
     mcBulkMap_t        *mapInfo
 )
@@ -1293,10 +1205,9 @@ __MC_CLIENT_LIB_API mcResult_t mcUnmap(
 
     LOG_I("===%s()===", __FUNCTION__);
 
-    devMutex.lock();
-
+    
     do {
-        CHECK_NOT_NULL(sessionHandle);
+        CHECK_DEVICE(device);
         CHECK_NOT_NULL(mapInfo);
         CHECK_NOT_NULL(buf);
         if (mapInfo->sVirtualAddr == 0) {
@@ -1304,20 +1215,12 @@ __MC_CLIENT_LIB_API mcResult_t mcUnmap(
             mcResult = MC_DRV_ERR_NULL_POINTER;
             break;
         }
-
-        // Determine device the session belongs to
-        Device *device = resolveDeviceId(sessionHandle->deviceId);
-        // Is the device known
-        CHECK_DEVICE(device);
-
-        // Is the device opened.
-        CHECK_DEVICE_CLOSED(device, sessionHandle->deviceId)
-
+        
         Connection  *devCon = device->connection;
 
         // Get session
-        Session *session = device->resolveSessionId(sessionHandle->sessionId);
-        CHECK_SESSION(session, sessionHandle->sessionId);
+        Session *session = device->resolveSessionId(sessionId);
+        CHECK_SESSION(session, sessionId);
 
         uint32_t handle = session->getBufHandle((uint32_t)mapInfo->sVirtualAddr, mapInfo->sVirtualLen);
         if (handle == 0) {
@@ -1326,10 +1229,10 @@ __MC_CLIENT_LIB_API mcResult_t mcUnmap(
             break;
         }
 
-        LOG_I(" Unmapping %p(handle=%u) from session %03x.", buf, handle, sessionHandle->sessionId);
+        LOG_I(" Unmapping %p(handle=%u) from session %03x.", buf, handle, sessionId);
 
         SEND_TO_DAEMON(devCon, MC_DRV_CMD_UNMAP_BULK_BUF,
-                       session->sessionId,
+                       sessionId,
                        handle,
                        (uint32_t)mapInfo->sVirtualAddr,
                        mapInfo->sVirtualLen);
@@ -1357,10 +1260,9 @@ __MC_CLIENT_LIB_API mcResult_t mcUnmap(
 
     if (mcResult == MC_DRV_ERR_SOCKET_WRITE || mcResult == MC_DRV_ERR_SOCKET_READ) {
         LOG_E("Connection is dead, removing device.");
-        removeDevice(sessionHandle->deviceId);
+        device->setInvalid();
     }
-
-    devMutex.unlock();
+    
 
 #endif /* WIN32 */
     return mcResult;
@@ -1368,64 +1270,50 @@ __MC_CLIENT_LIB_API mcResult_t mcUnmap(
 
 
 //------------------------------------------------------------------------------
-__MC_CLIENT_LIB_API mcResult_t mcGetSessionErrorCode(
-    mcSessionHandle_t   *session,
+__MC_CLIENT_LIB_API mcResult_t mcGetSessionErrorCode_(
+    Device*             device,
+    uint32_t            sessionId,
     int32_t             *lastErr
 )
 {
     mcResult_t mcResult = MC_DRV_OK;
 #ifndef WIN32
 
-    devMutex.lock();
+    
     LOG_I("===%s()===", __FUNCTION__);
 
     do {
-        CHECK_NOT_NULL(session);
+        CHECK_DEVICE(device);
         CHECK_NOT_NULL(lastErr);
 
-        // Get device
-        Device *device = resolveDeviceId(session->deviceId);
-        // Is the device known
-        CHECK_DEVICE(device);
-
-        // Is the device opened.
-        CHECK_DEVICE_CLOSED(device, session->deviceId)
-
         // Get session
-        Session *nqsession = device->resolveSessionId(session->sessionId);
-        CHECK_SESSION(nqsession, session->sessionId);
+        Session *nqsession = device->resolveSessionId(sessionId);
+        CHECK_SESSION(nqsession, sessionId);
 
         // get session error code from session
         *lastErr = nqsession->getLastErr();
 
-    } while (false);
-
-    devMutex.unlock();
+    } while (false);    
 
 #endif /* WIN32 */
 	return mcResult;
 }
 
 //------------------------------------------------------------------------------
-__MC_CLIENT_LIB_API mcResult_t mcGetMobiCoreVersion(
-    uint32_t  deviceId,
-    mcVersionInfo_t *versionInfo
+__MC_CLIENT_LIB_API mcResult_t mcGetMobiCoreVersion_(
+    Device*             device,
+    mcVersionInfo_t*    versionInfo
+
 )
 {
     mcResult_t mcResult = MC_DRV_OK;
 #ifndef WIN32
-
-    devMutex.lock();
+    
     LOG_I("===%s()===", __FUNCTION__);
 
     do {
-        Device *device = resolveDeviceId(deviceId);
 
-        // Is the device known
         CHECK_DEVICE(device);
-
-        // Is the device opened.
-        CHECK_DEVICE_CLOSED(device, deviceId)
 
         CHECK_NOT_NULL(versionInfo);
 
@@ -1451,8 +1339,7 @@ __MC_CLIENT_LIB_API mcResult_t mcGetMobiCoreVersion(
         *versionInfo = versionInfo_socket;
 
     } while (0);
-
-    devMutex.unlock();
+    
 
 #endif /* WIN32 */
     return mcResult;
@@ -1461,8 +1348,8 @@ __MC_CLIENT_LIB_API mcResult_t mcGetMobiCoreVersion(
 #ifndef WIN32
 //------------------------------------------------------------------------------
 // Only called by mcOpenDevice()
-// Must be taken with devMutex locked.
-uint32_t getDaemonVersion(Connection *devCon, uint32_t *version)
+static uint32_t getDaemonVersion(Connection *devCon, uint32_t *version)
+
 {
     mcResult_t mcResult = MC_DRV_OK;
     uint32_t v = 0;

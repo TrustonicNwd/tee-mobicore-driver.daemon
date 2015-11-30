@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2015 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -65,7 +65,14 @@ mcResult_t CMcKMod::mapWsm(
     }
 
     // mapping response data is in the buffer
-    struct mc_ioctl_map mapParams;
+    struct mc_ioctl_map mapParams = {    
+		len: len,
+        handle: 0,
+        phys_addr: 0,
+        rfu: 0,
+        reused: 0,
+    };
+
 
     mapParams.len = len;
     ret = ioctl(fdKMod, MC_IO_MAP_WSM, &mapParams);
@@ -105,7 +112,14 @@ mcResult_t CMcKMod::mapMCI(
 {
     LOG_I("Mapping MCI: len=%d", len);
     // mapping response data is in the buffer
-    struct mc_ioctl_map mapParams;
+    struct mc_ioctl_map mapParams = {
+		len: len,
+        handle: 0,
+        phys_addr: 0,
+        rfu: 0,
+        reused: 0,
+    };
+
 
     mapParams.len = len;
     if (!isOpen()) {
@@ -211,7 +225,13 @@ int CMcKMod::fcInfo(uint32_t extInfoId, uint32_t *pState, uint32_t *pExtInfo)
     }
 
     // Init MC with NQ and MCP buffer addresses
-    struct mc_ioctl_info fcInfoParams;
+    struct mc_ioctl_info fcInfoParams = {
+        ext_info_id: extInfoId,
+        state: 0,
+        ext_info: 0,
+    };
+
+
 
     fcInfoParams.ext_info_id = extInfoId;
     ret = ioctl(fdKMod, MC_IO_INFO, &fcInfoParams);
@@ -314,7 +334,14 @@ mcResult_t CMcKMod::registerWsmL2(
         return MC_DRV_ERR_KMOD_NOT_OPEN;
     }
 
-    struct mc_ioctl_reg_wsm params;
+      struct mc_ioctl_reg_wsm params = {
+        buffer: (uintptr_t) buffer,
+        len: len,
+        pid: pid,
+        handle: 0,
+        table_phys: 0,
+    };
+
 
     params.buffer = (uintptr_t)buffer;
     params.len = len;

@@ -140,6 +140,8 @@ struct MC_DRV_CMD_OPEN_TRUSTLET_struct {
     uint32_t  tci;
     uint32_t  handle;
     uint32_t  len;
+    // Followed by trustlet binary
+
 };
 
 typedef struct {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2015 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,8 +40,9 @@
 #include "tee_error.h"
 
 #if TBASE_API_LEVEL >= 3
+#include "tee_client_api_imp.h"
 
-#if (!defined(TEEC_EXPORT)) && __cplusplus
+#if (!defined(TEEC_EXPORT)) && defined(__cplusplus)
 #define TEEC_EXPORT       extern "C"
 #else
 #define TEEC_EXPORT
@@ -70,7 +71,6 @@ typedef struct {
 } TEEC_Value;
 
 
-#include "tee_client_api_imp.h"
 
 /* Type definitions */
 typedef struct TEEC_Context {
@@ -142,6 +142,8 @@ typedef struct TEEC_Operation {
 #define TEEC_LOGIN_USER_APPLICATION          0x00000005
 #define TEEC_LOGIN_GROUP_APPLICATION         0x00000006
 
+#define TEEC_TIMEOUT_INFINITE               0xFFFFFFFF
+
 #pragma GCC visibility push(default)
 
 TEEC_EXPORT TEEC_Result TEEC_InitializeContext(
@@ -167,7 +169,7 @@ TEEC_EXPORT TEEC_Result  TEEC_OpenSession (
     TEEC_Session    *session,
     const TEEC_UUID *destination,
     uint32_t        connectionMethod,
-    void            *connectionData,
+    const void            *connectionData,
     TEEC_Operation  *operation,
     uint32_t        *returnOrigin);
 

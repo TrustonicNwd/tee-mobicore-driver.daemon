@@ -1,35 +1,35 @@
 /*
-Copyright  © Trustonic Limited 2013
-
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification, 
-are permitted provided that the following conditions are met:
-
-  1. Redistributions of source code must retain the above copyright notice, this 
-     list of conditions and the following disclaimer.
-
-  2. Redistributions in binary form must reproduce the above copyright notice, 
-     this list of conditions and the following disclaimer in the documentation 
-     and/or other materials provided with the distribution.
-
-  3. Neither the name of the Trustonic Limited nor the names of its contributors 
-     may be used to endorse or promote products derived from this software 
-     without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
-OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Copyright (c) 2013 TRUSTONIC LIMITED
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the TRUSTONIC LIMITED nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 /*
-The content of this file is copied from b64.c (http://base64.sourceforge.net) 
+The content of this file is copied from b64.c (http://base64.sourceforge.net)
 and modified to work with memory buffers instead of files.
 
 The linebreak addition has been removed from the encoding part
@@ -70,7 +70,7 @@ static const char* cd64="|$$$}rstuvwxyz{$$$$$$$>?@ABCDEFGHIJKLMNOPQRSTUVW$$$$$$X
 
 
 static void decodeblock( unsigned char *in, unsigned char *out )
-{   
+{
     out[ 0 ] = (unsigned char ) (in[0] << 2 | in[1] >> 4);
     out[ 1 ] = (unsigned char ) (in[1] << 4 | in[2] >> 2);
     out[ 2 ] = (unsigned char ) (((in[2] << 6) & 0xc0) | in[3]);
@@ -98,46 +98,46 @@ size_t base64DecodeStringRemoveEndZero(const char* toBeDecoded, char** resultP)
 {
     size_t inSize;
     size_t outSize;
-    
+
     unsigned char in[ENCODEDSIZE];
     unsigned char out[PLAINSIZE];
     int v;
     int i, len;
-    int inIndex=0;
+    size_t inIndex=0;
     int outIndex=0;
 
     LOGD(">> base64DecodeStringRemoveEndZero");
     if(NULL==toBeDecoded) return 0;
 
-    inSize=strlen(toBeDecoded); 
+    inSize=strlen(toBeDecoded);
     outSize=((inSize*PLAINSIZE)/ENCODEDSIZE)+((inSize*PLAINSIZE)%ENCODEDSIZE);
     *resultP=(char *)malloc(outSize);
 
     if((*resultP)==NULL) return 0;
-    
+
     LOGD("in %d out %d", (int) inSize, (int) outSize);
 
 	*in = (unsigned char) 0;
 	*out = (unsigned char) 0;
-    
 
-    while( inIndex < inSize ) 
+
+    while( inIndex < inSize )
     {
-        for( len = 0, i = 0; i < ENCODEDSIZE && inIndex < inSize; i++ ) 
+        for( len = 0, i = 0; i < ENCODEDSIZE && inIndex < inSize; i++ )
         {
             v = 0;
             // skip characters that do not belong to decoded base64 and set v
-            while( inIndex < inSize && 0 == v ) 
+            while( inIndex < inSize && 0 == v )
             {
                 v = toBeDecoded[ inIndex++ ];
 
                 v = ((v < FIRSTB64ASCII || v > LASTB64ASCII) ? 0 : (int) cd64[ v - FIRSTB64ASCII ]);
-	     		if( v != 0 ) 
+	     		if( v != 0 )
                 {
                     v = ((v == (int)'$') ? 0 : v - 61);
                 }
             }
-            
+
             // set the character to in buffer, but only if it is not 0 (last character in toBeDecoded illegal)
             if( inIndex <= inSize )
             {
@@ -153,10 +153,10 @@ size_t base64DecodeStringRemoveEndZero(const char* toBeDecoded, char** resultP)
             }
         }
 
-        if( len > 0 ) 
+        if( len > 0 )
         {
             decodeblock( in, out );
-            for( i = 0; i < (len - 1); i++ ) 
+            for( i = 0; i < (len - 1); i++ )
             {
                 (*resultP)[outIndex++]=out[i];
             }
@@ -176,7 +176,7 @@ static void encodeblock( unsigned char *in, unsigned char *out, int len )
 }
 
 /**
-base64encode data to a NULL terminated string. 
+base64encode data to a NULL terminated string.
 
 @param toBeEncoded the buffer to be encoded
 @param length length of the buffer to be encoded
@@ -186,11 +186,11 @@ char* base64EncodeAddEndZero(const char* toBeEncoded, size_t length)
 {
     size_t outSize;
     char* resultP;
-    
+
     unsigned char in[PLAINSIZE];
 	unsigned char out[ENCODEDSIZE];
     int i, len;
-    int inIndex=0;
+    size_t inIndex=0;
     int outIndex=0;
 
     LOGD(">> base64EncodeAddEndZero %d %s", (int) length, ((toBeEncoded!=NULL)?"ptr ok":"NULL"));
@@ -206,31 +206,31 @@ char* base64EncodeAddEndZero(const char* toBeEncoded, size_t length)
     resultP[outSize-1]=0;
 
     LOGD("in %d out %d", (int) length, (int) outSize);
-    
+
 	*in = (unsigned char) 0;
 	*out = (unsigned char) 0;
 
-    while( inIndex < length ) 
+    while( inIndex < length )
     {
         len = 0;
-        for( i = 0; i < PLAINSIZE; i++ ) 
+        for( i = 0; i < PLAINSIZE; i++ )
         {
-            if( inIndex < length ) 
+            if( inIndex < length )
             {
                 in[i] = toBeEncoded[inIndex];
                 len++;
             }
-            else 
+            else
             {
                 in[i] = (unsigned char) 0;
             }
             inIndex++;
         }
-        
-        if( len > 0 ) 
+
+        if( len > 0 )
         {
             encodeblock( in, out, len );
-            for( i = 0; i < ENCODEDSIZE; i++ ) 
+            for( i = 0; i < ENCODEDSIZE; i++ )
             {
                 resultP[outIndex++]=out[i];
             }
