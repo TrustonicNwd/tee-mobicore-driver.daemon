@@ -1,33 +1,33 @@
 /*
-Copyright  © Trustonic Limited 2013
-
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification, 
-are permitted provided that the following conditions are met:
-
-  1. Redistributions of source code must retain the above copyright notice, this 
-     list of conditions and the following disclaimer.
-
-  2. Redistributions in binary form must reproduce the above copyright notice, 
-     this list of conditions and the following disclaimer in the documentation 
-     and/or other materials provided with the distribution.
-
-  3. Neither the name of the Trustonic Limited nor the names of its contributors 
-     may be used to endorse or promote products derived from this software 
-     without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
-OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
-OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Copyright (c) 2013 TRUSTONIC LIMITED
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the TRUSTONIC LIMITED nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 #include <string.h>
 #include <stdlib.h>
@@ -43,7 +43,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "rootpaErrors.h"
 #include "logging.h"
-#include "provisioningagent.h" 
+#include "provisioningagent.h"
 #include "registry.h"
 #include "contentmanager.h"
 #include "provisioningengine.h"
@@ -58,7 +58,7 @@ OF THE POSSIBILITY OF SUCH DAMAGE.
 See provisioningagent.h for description of this function.
 */
 rootpaerror_t executeCmpCommands(int numberOfCommands, CmpMessage* commandsP, CmpMessage* responsesP, uint32_t* internalError)
-{    
+{
     LOGD("executeCmpCommands");
     return executeContentManagementCommands(numberOfCommands, commandsP, responsesP, internalError);
 }
@@ -76,31 +76,31 @@ void closeSessionToCmtl()
 rootpaerror_t getVersion(int* tag, mcVersionInfo_t* versionP)
 {
     rootpaerror_t ret=ROOTPA_OK;
-    uint32_t internalError=0;          
-    CmpMessage command; 
+    uint32_t internalError=0;
+    CmpMessage command;
     CmpMessage response;
 
     LOGD(">>getVersion");
     memset(&command,0,sizeof(CmpMessage));
     memset(&response,0,sizeof(CmpMessage));
-    
+
     command.length=GET_VERSION_COMMAND_LENGTH;
     command.contentP=(uint8_t*)malloc(GET_VERSION_COMMAND_LENGTH);
     if(!command.contentP)
     {
         return ROOTPA_ERROR_OUT_OF_MEMORY;
     }
-    
+
     *((uint32_t*)command.contentP)=MC_CMP_CMD_GET_VERSION;
     command.hdr.ignoreError=false;
-        
+
     ret=executeContentManagementCommands(1, &command, &response, &internalError);
 
     if(ROOTPA_OK==ret && 0 == internalError)
     {
         if(response.length != sizeof(cmpRspGetVersion_t))
         {
-            ret=ROOTPA_ERROR_INTERNAL;        
+            ret=ROOTPA_ERROR_INTERNAL;
         }
         else
         {
@@ -119,7 +119,7 @@ rootpaerror_t getVersion(int* tag, mcVersionInfo_t* versionP)
     }
     else
     {
-        LOGE("getVersion, ERROR %d %d", ret, internalError);    
+        LOGE("getVersion, ERROR %d %d", ret, internalError);
     }
     free(response.contentP);
     free(command.contentP);
@@ -130,31 +130,31 @@ rootpaerror_t getVersion(int* tag, mcVersionInfo_t* versionP)
 rootpaerror_t getSuid(mcSuid_t* suidP)
 {
     rootpaerror_t  ret=ROOTPA_OK;
-    uint32_t internalError=0;          
-    CmpMessage command; 
+    uint32_t internalError=0;
+    CmpMessage command;
     CmpMessage response;
-        
+
     LOGD(">>getSuid");
     memset(&command,0,sizeof(CmpMessage));
     memset(&response,0,sizeof(CmpMessage));
-    
+
     command.length=GET_SUID_COMMAND_LENGTH;
     command.contentP=(uint8_t*)malloc(GET_SUID_COMMAND_LENGTH);
     if(!command.contentP)
     {
         return ROOTPA_ERROR_OUT_OF_MEMORY;
     }
-    
+
     *((uint32_t*)command.contentP)=MC_CMP_CMD_GET_SUID;
     command.hdr.ignoreError=false;
-    
+
     ret=executeContentManagementCommands(1, &command, &response, &internalError);
 
     if(ROOTPA_OK==ret && 0 == internalError)
     {
         if(response.length != sizeof(cmpRspGetSuid_t))
         {
-            ret=ROOTPA_ERROR_INTERNAL;        
+            ret=ROOTPA_ERROR_INTERNAL;
         }
         else
         {
@@ -175,30 +175,30 @@ rootpaerror_t  isRootContainerRegistered(bool* isRegisteredP)
     mcResult_t result;
     LOGD(">>isRootContainerRegistered");
     if(NULL==isRegisteredP) return ROOTPA_ERROR_ILLEGAL_ARGUMENT;
-    
-    result=regReadRoot(&rootContP, &rootContSize);  
+
+    result=regReadRoot(&rootContP, &rootContSize);
 
     if(MC_DRV_OK == result)
     {
         if(rootContP->cont.attribs.state != MC_CONT_STATE_UNREGISTERED)
         {
             *isRegisteredP=true;
-        }    
+        }
         else
         {
-            *isRegisteredP=false;        
+            *isRegisteredP=false;
         }
-        
+
     }
     else if(MC_DRV_ERR_INVALID_DEVICE_FILE == result)
     {
-        *isRegisteredP=false;    
+        *isRegisteredP=false;
     }
     else
     {
         ret=ROOTPA_ERROR_REGISTRY;
     }
-    
+
     free(rootContP);
 
     LOGD("<<isRootContainerRegistered %d", *isRegisteredP);
@@ -214,7 +214,7 @@ rootpaerror_t  isSpContainerRegistered(mcSpid_t spid, bool* isRegisteredP)
     if(NULL==isRegisteredP) return ROOTPA_ERROR_ILLEGAL_ARGUMENT;
 
     ret=getSpContainerState(spid, (mcContainerState_t*)&state);
-    
+
     if(ROOTPA_OK == ret)
     {
         if(state != MC_CONT_STATE_UNREGISTERED)
@@ -223,7 +223,7 @@ rootpaerror_t  isSpContainerRegistered(mcSpid_t spid, bool* isRegisteredP)
         }
         else
         {
-            *isRegisteredP=false;        
+            *isRegisteredP=false;
         }
     }
     else if(ROOTPA_ERROR_INTERNAL_NO_CONTAINER == ret)
@@ -231,7 +231,7 @@ rootpaerror_t  isSpContainerRegistered(mcSpid_t spid, bool* isRegisteredP)
         *isRegisteredP=false;
         ret=ROOTPA_OK;
     }
-    
+
     LOGD("<<isSpContainerRegistered %d", *isRegisteredP);
     return ret;
 }
@@ -246,7 +246,7 @@ rootpaerror_t getSpContainerState(mcSpid_t spid, mcContainerState_t* stateP)
     if(NULL==stateP) return ROOTPA_ERROR_ILLEGAL_ARGUMENT;
 
     result=regGetSpState(spid, stateP);
-    
+
     if(MC_DRV_ERR_INVALID_DEVICE_FILE == result)
     {
         ret=ROOTPA_ERROR_INTERNAL_NO_CONTAINER; // using this since it is changed to ROOTPA_OK and state NO_CONTAINER in the wrapper.
@@ -268,19 +268,19 @@ bool containerExists(mcUuid_t uuid)
 rootpaerror_t  getSpContainerStructure(mcSpid_t spid, SpContainerStructure* spContainerStructure)
 {
     rootpaerror_t ret=ROOTPA_OK;
-    SPCONTAINERP spP=NULL;    
+    SPCONTAINERP spP=NULL;
     uint32_t spContSize=0;
     mcResult_t result;
     int i;
     TLTCONTAINERP tltP=NULL;
     LOGD(">>getSpContainerStructure");
-    
+
     if(NULL==spContainerStructure) return ROOTPA_ERROR_ILLEGAL_ARGUMENT;
     memset(spContainerStructure, 0xFF, sizeof(SpContainerStructure));
-    spContainerStructure->nbrOfTlts=0;    
+    spContainerStructure->nbrOfTlts=0;
 
     result=regReadSp(spid, &spP, &spContSize);
-    
+
     if(MC_DRV_OK == result)
     {
         spContainerStructure->state=spP->cont.attribs.state;
@@ -315,11 +315,11 @@ rootpaerror_t  getSpContainerStructure(mcSpid_t spid, SpContainerStructure* spCo
     {
         ret=ROOTPA_ERROR_INTERNAL_NO_CONTAINER; // using this since it is changed to ROOTPA_OK and state NO_CONTAINER in the wrapper.
     }
-    else 
+    else
     {
         ret=ROOTPA_ERROR_REGISTRY;
     }
-    
+
     free(spP);
     LOGD("<<getSpContainerStructure nr: %d st: %d ret: %d",spContainerStructure->nbrOfTlts, spContainerStructure->state, ret );
     return ret;
@@ -330,7 +330,7 @@ rootpaerror_t storeTA(mcSpid_t spid, const mcUuid_t* uuidP, const uint8_t* taBin
     rootpaerror_t ret=ROOTPA_OK;
     mcResult_t result=0;
     mcContainerState_t state;
-    
+
     result=regGetTaState(spid, uuidP, &state);
     LOGD("storeTA, TA state %d, result 0x%x", state, result);
     if(MC_DRV_ERR_INVALID_DEVICE_FILE == result)
@@ -344,14 +344,14 @@ rootpaerror_t storeTA(mcSpid_t spid, const mcUuid_t* uuidP, const uint8_t* taBin
         ret=ROOTPA_ERROR_REGISTRY;
     }
     else
-    {       
+    {
         result =regStoreTA(spid, uuidP, taBinP, taBinLength);
-        
+
         if(result != MC_DRV_OK)
         {
             LOGE("storeTA, storing TA failed, result from registry 0x%x", result);
             ret=ROOTPA_ERROR_REGISTRY;
-        }        
+        }
     }
 
     return ret;
@@ -359,13 +359,16 @@ rootpaerror_t storeTA(mcSpid_t spid, const mcUuid_t* uuidP, const uint8_t* taBin
 
 void dummyCallback(ProvisioningState state, rootpaerror_t error, tltInfo_t* tltInfoP)
 {
+    (void) state;
+    (void) error;
+    (void) tltInfoP;
     LOGD("dummy callback %d %d %ld", state, error, (long int) tltInfoP);
 }
 
 rootpaerror_t dummySysInfoCallback(osInfo_t* osSpecificInfoP)
 {
     LOGD("dummy sysinfo callback %ld", (long int) osSpecificInfoP);
-    if(NULL==osSpecificInfoP) return ROOTPA_ERROR_INTERNAL;   
+    if(NULL==osSpecificInfoP) return ROOTPA_ERROR_INTERNAL;
     memset(osSpecificInfoP, 0, sizeof(osInfo_t));
     return ROOTPA_OK;
 }
@@ -388,9 +391,9 @@ typedef struct{
     LOGD(">>provisioningThreadFunction %ld", (long int)((provisioningparams_t*)paramsP)->callbackP);
     if((ret=openCmtlSession())==ROOTPA_OK)
     {
-        doProvisioningWithSe(((provisioningparams_t*)paramsP)->spid, 
-                             ((provisioningparams_t*)paramsP)->suid, 
-                             ((provisioningparams_t*)paramsP)->callbackP, 
+        doProvisioningWithSe(((provisioningparams_t*)paramsP)->spid,
+                             ((provisioningparams_t*)paramsP)->suid,
+                             ((provisioningparams_t*)paramsP)->callbackP,
                              ((provisioningparams_t*)paramsP)->sysInfoCallbackP,
                              getVersion,
                              ((provisioningparams_t*)paramsP)->initialRel,
@@ -410,14 +413,13 @@ typedef struct{
         free((char*)((provisioningparams_t*)paramsP)->tltInstallationDataP->tltPukHashP);
         free(((provisioningparams_t*)paramsP)->tltInstallationDataP);
     }
-    free(paramsP);  // Coverity complains that paramsP allocated in "provisioning" is not freed. It is done here.
-
+    
     LOGD("<<provisioningThreadFunction");
 #ifdef WIN32
 	ExitThread(NULL);
 #else
     pthread_exit(NULL);
-#endif	
+#endif
     return NULL; // this is required by some compilers with some settings in order to avoid errors.
 }
 
@@ -436,9 +438,9 @@ rootpaerror_t provision(mcSpid_t spid, CallbackFunctionP callbackP, SystemInfoCa
 
     paramsP=(provisioningparams_t*)malloc(sizeof(provisioningparams_t));
     if(!paramsP) return ROOTPA_ERROR_OUT_OF_MEMORY;
-    
+
     memset(paramsP,0,sizeof(provisioningparams_t)); // initialize in order to satisfy valgrind
-    
+
     paramsP->callbackP=callbackP;
     paramsP->sysInfoCallbackP=systemInfoCallbackP;
     paramsP->spid=spid;
@@ -449,21 +451,23 @@ rootpaerror_t provision(mcSpid_t spid, CallbackFunctionP callbackP, SystemInfoCa
         if(!paramsP->tltInstallationDataP)
         {
             free(paramsP);
+            paramsP = NULL;
             return ROOTPA_ERROR_OUT_OF_MEMORY;
         }
 
     // copy the whole struct
-        
+
         memset(paramsP->tltInstallationDataP,0,sizeof(trustletInstallationData_t)); // initialize in order to satisfy valgrind
         memcpy(paramsP->tltInstallationDataP, tltDataP, sizeof(trustletInstallationData_t));
 
     // malloc and copy data from/to the pointers
-        
+
         paramsP->tltInstallationDataP->dataP=(const uint8_t *)malloc(tltDataP->dataLength);
         if(!paramsP->tltInstallationDataP->dataP)
         {
             free(paramsP->tltInstallationDataP);
             free(paramsP);
+            paramsP = NULL;
             return ROOTPA_ERROR_OUT_OF_MEMORY;
         }
         memset((char*)paramsP->tltInstallationDataP->dataP,0,tltDataP->dataLength); // initialize in order to satisfy valgrind
@@ -475,18 +479,19 @@ rootpaerror_t provision(mcSpid_t spid, CallbackFunctionP callbackP, SystemInfoCa
             free((void*) paramsP->tltInstallationDataP->dataP);
             free((void*) paramsP->tltInstallationDataP);
             free(paramsP);
+            paramsP = NULL;
             return ROOTPA_ERROR_OUT_OF_MEMORY;
-        }        
+        }
         memset((char*)paramsP->tltInstallationDataP->tltPukHashP,0,tltDataP->tltPukHashLength); // initialize in order to satisfy valgrind
         memcpy((char*)paramsP->tltInstallationDataP->tltPukHashP, tltDataP->tltPukHashP, tltDataP->tltPukHashLength);
     }
     else
     {
-        paramsP->tltInstallationDataP=NULL;    
+        paramsP->tltInstallationDataP=NULL;
     }
 
 	paramsP->initialRel = initialRel;
-    
+
     ret=ROOTPA_OK;
     ret=getSuid(&paramsP->suid);
 
@@ -512,18 +517,19 @@ rootpaerror_t provision(mcSpid_t spid, CallbackFunctionP callbackP, SystemInfoCa
             ret=ROOTPA_ERROR_INTERNAL;
         }
         else
-        {            
+        {
             r=pthread_attr_setdetachstate(&attributes, PTHREAD_CREATE_DETACHED);
             if(r)
             {
                 LOGE("unable to set detached state, trying with defaults %d",r);
             }
-            
-            r=pthread_create(&provisioningThread, &attributes, provisioningThreadFunction, (void*) paramsP);
+
+            r=pthread_create(&provisioningThread, &attributes, provisioningThreadFunction, (void*) paramsP);   
             if(r)
             {
                 LOGE("unable to create thread %d",r);
                 free(paramsP);
+                paramsP = NULL;
                 ret=ROOTPA_ERROR_INTERNAL;
             }
             pthread_attr_destroy(&attributes);
@@ -532,9 +538,10 @@ rootpaerror_t provision(mcSpid_t spid, CallbackFunctionP callbackP, SystemInfoCa
     }
     else
     {
-        LOGE("provisioning can not get suid: %d",ret );        
+        LOGE("provisioning can not get suid: %d",ret );
     }
     LOGD("<<provision ret: %d",ret );
+
     return ret;
 }
 
@@ -546,7 +553,7 @@ rootpaerror_t doProvisioning(mcSpid_t spid, CallbackFunctionP callbackP, SystemI
 
 rootpaerror_t installTrustlet(mcSpid_t spid, CallbackFunctionP callbackP, SystemInfoCallbackFunctionP systemInfoCallbackP, trustletInstallationData_t* tltDataP)
 {
-    if(NULL == tltDataP || NULL == tltDataP->dataP || 0 == tltDataP->dataLength|| 
+    if(NULL == tltDataP || NULL == tltDataP->dataP || 0 == tltDataP->dataLength||
       (REQUEST_DATA_TLT != tltDataP->dataType &&  REQUEST_DATA_KEY != tltDataP->dataType)) return ROOTPA_ERROR_ILLEGAL_ARGUMENT;
     LOGD("installTrustlet");
     return provision(spid, callbackP, systemInfoCallbackP, tltDataP, initialRel_POST);

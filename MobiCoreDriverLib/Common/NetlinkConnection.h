@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2015 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -191,7 +191,7 @@ public:
      * @return Number of bytes written.
      */
     virtual ssize_t writeData(
-        void      *buffer,
+        const void *buffer,
         uint32_t  len
     );
 

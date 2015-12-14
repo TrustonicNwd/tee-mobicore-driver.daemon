@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2015 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,6 +42,9 @@
 #include <assert.h>
 //#define LOG_VERBOSE
 #include "log.h"
+
+#include "PrivateRegistry.h"
+
 
 /* The following definitions are not exported in the header files of the
    client API. */

@@ -14,6 +14,7 @@ LOCAL_SRC_FILES +=  src/com/gd/mobicore/pa/ifc/RootPAServiceIfc.aidl \
 LOCAL_MODULE := rootpa_interface
 LOCAL_MODULE_TAGS := debug eng optional
 
+APP_PIE := true
 LOCAL_32_BIT_ONLY := true
 
 include $(BUILD_STATIC_JAVA_LIBRARY)

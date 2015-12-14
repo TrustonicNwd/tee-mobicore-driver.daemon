@@ -94,6 +94,8 @@ protected:
     bool                mcFault; /**< Signal RTM fault */
     bool                mciReused; /**< Signal restart of Daemon. */
     CMutex              mutex_connection; // Mutex to share session->notificationConnection for GP cases
+    bool                notifySessionRemoved; /**< Signal sessions removed */
+
 
 
     /* In a special case a Trustlet can create a race condition in the daemon.

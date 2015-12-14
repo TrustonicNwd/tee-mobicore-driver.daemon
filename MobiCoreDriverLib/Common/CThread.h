@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -52,9 +52,8 @@ public:
 
     virtual void run(void) = 0;
 
-    void start(void);
-
-    void start(const char* name);
+    // Derived classes must call this base class method internally if overriding
+    virtual void start(const char* name = NULL);    
 
     void join(void);
 
@@ -72,7 +71,7 @@ protected:
 
     bool shouldTerminate(void);
 
-    void exit(int32_t exitcode);
+    void exit(void* exitcode);
 
 private:
 

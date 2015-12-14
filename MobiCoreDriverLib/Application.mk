@@ -7,7 +7,9 @@
 # Don't remove this - mandatory
 APP_PROJECT_PATH := $(abspath $(call my-dir))
 
-APP_STL := stlport_static
+APP_STL := gnustl_static
+
+NDK_TOOLCHAIN_VERSION := 4.8
 
 # Don't optimize for better debugging
 APP_OPTIM := debug
@@ -29,3 +31,6 @@ APP_PLATFORM := android-9
 
 # Position Independent Executable
 APP_PIE := true
+
+# Force compilation of proxy server
+APP_MODULES := libMcClient libMcRegistry mcDriverDaemon

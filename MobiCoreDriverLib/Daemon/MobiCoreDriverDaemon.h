@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,6 +37,10 @@
 
 #include "Server/public/ConnectionHandler.h"
 #include "Server/public/Server.h"
+#ifndef WITHOUT_PROXY
+#include "proxy_server.h"
+#endif
+
 
 #include "MobiCoreDevice.h"
 #include <string>
@@ -85,22 +89,11 @@ public:
         std::vector<std::string> drivers
     );
 
-    virtual ~MobiCoreDriverDaemon(
-        void
-    );
-
-    void dropConnection(
-        Connection *connection
-    );
-
-    bool handleConnection(
-        Connection *connection
-    );
-
-    void run(
-        void
-    );
-
+    virtual ~MobiCoreDriverDaemon();
+    void dropConnection(Connection *connection);
+    virtual bool readCommand(Connection *connection, uint32_t *command_id);
+    virtual void handleCommand(Connection *connection, uint32_t command_id);
+    virtual void run();
 private:
     MobiCoreDevice *mobiCoreDevice;
     /**< Flag to start/stop the scheduler */
@@ -112,6 +105,10 @@ private:
     driverResourcesList_t driverResources;
     /**< List of servers processing connections */
     Server *servers[MAX_SERVERS];
+#ifndef WITHOUT_PROXY
+    ProxyServer proxy_server;
+#endif
+
 
     bool checkPermission(Connection *connection);
 

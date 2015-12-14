@@ -82,11 +82,11 @@ void CThread::setExiting(
 
 //------------------------------------------------------------------------------
 void CThread::exit(
-    int32_t exitcode
+    void* exitcode
 )
 {
     setExiting();
-    pthread_exit((void*)(uintptr_t)exitcode);
+    pthread_exit(exitcode);
 }
 
 
@@ -101,24 +101,21 @@ bool CThread::shouldTerminate(
 
 //------------------------------------------------------------------------------
 void CThread::start(
-    void
+    const char* name
 )
 {
     int ret;
     ret = pthread_create(&m_thread, NULL, CThreadStartup, this);
-    if (0 != ret)
+    if (0 != ret) {
         LOG_E("pthread_create failed with error code %d", ret);
-}
-
-//------------------------------------------------------------------------------
-void CThread::start(
-    const char* name
-)
-{
-    start();
-    int ret = pthread_setname_np(m_thread, name);
-    if (0 != ret)
-        LOG_E("pthread_setname_np failed with error code %d %s", ret, name);
+        return;
+    }
+    if (name) {
+        ret = pthread_setname_np(m_thread, name);
+        if (0 != ret) {
+            LOG_E("pthread_setname_np failed with error code %d %s", ret, name);
+        }
+    }
 }
 
 //------------------------------------------------------------------------------

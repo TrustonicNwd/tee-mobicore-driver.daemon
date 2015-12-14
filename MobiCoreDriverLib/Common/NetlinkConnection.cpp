@@ -224,8 +224,8 @@ ssize_t NetlinkConnection::readData(
 
 //------------------------------------------------------------------------------
 ssize_t NetlinkConnection::writeData(
-    void *buffer,
-    uint32_t len
+    const void *buffer,
+    uint32_t   len
 )
 {
     ssize_t ret;

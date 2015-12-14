@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2015 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -636,24 +636,33 @@ void TrustZoneDevice::handleTaExit(void)
             if (!ts) {
                 break;
             }
-#ifndef NDEBUG
-            uint32_t sessionId = ts->sessionId;
-#endif
-            LOG_I("Cleaning up session %03x", sessionId);
+
+            LOG_I("Cleaning up session %03x", ts->sessionId);
             // Tell t-base to close the session (list gets locked in handleIrq() when MCP replies)
             mcResult_t mcRet = closeSessionInternal(ts);
             // If ok, remove objects
             if (mcRet == MC_DRV_OK) {
-                freeSession(ts);
-                LOG_I("TA session %03x finally closed", sessionId);
+                mutex_tslist.lock();
+                trustletSessions.remove(ts);
+                mutex_tslist.unlock();
+                LOG_I("TA session %03x finally closed", ts->sessionId);
+                delete ts;
             } else {
-                LOG_I("TA session %03x could not be closed yet.", sessionId);
+                LOG_I("TA session %03x could not be closed yet.", ts->sessionId);
             }
         }
         mutex_mcp.unlock();
     }
     TAExitHandler::setExiting();
     signalMcpNotification();
+    
+    // In case there's no ongoing waitMcpNotification
+    ::sleep(1);
+    if (DeviceScheduler::shouldTerminate() == false) {
+        kill(getpid(), SIGTERM);
+    }
+
+
 
     LOG_E("schedule loop terminated");
 }
@@ -717,6 +726,11 @@ void TrustZoneDevice::handleIrq(
                  */
                 LOG_W("Notification for unknown session ID");
                 queueUnknownNotification(*notification);
+                if (notifySessionRemoved) {
+                    notify(notification->sessionId);
+                }
+                notifySessionRemoved = false;
+
             } else {
                 mutex_connection.lock();
                 // Get the NQ connection for the session ID
@@ -753,5 +767,12 @@ void TrustZoneDevice::handleIrq(
     // MSH thread MUST not block!
     DeviceIrqHandler::setExiting();
     signalMcpNotification();
+    
+    // In case there's no ongoing waitMcpNotification
+    ::sleep(1);
+    if (DeviceScheduler::shouldTerminate() == false) {
+        kill(getpid(), SIGTERM);
+    }
+
 }
 

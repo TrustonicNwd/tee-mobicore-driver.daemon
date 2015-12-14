@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2015 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -54,7 +54,6 @@
 #include "mcVersionHelper.h"
 
 #include "PrivateRegistry.h"
-#include "MobiCoreRegistry.h"
 
 #include "uuid_attestation.h"
 
@@ -307,7 +306,7 @@ mcResult_t mcRegistryReadAuthToken(mcSoAuthTokenCont_t *so)
         //File is shorter than expected
         if (feof(fs)) {
             LOG_E("%s(): EOF reached: res is %d, size of mcSoAuthTokenCont_t is %zu", __func__, res,
-            sizeof(mcSoAuthTokenCont_t));   
+            sizeof(mcSoAuthTokenCont_t));
         }
         fclose(fs);
         return MC_DRV_ERR_INVALID_PARAMETER;
@@ -1489,4 +1488,3 @@ regObject_t *mcRegistryGetDriverBlob(const char *filename)
 
     return regobj;
 }
-

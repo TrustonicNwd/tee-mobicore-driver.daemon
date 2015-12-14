@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 TRUSTONIC LIMITED
+ * Copyright (c) 2013-2014 TRUSTONIC LIMITED
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,32 +37,58 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <pthread.h>
 
 //#define LOG_VERBOSE
 #include "log.h"
 #include "FSD.h"
+// Local headers
+#include "Queue.h"
+#include "Client.h"
+
+struct Server::Private : public CThread {
+    ConnectionHandler *connectionHandler;
+    std::list<Client*> clients;
+    pthread_mutex_t clients_mutex_;
+    Queue<Client*> queue;
+    Private(ConnectionHandler *ch): connectionHandler(ch) {
+        pthread_mutex_init(&clients_mutex_, NULL);
+    }
+    ~Private() {
+        pthread_mutex_destroy(&clients_mutex_);
+    }
+    void run() {
+        Client* client;
+        for (;;) {
+            client = queue.pop();
+            if (!client) {
+                break;
+            }
+            if (client->isDead()) {
+                if (!client->isDetached()) {
+                    client->dropConnection();
+                }
+                client->setExiting();
+            } else {
+                connectionHandler->handleCommand(client->connection(), client->commandId());
+            }
+            client->unlock();
+        }
+    }
+};
 
 //------------------------------------------------------------------------------
-Server::Server(
-    ConnectionHandler *connectionHandler,
-    const char *localAddr
-) : socketAddr(localAddr)
-{
-    this->connectionHandler = connectionHandler;
-    this->serverSock = -1;
-}
+Server::Server(ConnectionHandler *handler, const char *localAddr):
+    serverSock(-1), socketAddr(localAddr), connectionHandler(handler),
+    priv_(new Private(connectionHandler)) {}
 
 
 //------------------------------------------------------------------------------
-void Server::run(
-    void
-)
-{
+void Server::run() {
     bool isFSDStarted=false;
     FSD *FileStorageDaemon=NULL;
 
     do {
-
         LOG_I("Server: start listening on socket %s", socketAddr.c_str());
 
         // Open a socket (a UNIX domain stream socket)
@@ -91,8 +117,7 @@ void Server::run(
         }
 
         LOG_I("\n********* successfully initialized Daemon *********\n");
-
-
+        priv_->start();
 
         for (;;) {
             fd_set fdReadSockets;
@@ -102,19 +127,6 @@ void Server::run(
 
             // Select server socket descriptor
             FD_SET(serverSock, &fdReadSockets);
-            int maxSocketDescriptor = serverSock;
-
-            // Select socket descriptor of all connections
-            for (connectionIterator_t iterator = peerConnections.begin();
-                    iterator != peerConnections.end();
-                    ++iterator) {
-                Connection *connection = (*iterator);
-                int peerSocket = connection->socketDescriptor;
-                FD_SET(peerSocket, &fdReadSockets);
-                if (peerSocket > maxSocketDescriptor) {
-                    maxSocketDescriptor = peerSocket;
-                }
-            }
 
             if (!isFSDStarted) {
                 // Create the <t-base File Storage Daemon
@@ -127,11 +139,8 @@ void Server::run(
 
             // Wait for activities, select() returns the number of sockets
             // which require processing
-            LOG_V(" Server: waiting on sockets");
-            int numSockets = select(
-                                 maxSocketDescriptor + 1,
-                                 &fdReadSockets,
-                                 NULL, NULL, NULL);
+            LOG_V(" Server: waiting on server socket");
+            int numSockets = select(serverSock + 1, &fdReadSockets, NULL, NULL, NULL);
 
             // Check if select failed
             if (numSockets < 0) {
@@ -145,7 +154,7 @@ void Server::run(
                 continue;
             }
 
-            LOG_V(" Server: events on %d socket(s).", numSockets);
+            LOG_V(" Server: event on socket.");
 
             // Check if a new client connected to the server socket
             if (FD_ISSET(serverSock, &fdReadSockets)) {
@@ -165,9 +174,12 @@ void Server::run(
                         break;
                     }
 
-                    Connection *connection = new Connection(clientSock, &clientAddr);
-                    peerConnections.push_back(connection);
-                    LOG_I(" Server: new socket connection established and start listening.");
+                    Client *client = new Client(connectionHandler, clientSock, &clientAddr, priv_->queue);
+                    pthread_mutex_lock(&priv_->clients_mutex_);
+                    priv_->clients.push_back(client);
+                    pthread_mutex_unlock(&priv_->clients_mutex_);
+                    client->start();
+                    LOG_I(" Server: new socket client %p created and start listening.", client);
                 } while (false);
 
                 // we can ignore any errors from accepting a new connection.
@@ -175,87 +187,89 @@ void Server::run(
                 // and nothing has changed.
             }
 
-            // Handle traffic on existing client connections
-            connectionIterator_t iterator = peerConnections.begin();
-            while ( (iterator != peerConnections.end())
-                    && (numSockets > 0) ) {
-                Connection *connection = (*iterator);
-                int peerSocket = connection->socketDescriptor;
-
-                if (!FD_ISSET(peerSocket, &fdReadSockets)) {
-                    ++iterator;
-                    continue;
+            // Take this opportunity to reap any dead clients
+            pthread_mutex_lock(&priv_->clients_mutex_);
+            std::list<Client*>::iterator it = priv_->clients.begin();
+            while (it != priv_->clients.end()) {
+                Client* client = *it;
+                if (client->isExiting()) {
+                    it = priv_->clients.erase(it);
+                    client->join();
+                    delete client;
+                    LOG_I(" Server: client %p destroyed.", client);
+                } else {
+                    it++;
                 }
-
-                numSockets--;
-
-                // the connection will be terminated if command processing
-                // fails
-                if (!connectionHandler->handleConnection(connection)) {
-                    LOG_I(" Server: dropping connection.");
-
-                    //Inform the driver
-                    connectionHandler->dropConnection(connection);
-
-                    // Remove connection from list
-                    delete connection;
-                    iterator = peerConnections.erase(iterator);
-                    continue;
-                }
-
-                ++iterator;
             }
+            pthread_mutex_unlock(&priv_->clients_mutex_);
         }
 
+        // Exit worker thread
+        priv_->queue.push(NULL);
+        priv_->join();
     } while (false);
+
+    // Change state to STOPPED, releases start() on failure
+    pthread_mutex_lock(&startup_mutex);
+    server_state = STOPPED;
+    pthread_cond_broadcast(&startup_cond);
+    pthread_mutex_unlock(&startup_mutex);
+
+
 
     //Wait for File Storage Daemon to exit
     if (FileStorageDaemon) {
-    	FileStorageDaemon->join();
-	    delete FileStorageDaemon;
+        FileStorageDaemon->join();
+        delete FileStorageDaemon;
     }
 
     LOG_ERRNO("Exiting Server, because");
+    kill(getpid(), SIGTERM);
+
 }
 
 
 //------------------------------------------------------------------------------
-void Server::detachConnection(
-    Connection *connection
-)
-{
+void Server::detachConnection(Connection* connection) {
     LOG_V(" Stopping to listen on notification socket.");
 
-    for (connectionIterator_t iterator = peerConnections.begin();
-            iterator != peerConnections.end();
-            ++iterator) {
-        Connection *tmpConnection = (*iterator);
-        if (tmpConnection == connection) {
-            peerConnections.erase(iterator);
+    pthread_mutex_lock(&priv_->clients_mutex_);
+    for (std::list<Client*>::iterator it = priv_->clients.begin(); it != priv_->clients.end(); it++) {
+        Client* client = *it;
+        if (client->connection() == connection) {
+            client->detachConnection();
             LOG_I(" Stopped listening on notification socket.");
             break;
         }
     }
+    pthread_mutex_unlock(&priv_->clients_mutex_);
 }
 
 
 //------------------------------------------------------------------------------
-Server::~Server(
-    void
-)
-{
+Server::~Server() {
     // Shut down the server socket
-    if(serverSock != -1) {
+    if (serverSock != -1) {
         close(serverSock);
-        serverSock = -1;
     }
-
     // Destroy all client connections
-    connectionIterator_t iterator = peerConnections.begin();
-    while (iterator != peerConnections.end()) {
-        Connection *tmpConnection = (*iterator);
-        delete tmpConnection;
-        iterator = peerConnections.erase(iterator);
+    for (std::list<Client*>::iterator it = priv_->clients.begin(); it != priv_->clients.end(); it++) {
+        Client* client = *it;
+        delete client;
     }
+    delete priv_;
+}
+
+//------------------------------------------------------------------------------
+
+void Server::start(const char *name) {
+    server_state = STARTING;
+    CThread::start(name);
+    // Hang on till thread has started or stopped
+    pthread_mutex_lock(&startup_mutex);
+    while (server_state == STARTING) {
+        pthread_cond_wait(&startup_cond, &startup_mutex);
+    }
+    pthread_mutex_unlock(&startup_mutex);
 }
 

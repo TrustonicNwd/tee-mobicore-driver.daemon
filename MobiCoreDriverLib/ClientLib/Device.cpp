@@ -48,7 +48,8 @@ Device::Device(uint32_t deviceId, Connection *connection)
 {
     this->deviceId = deviceId;
     this->connection = connection;
-    this->openCount = 0;
+    this->isValid_ = true;
+
 
     pMcKMod = new CMcKMod();
 }

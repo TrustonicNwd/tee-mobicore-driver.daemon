@@ -36,15 +36,10 @@ typedef struct {
     uint32_t   b;
 } TEE_Value;
 
-#if defined (TRUSTEDAPP)
-typedef struct {
-    void        *sVirtualAddr;         /**< The virtual address of the Bulk buffer regarding the address space of the Trustlet, already includes a possible offset! */
-    uint32_t    sVirtualLen;       /**< Length of the mapped Bulk buffer */
-} mcBulkMap_t;
-#endif
 
 typedef struct {
-    mcBulkMap_t mapInfo;
+     uint32_t    sVirtualAddr;         /**< The virtual address of the Bulk buffer regarding the address space of the Trustlet, already includes a possible offset! */
+    uint32_t    sVirtualLen; 
     uint32_t    outputSize;
 } _TEEC_MemoryReferenceInternal;
 

@@ -51,6 +51,14 @@
 
 class NetlinkServer: public Server, public NetlinkConnectionManager
 {
+    /**
+     * Listen for incoming connections.
+     * Implements the central socket server loop. Incoming connections will be stored.
+     */
+    virtual void run(
+        void
+    );
+
 public:
     /**
      * Server contructor.
@@ -70,12 +78,15 @@ public:
     );
 
     /**
-     * Start server and listen for incoming connections.
-     * Implements the central socket server loop. Incoming connections will be stored.
+     * Start server thread.
+     * This function only returns once the server is indeed ready.
      */
-    virtual void run(
-        void
-    );
+    virtual void start(
+        const char *name = NULL
+    ) {
+        // Avoid calling Server::start()
+        CThread::start(name);
+    }
 
     /**
      * Remove a connection object from the list of available connections.
