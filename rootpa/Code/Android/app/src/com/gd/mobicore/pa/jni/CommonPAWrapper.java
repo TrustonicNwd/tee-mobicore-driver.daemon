@@ -114,11 +114,8 @@ public class CommonPAWrapper {
     public String[] getSystemInfo(){
         Log.d(TAG,">>CommonPAWrapper.getSystemInfo");
         String[] response= new String[RESPONSE_ARRAY_SIZE];
-        TelephonyManager telephonyManager = (TelephonyManager)service_.getSystemService(Context.TELEPHONY_SERVICE);
-        if(telephonyManager!=null){
-            response[IMEI_ESN_INDEX]=telephonyManager.getDeviceId();
-            response[MNO_INDEX]=telephonyManager.getSimOperatorName();
-        }
+        response[IMEI_ESN_INDEX]="";
+        response[MNO_INDEX]="";
         response[BRAND_INDEX]=Build.BRAND;
         response[MANUFACTURER_INDEX]=Build.MANUFACTURER;
         response[HARDWARE_INDEX]=Build.HARDWARE;

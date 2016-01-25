@@ -22,4 +22,3 @@ LOCAL_DEX_PREOPT := false
 include $(BUILD_PACKAGE)
 
 include $(CLEAR_VARS)
-
